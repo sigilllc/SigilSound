@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Sigil.Sound.Testing</RootNamespace>
+    <Description>Signal analysis and audio assertions for testing Sigil.Sound code.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sigil.Sound\Sigil.Sound.csproj" />
+  </ItemGroup>
+</Project>
