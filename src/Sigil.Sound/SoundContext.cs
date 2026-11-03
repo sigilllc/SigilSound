@@ -17,7 +17,7 @@ namespace Sigil.Sound;
 /// output.Render(frames);
 /// </code>
 /// </example>
-public sealed class SoundContext
+public sealed class SoundContext : IDisposable
 {
     private readonly Slot _slot;
     private readonly IOperator _output;
@@ -47,6 +47,9 @@ public sealed class SoundContext
 
     /// <summary>Fades to silence.</summary>
     public void Stop(double? fadeSeconds = null) => _slot.Swap(Sounds.Silence, fadeSeconds);
+
+    /// <summary>Releases everything the running sounds hold. Stop rendering first.</summary>
+    public void Dispose() => (_output as IDisposable)?.Dispose();
 
     /// <summary>Fills <paramref name="output"/> with the next frames, in blocks of at most <see cref="RenderContext.BlockSize"/>.</summary>
     public void Render(Span<StereoFrame> output)

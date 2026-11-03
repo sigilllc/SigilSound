@@ -27,7 +27,6 @@ internal sealed class SnippetDocument
         using System.Collections.Generic;
         using System.Linq;
         using Sigil.Sound;
-        using Sigil.Sound.Notes;
         using static System.Math;
         using static Sigil.Sound.Sounds;
 

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Sigil.Sound.Notes;
+namespace Sigil.Sound;
 
 /// <summary>An immutable note: a MIDI pitch, a velocity in [0, 1] and a length in beats.</summary>
 public readonly record struct Note(int Pitch, float Velocity = 0.8f, double Beats = 1.0)

@@ -11,7 +11,10 @@ namespace Sigil.Sound;
 /// </param>
 public readonly record struct RenderContext(int SampleRate, int BlockSize = RenderContext.DefaultBlockSize)
 {
+    /// <summary>The sample rate of <see cref="Default"/>: 48 kHz.</summary>
     public const int DefaultSampleRate = 48_000;
+
+    /// <summary>The default largest block size: 256 frames.</summary>
     public const int DefaultBlockSize = 256;
 
     /// <summary>A 48 kHz context with the default block size.</summary>
@@ -22,6 +25,13 @@ public readonly record struct RenderContext(int SampleRate, int BlockSize = Rend
 
     /// <summary>Half the sample rate.</summary>
     public double Nyquist => SampleRate * 0.5;
+
+    // The two members below are engine plumbing and deliberately not public: they let the fluent layer
+    // share one compiled instance between several uses of the same Sound and give note voices their pitch
+    // and length, without any of it showing up in user code.
+    internal CompileScope? Scope { get; init; }
+
+    internal VoiceControl? Voice { get; init; }
 
     /// <summary>Throws if the sample rate or block size is not positive; otherwise returns this context.</summary>
     public RenderContext Validate()

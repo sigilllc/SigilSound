@@ -23,7 +23,19 @@ public interface IOperator
 }
 
 /// <summary>
-/// The shape of a block renderer written as a lambda; see <see cref="Operator.From"/>.
+/// Optional: an operator that can return to its just-compiled state without being rebuilt.
+/// The engine uses it to reuse note voices without allocating. Built-in operators all implement it,
+/// and <see cref="Sound.Through"/> and <see cref="Operator.From(BlockRenderer, Action)"/> forward it for you,
+/// so most custom operators never need to.
+/// </summary>
+public interface IResettable
+{
+    /// <summary>Clears filters, delay lines, envelopes and positions, as if the operator had just been created.</summary>
+    void Reset();
+}
+
+/// <summary>
+/// The shape of a block renderer written as a lambda; see <see cref="Operator.From(BlockRenderer)"/>.
 /// A custom delegate, because <see cref="Span{T}"/> cannot be a type argument of <see cref="Action{T}"/>.
 /// </summary>
 /// <param name="block">The frames to fill, or to rework when the operator has an input.</param>
@@ -48,14 +60,24 @@ public static class Operator
     /// }))
     /// </code>
     /// </example>
-    public static IOperator From(BlockRenderer render)
+    public static IOperator From(BlockRenderer render) => From(render, null);
+
+    /// <summary>
+    /// Like <see cref="From(BlockRenderer)"/>, with a <paramref name="reset"/> that restores the lambda's captured state.
+    /// Only needed when the sound is played as a note voice and your state must start clean for every note.
+    /// </summary>
+    /// <param name="render">Renders the next block. Must not allocate or block.</param>
+    /// <param name="reset">Restores the captured state to its initial values.</param>
+    public static IOperator From(BlockRenderer render, Action? reset)
     {
         ArgumentNullException.ThrowIfNull(render);
-        return new DelegateOperator(render);
+        return new DelegateOperator(render, reset);
     }
 
-    private sealed class DelegateOperator(BlockRenderer render) : IOperator
+    private sealed class DelegateOperator(BlockRenderer render, Action? reset) : IOperator, IResettable
     {
         public void RenderBlock(Span<StereoFrame> block) => render(block);
+
+        public void Reset() => reset?.Invoke();
     }
 }

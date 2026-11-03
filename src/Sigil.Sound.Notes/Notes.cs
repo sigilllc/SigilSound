@@ -1,4 +1,4 @@
-namespace Sigil.Sound.Notes;
+namespace Sigil.Sound;
 
 /// <summary>
 /// Creating note sequences. Sequences are plain <see cref="IEnumerable{T}"/> values, so LINQ

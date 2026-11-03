@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @implements IDisposable
 @inject ReplEngine Engine
 @inject IJSRuntime JS
@@ -57,6 +57,8 @@
     <main class="work">
         <div id="editor" class="editor" @ref="_editorHost"></div>
 
+        <div id="resizer" class="resizer" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" tabindex="0"></div>
+
         <aside class="side">
             <section class="sec">
                 <div class="sec-h"><h2>Output</h2></div>
@@ -90,11 +92,14 @@
                 <div class="sec-h"><h2>Reference</h2></div>
                 <ul class="kv">
                     <li><span class="k">Sources</span><span class="val">Sine Saw Square Noise Fn Constant</span></li>
-                    <li><span class="k">Shape</span><span class="val">LowPass Adsr Range Gain</span></li>
+                    <li><span class="k">Shape</span><span class="val">LowPass HighPass Adsr Range Gain Pan</span></li>
+                    <li><span class="k">Space</span><span class="val">Delay Reverb Chorus Phaser</span></li>
+                    <li><span class="k">Grit</span><span class="val">Distort BitCrush Comb Limit</span></li>
                     <li><span class="k">Mix</span><span class="val">a + b, a * 0.5</span></li>
                     <li><span class="k">Ring mod</span><span class="val">a * b</span></li>
                     <li><span class="k">Parameters</span><span class="val">number, sound, Fn(t =&gt; ...)</span></li>
                     <li><span class="k">Notes</span><span class="val">Notes.Parse("C4 E4"), LINQ</span></li>
+                    <li><span class="k">Sequence</span><span class="val">.Every(Beats.Eighth).Loop().Play(v =&gt; ...)</span></li>
                 </ul>
                 <p class="plain dim">The last expression is the sound.</p>
             </section>
@@ -260,7 +265,7 @@
         try
         {
             using var wav = new MemoryStream();
-            Engine.BeforeBlockingWork("compile", () =>
+            Engine.BeforeBlockingWork("render", () =>
             {
                 result.Run().RenderToWav(wav, seconds: 10, sampleRate: Engine.SampleRate);
                 return 0;

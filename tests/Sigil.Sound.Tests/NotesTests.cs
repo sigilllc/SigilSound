@@ -1,7 +1,4 @@
-using Sigil.Sound.Notes;
 
-// Inside the Sigil.Sound namespace, "Notes" means the namespace; user code outside it can write Notes.Parse.
-using NoteSeq = Sigil.Sound.Notes.Notes;
 
 namespace Sigil.Sound.Tests;
 
@@ -16,13 +13,13 @@ public class NotesTests
     [InlineData("G9", 127)]
     public void ParsePitch_reads_scientific_pitch_notation(string name, int expected)
     {
-        Assert.Equal(expected, NoteSeq.ParsePitch(name));
+        Assert.Equal(expected, Notes.ParsePitch(name));
     }
 
     [Fact]
     public void Parse_sequence_supports_linq()
     {
-        var names = NoteSeq.Parse("C4 E4 G4 B4")
+        var names = Notes.Parse("C4 E4 G4 B4")
             .Transpose(12)
             .Where(n => n.Pitch < 83)
             .Select(n => n.Name);
@@ -42,6 +39,6 @@ public class NotesTests
     [InlineData("C10")]
     public void ParsePitch_rejects_bad_names(string name)
     {
-        Assert.Throws<FormatException>(() => NoteSeq.ParsePitch(name));
+        Assert.Throws<FormatException>(() => Notes.ParsePitch(name));
     }
 }

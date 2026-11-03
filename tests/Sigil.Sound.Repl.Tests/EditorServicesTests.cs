@@ -122,4 +122,18 @@ public class EditorServicesTests
     {
         Assert.Null(EditorServices.Describe("Sine(440)", 6));
     }
+
+    [Fact]
+    public void Describe_the_sequence_API_from_the_notes_package()
+    {
+        const string code = "Notes.Parse(\"C4\").Every(Beats.Eighth).Play(v => Sine(v.Frequency))";
+        var play = EditorServices.Describe(code, code.IndexOf("Play", StringComparison.Ordinal) + 1);
+        var every = EditorServices.Describe(code, code.IndexOf("Every", StringComparison.Ordinal) + 1);
+
+        Assert.NotNull(play);
+        Assert.Contains("polyphony", play);
+        Assert.Contains("**Example**", play);
+        Assert.NotNull(every);
+        Assert.Contains("- `gate`:", every);
+    }
 }

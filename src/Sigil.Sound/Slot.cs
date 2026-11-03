@@ -76,6 +76,7 @@ public sealed class Slot
                 instance.DisposeRetired();
                 var op = next.Compile(instance.Context);
                 instance.Post(op, (int)Math.Round(fade * instance.Context.SampleRate));
+                ScheduleCleanup(instance, fade);
             }
         }
     }
@@ -90,10 +91,24 @@ public sealed class Slot
     {
         lock (_gate)
         {
-            var instance = new SlotOperator(_current.Compile(context), context);
+            // Each slot instance is its own compile root, so retiring it disposes exactly what it built.
+            var own = context with { Scope = null };
+            var instance = new SlotOperator(_current.Compile(own), own);
             _instances.Add(new WeakReference<SlotOperator>(instance));
             return instance;
         }
+    }
+
+    // Once the crossfade is over the audio thread has retired the old sound; dispose it then, rather than
+    // leaving it until the next swap. If nothing is rendering, the next swap or disposal still collects it.
+    private static void ScheduleCleanup(SlotOperator instance, double fadeSeconds)
+    {
+        var weak = new WeakReference<SlotOperator>(instance);
+        _ = Task.Delay(TimeSpan.FromSeconds(fadeSeconds + 0.25)).ContinueWith(_ =>
+        {
+            if (weak.TryGetTarget(out var target))
+                target.DisposeRetired();
+        }, TaskScheduler.Default);
     }
 
     private static void ValidateFade(double fadeSeconds)

@@ -126,8 +126,29 @@ button {
 
 .work {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(0, 1fr) 6px var(--sidebar-width, 360px);
     min-height: 0;
+    position: relative;
+}
+
+.resizer {
+    width: 6px;
+    background: var(--canvas);
+    border-left: 1px solid var(--line-2);
+    border-right: 1px solid var(--line);
+    cursor: col-resize;
+    user-select: none;
+    touch-action: none;
+    transition: background 0.15s ease;
+    z-index: 10;
+}
+
+.resizer:hover,
+.resizer:focus-visible,
+.resizer.resizing {
+    background: var(--teal);
+    border-color: var(--teal);
+    outline: none;
 }
 
 .editor {
@@ -552,6 +573,10 @@ button {
 
     .work {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .resizer {
+        display: none;
     }
 
     .editor {

@@ -70,4 +70,10 @@ public class SnippetCompilerTests
         AudioAssert.IsFinite(audio);
         Assert.True(SignalAnalysis.Peak(audio.ToMono()) > 0.01f, "the example is silent");
     }
+
+    [Fact]
+    public void Warm_snippet_compiles_and_renders()
+    {
+        SnippetCompiler.Warm();
+    }
 }

@@ -56,6 +56,10 @@ public static class Sounds
     public static Sound Constant(double value) =>
         Sound.FromOperator(_ => new ConstantOperator((float)value), $"Constant({value})");
 
+    // A parameter as a sound, for arithmetic such as sound + 12.
+    internal static Sound FromParam(Param param) =>
+        Sound.FromOperator(ctx => new ParamOperator(param.Compile(ctx)), param.ToString());
+
     /// <summary>Silence.</summary>
     public static Sound Silence => Constant(0);
 }

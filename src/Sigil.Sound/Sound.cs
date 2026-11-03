@@ -9,7 +9,7 @@ namespace Sigil.Sound;
 /// shared and rendered many times. State only exists in the <see cref="IOperator"/> produced by
 /// <see cref="Compile"/>.
 /// </summary>
-public sealed class Sound
+public sealed partial class Sound
 {
     private readonly Func<RenderContext, IOperator> _factory;
     private readonly string _description;
@@ -34,13 +34,28 @@ public sealed class Sound
     /// Builds a running instance of this sound for <paramref name="context"/>.
     /// May allocate; the returned operator's <see cref="IOperator.RenderBlock"/> must not.
     /// </summary>
-    public IOperator Compile(RenderContext context) => _factory(context.Validate());
+    /// <remarks>
+    /// A sound used in several places of one graph is built once and fans out to all of them,
+    /// so <c>var bus = ...; bus + bus.Delay(0.2)</c> renders <c>bus</c> a single time.
+    /// The result is <see cref="IDisposable"/> when anything inside it is; dispose it when you are done rendering.
+    /// </remarks>
+    public IOperator Compile(RenderContext context)
+    {
+        context.Validate();
+        if (context.Scope is { } scope)
+            return scope.Share(this, () => _factory(context), context);
+
+        // The outermost compile owns the scope and hands back one object that resets and disposes the whole graph.
+        scope = new CompileScope();
+        var root = scope.Share(this, () => _factory(context with { Scope = scope }), context);
+        return new CompiledGraph(root, scope.Disposables);
+    }
 
     /// <summary>
     /// Escape hatch to the operator layer: feeds this sound into an operator you write.
     /// </summary>
     /// <param name="wrap">Called once per compile with this sound's running operator; returns the operator that processes it.
-    /// Create any state inside it so every compile starts fresh. Use <see cref="Operator.From"/> to write one as a lambda.</param>
+    /// Create any state inside it so every compile starts fresh. Use <see cref="Operator.From(BlockRenderer)"/> to write one as a lambda.</param>
     /// <param name="description">Text shown for the result in <see cref="ToString"/>.</param>
     /// <example>
     /// <code>
@@ -55,7 +70,14 @@ public sealed class Sound
     public Sound Through(Func<IOperator, IOperator> wrap, string? description = null)
     {
         ArgumentNullException.ThrowIfNull(wrap);
-        return new Sound(ctx => wrap(Compile(ctx)), description ?? $"{this}.Through(...)");
+        return new Sound(ctx =>
+        {
+            var input = Compile(ctx);
+            var output = wrap(input);
+            ctx.Scope?.Track(output);
+            // Reset reaches the input and your operator without you wiring it up.
+            return new ThroughOperator(input, output);
+        }, description ?? $"{this}.Through(...)");
     }
 
     /// <summary>Scales the amplitude.</summary>
@@ -73,13 +95,14 @@ public sealed class Sound
 
     /// <summary>
     /// Shapes the amplitude with an attack-decay-sustain-release envelope. Times are in seconds.
-    /// The release starts after <paramref name="hold"/> seconds (default: once attack and decay finish).
+    /// Inside a note voice (<c>Play</c>) the release starts when the note ends. Anywhere else the sound
+    /// sustains until you give <paramref name="hold"/>, or for as long as it plays.
     /// </summary>
     /// <param name="attack">Seconds to rise from silence to full level.</param>
     /// <param name="decay">Seconds to fall from full level to <paramref name="sustain"/>.</param>
     /// <param name="sustain">The level held after the decay, from 0 to 1.</param>
     /// <param name="release">Seconds to fall to silence once the release starts.</param>
-    /// <param name="hold">Seconds from the start until the release begins. Omit it to release right after the decay.</param>
+    /// <param name="hold">Seconds from the start until the release begins. Omit it to follow the note, or to sustain.</param>
     /// <example><code>Saw(220).Adsr(0.01, 0.2, 0.6, 1.5, hold: 3)</code></example>
     public Sound Adsr(double attack, double decay, double sustain, double release, double? hold = null)
     {
@@ -88,8 +111,9 @@ public sealed class Sound
         if (sustain is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(sustain), sustain, "Sustain must be between 0 and 1.");
         if (release < 0) throw new ArgumentOutOfRangeException(nameof(release), release, "Release must not be negative.");
 
-        double releaseAt = hold ?? attack + decay;
-        return new(ctx => new AdsrOperator(Compile(ctx), attack, decay, (float)sustain, release, releaseAt, ctx),
+        if (hold is < 0 or double.NaN) throw new ArgumentOutOfRangeException(nameof(hold), hold, "Hold must not be negative.");
+
+        return new(ctx => new AdsrOperator(Compile(ctx), attack, decay, (float)sustain, release, hold, ctx),
             $"{this}.Adsr({attack}, {decay}, {sustain}, {release})");
     }
 
@@ -97,12 +121,42 @@ public sealed class Sound
     /// <param name="cutoff">Frequency in Hz above which the sound is attenuated. A number, or a sound or <c>Fn(t => ...)</c> to sweep it.</param>
     /// <param name="q">Resonance at the cutoff. 0.7 is flat; higher values ring. Defaults to 0.7071.</param>
     /// <example><code>Saw(110).LowPass(Sine(0.25).Range(200, 2000), q: 4)</code></example>
-    public Sound LowPass(Param cutoff, Param? q = null)
+    public Sound LowPass(Param cutoff, Param? q = null) => Filter(FilterMode.LowPass, cutoff, q);
+
+    /// <summary>A resonant two-pole high-pass filter: removes what is below <paramref name="cutoff"/>. Mirror image of <see cref="LowPass"/>.</summary>
+    /// <param name="cutoff">Frequency in Hz below which the sound is attenuated. A number, or a sound or <c>Fn(t => ...)</c> to sweep it.</param>
+    /// <param name="q">Resonance at the cutoff. 0.7 is flat; higher values ring. Defaults to 0.7071.</param>
+    /// <example><code>Noise().HighPass(Sine(0.2).Range(500, 6000), q: 3) * 0.3</code></example>
+    public Sound HighPass(Param cutoff, Param? q = null) => Filter(FilterMode.HighPass, cutoff, q);
+
+    /// <summary>A band-pass filter: keeps a band around <paramref name="center"/> and removes the rest.</summary>
+    /// <param name="center">Frequency in Hz at the middle of the band. A number, or a sound or <c>Fn(t => ...)</c> to sweep it.</param>
+    /// <param name="q">Narrowness of the band: higher is narrower. Defaults to 0.7071.</param>
+    /// <example><code>Noise().BandPass(Sine(0.3).Range(300, 3000), q: 8)</code></example>
+    public Sound BandPass(Param center, Param? q = null) => Filter(FilterMode.BandPass, center, q);
+
+    /// <summary>A notch filter: removes a narrow band around <paramref name="center"/> and keeps the rest.</summary>
+    /// <param name="center">Frequency in Hz at the middle of the notch. A number, or a sound or <c>Fn(t => ...)</c> to sweep it.</param>
+    /// <param name="q">Narrowness of the notch: higher is narrower. Defaults to 0.7071.</param>
+    /// <example><code>Saw(110).Notch(1000, q: 4)</code></example>
+    public Sound Notch(Param center, Param? q = null) => Filter(FilterMode.Notch, center, q);
+
+    private Sound Filter(FilterMode mode, Param cutoff, Param? q)
     {
         var resonance = q ?? 0.7071f;
-        return new(ctx => new LowPassOperator(Compile(ctx), cutoff.Compile(ctx), resonance.Compile(ctx), ctx),
-            $"{this}.LowPass({cutoff}, {resonance})");
+        return new(ctx => new FilterOperator(Compile(ctx), mode, cutoff.Compile(ctx), resonance.Compile(ctx), ctx),
+            $"{this}.{mode}({cutoff}, {resonance})");
     }
+
+    /// <summary>Adds a constant or a modulating signal to this sound; <c>sound + 12</c> shifts a control signal up by 12.</summary>
+    public static Sound operator +(Sound a, Param offset)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        return a + Sounds.FromParam(offset);
+    }
+
+    /// <summary>Adds a constant or a modulating signal to this sound.</summary>
+    public static Sound operator +(Param offset, Sound a) => a + offset;
 
     /// <summary>Mixes two sounds by summing them.</summary>
     public static Sound operator +(Sound a, Sound b)

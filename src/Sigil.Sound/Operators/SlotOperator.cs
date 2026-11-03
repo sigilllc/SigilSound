@@ -4,7 +4,7 @@ namespace Sigil.Sound.Operators;
 /// The running form of a <see cref="Slot"/>. Swaps arrive through an atomic exchange and are
 /// taken at the start of a block; during a fade both the old and the new operator render.
 /// </summary>
-internal sealed class SlotOperator : IOperator
+internal sealed class SlotOperator : IOperator, IResettable, IDisposable
 {
     private readonly StereoFrame[] _scratch;
 
@@ -28,6 +28,7 @@ internal sealed class SlotOperator : IOperator
         _scratch = new StereoFrame[context.BlockSize];
     }
 
+    /// <summary>The context swapped-in sounds are compiled with: the render's settings, without any compile scope of its own.</summary>
     public RenderContext Context { get; }
 
     /// <summary>Queues <paramref name="next"/> for the next block. Called off the audio thread.</summary>
@@ -44,6 +45,17 @@ internal sealed class SlotOperator : IOperator
         for (var node = Interlocked.Exchange(ref _retired, null); node is not null; node = node.NextRetired)
             (node.Old as IDisposable)?.Dispose();
     }
+
+    /// <summary>Disposes everything this slot holds. Stop rendering first.</summary>
+    public void Dispose()
+    {
+        DisposeRetired();
+        (Interlocked.Exchange(ref _pending, null)?.Next as IDisposable)?.Dispose();
+        (_fadingOut as IDisposable)?.Dispose();
+        (_current as IDisposable)?.Dispose();
+    }
+
+    public void Reset() => _current.ResetState();
 
     public void RenderBlock(Span<StereoFrame> block)
     {

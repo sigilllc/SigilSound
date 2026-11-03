@@ -1,7 +1,7 @@
 namespace Sigil.Sound.Operators;
 
 /// <summary>Multiplies its input by a gain parameter.</summary>
-public sealed class GainOperator : IOperator
+internal sealed class GainOperator : IOperator, IResettable
 {
     private readonly IOperator _input;
     private readonly ParamSource _gain;
@@ -10,6 +10,12 @@ public sealed class GainOperator : IOperator
     {
         _input = input;
         _gain = gain;
+    }
+
+    public void Reset()
+    {
+        _input.ResetState();
+        _gain.Reset();
     }
 
     public void RenderBlock(Span<StereoFrame> block)
@@ -22,7 +28,7 @@ public sealed class GainOperator : IOperator
 }
 
 /// <summary>Sums two inputs.</summary>
-public sealed class MixOperator : IOperator
+internal sealed class MixOperator : IOperator, IResettable
 {
     private readonly IOperator _a;
     private readonly IOperator _b;
@@ -33,6 +39,12 @@ public sealed class MixOperator : IOperator
         _a = a;
         _b = b;
         _scratch = new StereoFrame[context.BlockSize];
+    }
+
+    public void Reset()
+    {
+        _a.ResetState();
+        _b.ResetState();
     }
 
     public void RenderBlock(Span<StereoFrame> block)
@@ -46,8 +58,10 @@ public sealed class MixOperator : IOperator
 }
 
 /// <summary>Maps a bipolar input in [-1, 1] linearly to [min, max] on each channel.</summary>
-public sealed class RangeOperator(IOperator input, float min, float max) : IOperator
+internal sealed class RangeOperator(IOperator input, float min, float max) : IOperator, IResettable
 {
+    public void Reset() => input.ResetState();
+
     public void RenderBlock(Span<StereoFrame> block)
     {
         input.RenderBlock(block);
@@ -57,5 +71,33 @@ public sealed class RangeOperator(IOperator input, float min, float max) : IOper
             var f = block[i];
             block[i] = new StereoFrame(min + (f.Left + 1.0f) * half, min + (f.Right + 1.0f) * half);
         }
+    }
+}
+
+/// <summary>A parameter's values as a mono sound.</summary>
+internal sealed class ParamOperator(ParamSource source) : IOperator, IResettable
+{
+    public void Reset() => source.Reset();
+
+    public void RenderBlock(Span<StereoFrame> block)
+    {
+        var values = source.Next(block.Length);
+        for (int i = 0; i < block.Length; i++)
+            block[i] = StereoFrame.Mono(values[i]);
+    }
+}
+
+/// <summary>
+/// What <see cref="Sound.Through"/> returns: the user's operator, with reset passed on to the input
+/// it wraps so the user's operator does not have to do it.
+/// </summary>
+internal sealed class ThroughOperator(IOperator input, IOperator output) : IOperator, IResettable
+{
+    public void RenderBlock(Span<StereoFrame> block) => output.RenderBlock(block);
+
+    public void Reset()
+    {
+        input.ResetState();
+        output.ResetState();
     }
 }

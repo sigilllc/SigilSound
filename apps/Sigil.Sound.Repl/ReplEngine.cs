@@ -17,12 +17,15 @@ namespace Sigil.Sound.Repl;
 public sealed class ReplEngine(IJSRuntime js)
 {
     private const double SafetySeconds = 0.15;
+    private const double AudibleLeadSeconds = 0.06;
+    private const double MinCompileLeadSeconds = 1.0;
     private const double MaxAheadSeconds = 4.0;
 
     private readonly Dictionary<string, double> _workEstimates = new()
     {
-        ["compile"] = 1.0,
+        ["compile"] = 0.6,
         ["analyze"] = 0.3,
+        ["render"] = 0.5,
     };
 
     private SoundContext? _output;
@@ -51,7 +54,12 @@ public sealed class ReplEngine(IJSRuntime js)
     public void Play(Sound sound)
     {
         Current = sound;
-        _output?.Play(sound);
+        if (_output is null)
+            return;
+
+        // Audio rendered ahead belongs to the old sound; drop most of it so the change is heard now.
+        Js.InvokeVoid("sigilRepl.audio.flush", AudibleLeadSeconds);
+        _output.Play(sound);
     }
 
     public void Stop()
@@ -67,7 +75,12 @@ public sealed class ReplEngine(IJSRuntime js)
     public T BeforeBlockingWork<T>(string kind, Func<T> work)
     {
         double estimate = _workEstimates[kind];
-        TopUp(Math.Min(MaxAheadSeconds, estimate * 1.5 + SafetySeconds));
+        // A first compile of something unusual can take far longer than the last one did, so compiles
+        // always start with a second of audio queued; Play then flushes whatever the new sound doesn't need.
+        double lead = estimate * 1.5 + SafetySeconds;
+        if (kind == "compile")
+            lead = Math.Max(lead, MinCompileLeadSeconds);
+        TopUp(Math.Min(MaxAheadSeconds, lead));
 
         var timer = Stopwatch.StartNew();
         try
@@ -124,7 +137,15 @@ public sealed class ReplEngine(IJSRuntime js)
             return;
         int buffered = Js.Invoke<int>("sigilRepl.audio.buffered");
         int missing = (int)(seconds * SampleRate) - buffered;
-        if (missing > 0)
-            Js.InvokeVoid("sigilRepl.audio.push", Render(missing));
+
+        // Push in small chunks: the worklet receives each one on its own thread right away, so a heavy sound
+        // that renders at half real time still outpaces playback instead of starving it while one big chunk renders.
+        int chunk = SampleRate / 20;
+        while (missing > 0)
+        {
+            int frames = Math.Min(chunk, missing);
+            Js.InvokeVoid("sigilRepl.audio.push", Render(frames));
+            missing -= frames;
+        }
     }
 }

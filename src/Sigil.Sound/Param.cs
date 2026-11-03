@@ -58,7 +58,7 @@ public abstract class ParamSource
 {
     private readonly float[] _buffer;
 
-    protected ParamSource(RenderContext context) => _buffer = new float[context.BlockSize];
+    internal ParamSource(RenderContext context) => _buffer = new float[context.BlockSize];
 
     /// <summary>True when every value this source produces is the same.</summary>
     public virtual bool IsConstant => false;
@@ -73,19 +73,34 @@ public abstract class ParamSource
         return span;
     }
 
+    /// <summary>Returns to the state just after compiling, so a time function starts again at zero.</summary>
+    internal virtual void Reset()
+    {
+    }
+
     /// <summary>Writes the next <c>values.Length</c> values.</summary>
-    protected abstract void Fill(Span<float> values);
+    private protected abstract void Fill(Span<float> values);
+
+    // Lets a source that never changes fill its buffer once, up front.
+    private protected void Prefill(float value) => _buffer.AsSpan().Fill(value);
 }
 
 internal sealed class ConstantParamSource : ParamSource
 {
-    private readonly float _value;
+    public ConstantParamSource(float value, RenderContext context) : base(context)
+    {
+        Value = value;
+        Prefill(value);
+    }
 
-    public ConstantParamSource(float value, RenderContext context) : base(context) => _value = value;
+    public float Value { get; }
 
     public override bool IsConstant => true;
 
-    protected override void Fill(Span<float> values) => values.Fill(_value);
+    // The buffer already holds the value.
+    private protected override void Fill(Span<float> values)
+    {
+    }
 }
 
 internal sealed class FunctionParamSource : ParamSource
@@ -100,7 +115,9 @@ internal sealed class FunctionParamSource : ParamSource
         _samplePeriod = context.SamplePeriod;
     }
 
-    protected override void Fill(Span<float> values)
+    internal override void Reset() => _position = 0;
+
+    private protected override void Fill(Span<float> values)
     {
         for (int i = 0; i < values.Length; i++)
             values[i] = _function((_position + i) * _samplePeriod);
@@ -119,7 +136,9 @@ internal sealed class SoundParamSource : ParamSource
         _scratch = new StereoFrame[context.BlockSize];
     }
 
-    protected override void Fill(Span<float> values)
+    internal override void Reset() => _operator.ResetState();
+
+    private protected override void Fill(Span<float> values)
     {
         var frames = _scratch.AsSpan(0, values.Length);
         _operator.RenderBlock(frames);

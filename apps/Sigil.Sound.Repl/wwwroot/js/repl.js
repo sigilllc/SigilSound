@@ -187,6 +187,14 @@
             return Math.max(0, audio.written - audio.read);
         },
 
+        // Discards queued audio beyond `seconds`, so a new sound is heard almost at once.
+        flush(seconds) {
+            if (!audio.node) return;
+            const keep = Math.round(seconds * audio.context.sampleRate);
+            audio.node.port.postMessage({ flush: keep });
+            audio.written = Math.min(audio.written, audio.read + keep);
+        },
+
         push(bytes) {
             if (!audio.node || !bytes || bytes.length === 0) return;
             // Copy into a fresh, aligned buffer we can hand to the worklet without copying again.
@@ -253,6 +261,84 @@
         draw();
     }
 
+    function initResizer() {
+        const resizer = document.getElementById("resizer");
+        const work = document.querySelector(".work");
+        if (!resizer || !work) return;
+
+        const MIN_WIDTH = 220;
+        const MAX_WIDTH = 800;
+
+        // Restore saved sidebar width if any
+        const savedWidth = window.sigilRepl.prefs.get("sidebarWidth", null);
+        if (savedWidth && typeof savedWidth === "number") {
+            const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, savedWidth));
+            work.style.setProperty("--sidebar-width", `${clamped}px`);
+        }
+
+        let isDragging = false;
+
+        function onPointerDown(e) {
+            isDragging = true;
+            resizer.classList.add("resizing");
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+            resizer.setPointerCapture(e.pointerId);
+        }
+
+        function onPointerMove(e) {
+            if (!isDragging) return;
+            const workRect = work.getBoundingClientRect();
+            // Calculate new width: distance from mouse pointer to right edge of .work
+            const newWidth = workRect.right - e.clientX;
+            const clamped = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.min(newWidth, workRect.width - 200)));
+            work.style.setProperty("--sidebar-width", `${clamped}px`);
+            if (editor) editor.layout();
+        }
+
+        function onPointerUp(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            resizer.classList.remove("resizing");
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+            if (resizer.hasPointerCapture(e.pointerId)) {
+                resizer.releasePointerCapture(e.pointerId);
+            }
+
+            // Save preference
+            const currentStr = work.style.getPropertyValue("--sidebar-width");
+            const parsed = parseInt(currentStr, 10);
+            if (!isNaN(parsed)) {
+                window.sigilRepl.prefs.set("sidebarWidth", parsed);
+            }
+        }
+
+        resizer.addEventListener("pointerdown", onPointerDown);
+        resizer.addEventListener("pointermove", onPointerMove);
+        resizer.addEventListener("pointerup", onPointerUp);
+        resizer.addEventListener("pointercancel", onPointerUp);
+
+        // Keyboard accessibility: Left / Right arrow keys resize by 20px
+        resizer.addEventListener("keydown", e => {
+            const currentStr = work.style.getPropertyValue("--sidebar-width") || "360px";
+            let current = parseInt(currentStr, 10) || 360;
+            if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                current = Math.min(MAX_WIDTH, current + 20);
+                work.style.setProperty("--sidebar-width", `${current}px`);
+                window.sigilRepl.prefs.set("sidebarWidth", current);
+                if (editor) editor.layout();
+            } else if (e.key === "ArrowRight") {
+                e.preventDefault();
+                current = Math.max(MIN_WIDTH, current - 20);
+                work.style.setProperty("--sidebar-width", `${current}px`);
+                window.sigilRepl.prefs.set("sidebarWidth", current);
+                if (editor) editor.layout();
+            }
+        });
+    }
+
     // ---- API used from C# --------------------------------------------------------------------
 
     window.sigilRepl = {
@@ -304,6 +390,7 @@
                 }
             }, true);
             editor.onDidChangeModelContent(scheduleCheck);
+            initResizer();
             editor.focus();
         },
 

@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
-using Sigil.Sound.Notes;
+using Sigil.Sound;
 
 namespace Sigil.Sound.Repl;
 
