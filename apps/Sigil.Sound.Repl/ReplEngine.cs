@@ -107,6 +107,8 @@ public sealed class ReplEngine(IJSRuntime js)
             _frames = new StereoFrame[frames];
         var block = _frames.AsSpan(0, frames);
 
+        ExecutionGuard.Reset(frames);
+
         try
         {
             _output.Render(block);

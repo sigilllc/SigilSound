@@ -21,27 +21,15 @@ internal sealed class SnippetDocument
     public const string ClassName = "__Snippet";
     public const string MethodName = "__Run";
 
-    private const string Header =
-        """
-        using System;
-        using System.Collections.Generic;
-        using System.Linq;
-        using Sigil.Sound;
-        using static System.Math;
-        using static Sigil.Sound.Sounds;
-
-        public static class __Snippet
-        {
-            public static Sound __Run()
-            {
-
-        """;
+    private static string HeaderFor(SnippetProfile profile) =>
+        string.Join('\n', profile.Usings) + "\n\npublic static class __Snippet\n{\n    public static Sound __Run()\n    {\n\n";
 
     // Each piece of the user's text and where it starts in the wrapped file.
     private readonly (int UserStart, int UserEnd, int WrappedStart)[] _pieces;
 
-    private SnippetDocument(string userCode, string wrapped, (int, int, int)[] pieces)
+    private SnippetDocument(string userCode, string wrapped, (int, int, int)[] pieces, SnippetProfile profile)
     {
+        Profile = profile;
         UserCode = userCode;
         Wrapped = wrapped;
         _pieces = pieces;
@@ -52,16 +40,20 @@ internal sealed class SnippetDocument
 
     public string UserCode { get; }
 
+    /// <summary>The policy this document was wrapped and will be checked under.</summary>
+    public SnippetProfile Profile { get; }
+
     public string Wrapped { get; }
 
     public SyntaxTree Tree { get; }
 
-    public static SnippetDocument Create(string userCode)
+    public static SnippetDocument Create(string userCode, SnippetProfile? profile = null)
     {
+        profile ??= SnippetProfile.Default;
         userCode = userCode.Replace("\r\n", "\n");
         int? split = FinalExpressionStart(userCode);
 
-        var text = new StringBuilder(Header);
+        var text = new StringBuilder(HeaderFor(profile));
         var pieces = new List<(int, int, int)>();
         text.Append("#line 1 \"").Append(FileName).Append("\"\n");
 
@@ -88,7 +80,36 @@ internal sealed class SnippetDocument
         }
 
         text.Append("\n#line default\n    }\n}\n");
-        return new SnippetDocument(userCode, text.ToString(), pieces.ToArray());
+        return new SnippetDocument(userCode, text.ToString(), pieces.ToArray(), profile);
+    }
+
+    /// <summary>
+    /// True when <paramref name="wrappedSpan"/> starts inside text the user typed rather than the generated wrapper.
+    /// Decided by position, never by the <c>#line</c> mapping, which user text could rewrite.
+    /// </summary>
+    public bool IsUserText(Microsoft.CodeAnalysis.Text.TextSpan wrappedSpan)
+    {
+        foreach (var (userStart, userEnd, wrappedStart) in _pieces)
+        {
+            if (wrappedSpan.Start >= wrappedStart && wrappedSpan.Start < wrappedStart + (userEnd - userStart))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>The 1-based line and column in the user's text of a position in the wrapped file that lies inside it.</summary>
+    public (int Line, int Column) LocateInUserText(int wrappedPosition)
+    {
+        foreach (var (userStart, userEnd, wrappedStart) in _pieces)
+        {
+            if (wrappedPosition < wrappedStart || wrappedPosition > wrappedStart + (userEnd - userStart))
+                continue;
+            int offset = Math.Clamp(userStart + wrappedPosition - wrappedStart, 0, UserCode.Length);
+            int line = 1 + UserCode.AsSpan(0, offset).Count('\n');
+            int lastNewline = offset == 0 ? -1 : UserCode.LastIndexOf('\n', offset - 1);
+            return (line, offset - lastNewline);
+        }
+        return (1, 1);
     }
 
     /// <summary>Maps an offset in the user's text to the wrapped file.</summary>

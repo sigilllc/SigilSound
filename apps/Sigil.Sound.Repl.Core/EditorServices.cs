@@ -47,9 +47,9 @@ public static partial class EditorServices
     /// Documentation for the symbol under the cursor as Markdown: its signature, summary, parameters,
     /// return value, remarks and examples. Null when the cursor is not on a documented symbol.
     /// </summary>
-    public static string? Describe(string code, int offset)
+    public static string? Describe(string code, int offset, SnippetProfile? profile = null)
     {
-        var document = SnippetDocument.Create(code);
+        var document = SnippetDocument.Create(code, profile);
         int position = document.ToWrapped(SnippetDocument.NormalizeOffset(code, offset));
         var model = SnippetCompiler.CreateCompilation(document).GetSemanticModel(document.Tree);
         var token = document.Tree.GetRoot().FindToken(position);
@@ -104,9 +104,9 @@ public static partial class EditorServices
         return markdown.ToString().TrimEnd();
     }
 
-    public static IReadOnlyList<CompletionItem> Complete(string code, int offset)
+    public static IReadOnlyList<CompletionItem> Complete(string code, int offset, SnippetProfile? profile = null)
     {
-        var document = SnippetDocument.Create(code);
+        var document = SnippetDocument.Create(code, profile);
         int position = document.ToWrapped(SnippetDocument.NormalizeOffset(code, offset));
         var model = SnippetCompiler.CreateCompilation(document).GetSemanticModel(document.Tree);
         var root = document.Tree.GetRoot();
@@ -119,22 +119,22 @@ public static partial class EditorServices
             token = token.GetPreviousToken();
 
         if (token.IsKind(SyntaxKind.DotToken))
-            return MemberCompletions(model, token, position);
+            return MemberCompletions(model, token, position, document.Profile);
 
         if (InsideStringOrComment(root, position))
             return [];
 
         var symbols = model.LookupSymbols(position)
             .Where(s => s is not INamespaceSymbol ns || ns.Name is "System" or "Sigil")
-            .Where(Visible);
+            .Where(s => Visible(s, document.Profile));
         var items = Group(symbols, model, position, rank: s => s.ContainingType?.ContainingNamespace?.ToDisplayString().StartsWith("Sigil") == true ? "0" : "1");
         items.AddRange(Keywords.Select(k => new CompletionItem(k, "Keyword", "keyword", null, "2" + k)));
         return items;
     }
 
-    public static SignatureHelp? Signatures(string code, int offset)
+    public static SignatureHelp? Signatures(string code, int offset, SnippetProfile? profile = null)
     {
-        var document = SnippetDocument.Create(code);
+        var document = SnippetDocument.Create(code, profile);
         int position = document.ToWrapped(SnippetDocument.NormalizeOffset(code, offset));
         var model = SnippetCompiler.CreateCompilation(document).GetSemanticModel(document.Tree);
         var token = document.Tree.GetRoot().FindToken(Math.Max(0, position - 1));
@@ -154,7 +154,7 @@ public static partial class EditorServices
                 ?? [],
             _ => [],
         };
-        var methods = candidates.Where(Visible).ToList();
+        var methods = candidates.Where(m => Visible(m, document.Profile)).ToList();
         if (methods.Count == 0)
             return null;
 
@@ -186,7 +186,7 @@ public static partial class EditorServices
         return new SignatureInfo(label.ToString(), docs?.Summary, parameters);
     }
 
-    private static List<CompletionItem> MemberCompletions(SemanticModel model, SyntaxToken dot, int position)
+    private static List<CompletionItem> MemberCompletions(SemanticModel model, SyntaxToken dot, int position, SnippetProfile profile)
     {
         ExpressionSyntax? left = dot.Parent switch
         {
@@ -216,7 +216,7 @@ public static partial class EditorServices
                 .Where(s => !s.IsStatic || s is IMethodSymbol { MethodKind: MethodKind.ReducedExtension });
         }
 
-        return Group(symbols.Where(Visible), model, position,
+        return Group(symbols.Where(s => Visible(s, profile)), model, position,
             rank: s => s.ContainingType?.SpecialType is SpecialType.System_Object or SpecialType.System_ValueType ? "1" : "0");
     }
 
@@ -242,13 +242,28 @@ public static partial class EditorServices
         return items;
     }
 
-    private static bool Visible(ISymbol symbol) =>
-        symbol.CanBeReferencedByName &&
-        !symbol.IsImplicitlyDeclared &&
-        !symbol.Name.StartsWith("__", StringComparison.Ordinal) &&
-        symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.NotApplicable &&
-        symbol is not IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator or MethodKind.Conversion or MethodKind.PropertyGet or MethodKind.PropertySet } &&
-        !symbol.GetAttributes().Any(a => a.AttributeClass?.Name is "ObsoleteAttribute" or "EditorBrowsableAttribute");
+    /// <summary>Whether completion and signature help may offer <paramref name="symbol"/>: public, not hidden, and not in a namespace the profile blocks.</summary>
+    private static bool Visible(ISymbol symbol, SnippetProfile profile)
+    {
+        if (!symbol.CanBeReferencedByName ||
+            symbol.IsImplicitlyDeclared ||
+            symbol.Name.StartsWith("__", StringComparison.Ordinal) ||
+            symbol.DeclaredAccessibility is not (Accessibility.Public or Accessibility.NotApplicable) ||
+            symbol is IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator or MethodKind.Conversion or MethodKind.PropertyGet or MethodKind.PropertySet } ||
+            symbol.GetAttributes().Any(a => a.AttributeClass?.Name is "ObsoleteAttribute" or "EditorBrowsableAttribute"))
+        {
+            return false;
+        }
+
+        var ns = (symbol as INamespaceSymbol) ?? symbol.ContainingNamespace;
+        if (ns is not null && !ns.IsGlobalNamespace)
+        {
+            if (profile.IsBlockedNamespace(ns.ToDisplayString()))
+                return false;
+        }
+
+        return true;
+    }
 
     private static string KindOf(ISymbol symbol) => symbol switch
     {

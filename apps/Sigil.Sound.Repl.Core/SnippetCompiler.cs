@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -32,6 +33,7 @@ public sealed class CompileResult
     {
         if (_entryPoint is null)
             throw new InvalidOperationException("The snippet did not compile.");
+        ExecutionGuard.Reset();
         try
         {
             return (Sound?)_entryPoint.Invoke(null, null)
@@ -57,10 +59,14 @@ public static class SnippetCompiler
         concurrentBuild: false,
         nullableContextOptions: NullableContextOptions.Disable);
 
-    // The references are bound once. Editor requests (completion, hover, checking while typing) add their snippet to this
-    // compilation instead of building one from scratch, which keeps every keystroke from re-reading all the metadata.
-    private static readonly Lazy<CSharpCompilation> Shared = new(() =>
-        CSharpCompilation.Create("snippet", references: SnippetReferences.All, options: Options));
+    // The references are bound once per profile. Editor requests (completion, hover, checking while typing) add their
+    // snippet to this compilation instead of building one from scratch, which keeps every keystroke from re-reading
+    // all the metadata.
+    private static readonly ConditionalWeakTable<SnippetProfile, Lazy<CSharpCompilation>> Shared = new();
+
+    private static CSharpCompilation SharedFor(SnippetProfile profile) =>
+        Shared.GetValue(profile, static p => new Lazy<CSharpCompilation>(() =>
+            CSharpCompilation.Create("snippet", references: p.References, options: Options))).Value;
 
     /// <summary>
     /// A compilation of <paramref name="document"/>. Without an assembly name it reuses the shared reference binding,
@@ -68,8 +74,8 @@ public static class SnippetCompiler
     /// </summary>
     internal static CSharpCompilation CreateCompilation(SnippetDocument document, string? assemblyName = null) =>
         assemblyName is null
-            ? Shared.Value.AddSyntaxTrees(document.Tree)
-            : CSharpCompilation.Create(assemblyName, [document.Tree], SnippetReferences.All, Options);
+            ? SharedFor(document.Profile).AddSyntaxTrees(document.Tree)
+            : CSharpCompilation.Create(assemblyName, [document.Tree], document.Profile.References, Options);
 
     // Every run of a snippet produces an assembly. In a collectible context they can be freed once the sound that
     // uses one has been replaced; a long live-coding session would otherwise pile them up for good.
@@ -102,13 +108,28 @@ public static class SnippetCompiler
     /// </summary>
     public static void Warm() => Compile(WarmSnippet).Run().Render(0.05);
 
-    public static CompileResult Compile(string code)
+    /// <param name="code">What the user typed.</param>
+    /// <param name="profile">The host's policy; <see cref="SnippetProfile.Default"/> when omitted.</param>
+    public static CompileResult Compile(string code, SnippetProfile? profile = null)
     {
-        var document = SnippetDocument.Create(code);
+        var document = SnippetDocument.Create(code, profile);
         var compilation = CreateCompilation(document, $"snippet{Interlocked.Increment(ref _count)}");
 
+        // 1. Validate AST and symbols against the REPL security sandbox allowlist
+        var securityDiagnostics = SnippetSecurityValidator.Validate(compilation, document);
+        if (securityDiagnostics.Any(d => d.IsError))
+            return new CompileResult(null, securityDiagnostics);
+
+        // 2. Rewrite AST to inject loop step counters and recursion depth guards
+        var guardedTree = LoopGuardRewriter.Apply(document.Tree, compilation.GetSemanticModel(document.Tree));
+        var guardedCompilation = CSharpCompilation.Create(
+            compilation.AssemblyName!,
+            [guardedTree],
+            document.Profile.References,
+            Options);
+
         using var image = new MemoryStream();
-        var emit = compilation.Emit(image);
+        var emit = guardedCompilation.Emit(image);
         var diagnostics = Map(emit.Diagnostics);
         if (!emit.Success)
             return new CompileResult(null, diagnostics);
@@ -119,8 +140,20 @@ public static class SnippetCompiler
     }
 
     /// <summary>Errors and warnings in the user's text, without emitting; cheap enough to run while typing.</summary>
-    public static IReadOnlyList<SnippetDiagnostic> Check(string code) =>
-        Map(CreateCompilation(SnippetDocument.Create(code)).GetDiagnostics());
+    public static IReadOnlyList<SnippetDiagnostic> Check(string code, SnippetProfile? profile = null)
+    {
+        var document = SnippetDocument.Create(code, profile);
+        var compilation = CreateCompilation(document);
+        var securityDiagnostics = SnippetSecurityValidator.Validate(compilation, document);
+        var compilerDiagnostics = Map(compilation.GetDiagnostics());
+
+        return securityDiagnostics
+            .Concat(compilerDiagnostics)
+            .OrderBy(d => !d.IsError)
+            .ThenBy(d => d.StartLine)
+            .ThenBy(d => d.StartColumn)
+            .ToList();
+    }
 
     internal static IReadOnlyList<SnippetDiagnostic> Map(IEnumerable<Diagnostic> diagnostics) =>
         diagnostics

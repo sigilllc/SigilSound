@@ -54,6 +54,22 @@
         </a>
     </header>
 
+    @if (_showDisclaimer)
+    {
+        <div class="disclaimer-banner" role="note" aria-label="Security and safety notice">
+            <span class="disclaimer-badge">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span>Notice</span>
+            </span>
+            <span class="disclaimer-text">
+                Snippets compile and run locally in your browser sandbox. Only execute code from sources you trust, and monitor volume levels to protect your hearing.
+            </span>
+            <button class="disclaimer-dismiss" @onclick="DismissDisclaimer" title="Dismiss notice" aria-label="Dismiss">✕</button>
+        </div>
+    }
+
     <main class="work">
         <div id="editor" class="editor" @ref="_editorHost"></div>
 
@@ -109,6 +125,13 @@
     <footer class="status">
         <span class="@_statusKind">@_status</span>
         <span class="sp"></span>
+        <button class="status-shield" @onclick="ToggleDisclaimer" title="Snippets compile and run locally in your browser sandbox. Click to toggle security notice.">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Sandboxed REPL · Run trusted code only</span>
+        </button>
+        <span class="sp"></span>
         <span class="keys">Ctrl+Enter run · Ctrl+. stop · Ctrl+I suggest · Ctrl+Click docs</span>
     </footer>
 </div>
@@ -120,6 +143,7 @@
     private bool _ready;
     private bool _playing;
     private bool _refreshOnChange = true;
+    private bool _showDisclaimer = true;
     private string _status = "Loading compiler";
     private string _statusKind = "dim";
     private IReadOnlyList<SnippetDiagnostic> _diagnostics = [];
@@ -135,6 +159,12 @@
         _engineRef = DotNetObjectReference.Create(Engine);
         await JS.InvokeVoidAsync("sigilRepl.init", _self, _editorHost, Examples.All[0].Code);
         _refreshOnChange = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "refreshOnChange", true);
+        bool dismissed = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "disclaimerDismissed", false);
+        if (dismissed && _showDisclaimer)
+        {
+            _showDisclaimer = false;
+            StateHasChanged();
+        }
 
         // Let the page paint before the first, slow Roslyn run.
         await Task.Delay(50);
@@ -146,6 +176,18 @@
         });
         _ready = true;
         SetStatus($"Ready ({timer.ElapsedMilliseconds} ms)", "dim");
+    }
+
+    private async Task DismissDisclaimer()
+    {
+        _showDisclaimer = false;
+        await JS.InvokeVoidAsync("sigilRepl.prefs.set", "disclaimerDismissed", true);
+    }
+
+    private async Task ToggleDisclaimer()
+    {
+        _showDisclaimer = !_showDisclaimer;
+        await JS.InvokeVoidAsync("sigilRepl.prefs.set", "disclaimerDismissed", !_showDisclaimer);
     }
 
     /// <summary>Run button and Ctrl+Enter: starts audio if needed and plays the editor's code.</summary>

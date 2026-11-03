@@ -21,11 +21,11 @@ internal static class SnippetReferences
         "System.Linq",
     ];
 
-    private static readonly Lazy<IReadOnlyList<MetadataReference>> Cached = new(Create);
+    /// <summary>The references of <see cref="SnippetProfile.Default"/>.</summary>
+    public static IReadOnlyList<MetadataReference> All => SnippetProfile.Default.References;
 
-    public static IReadOnlyList<MetadataReference> All => Cached.Value;
-
-    private static IReadOnlyList<MetadataReference> Create()
+    /// <summary>The framework, the Sigil assemblies and the snippet guards, plus whatever a host profile adds.</summary>
+    internal static IReadOnlyList<MetadataReference> Create(IEnumerable<Assembly> extraAssemblies)
     {
         var references = new List<MetadataReference>();
         foreach (var name in FrameworkAssemblies)
@@ -33,6 +33,9 @@ internal static class SnippetReferences
 
         references.Add(FromLoaded(typeof(Sound).Assembly));
         references.Add(FromLoaded(typeof(Note).Assembly));
+        references.Add(FromLoaded(typeof(ExecutionGuard).Assembly));
+        foreach (var assembly in extraAssemblies)
+            references.Add(FromLoaded(assembly));
         return references;
     }
 
