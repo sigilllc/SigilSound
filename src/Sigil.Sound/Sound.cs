@@ -39,25 +39,48 @@ public sealed class Sound
     /// <summary>
     /// Escape hatch to the operator layer: feeds this sound into an operator you write.
     /// </summary>
-    /// <example><c>sound.Through(input => new MyOperator(input))</c></example>
+    /// <param name="wrap">Called once per compile with this sound's running operator; returns the operator that processes it.
+    /// Create any state inside it so every compile starts fresh. Use <see cref="Operator.From"/> to write one as a lambda.</param>
+    /// <param name="description">Text shown for the result in <see cref="ToString"/>.</param>
+    /// <example>
+    /// <code>
+    /// Saw(110).Through(input => Operator.From(block =>
+    /// {
+    ///     input.RenderBlock(block);
+    ///     for (int i = 0; i != block.Length; i++)
+    ///         block[i] = block[i] * 0.5f;
+    /// }))
+    /// </code>
+    /// </example>
     public Sound Through(Func<IOperator, IOperator> wrap, string? description = null)
     {
         ArgumentNullException.ThrowIfNull(wrap);
         return new Sound(ctx => wrap(Compile(ctx)), description ?? $"{this}.Through(...)");
     }
 
-    /// <summary>Scales the amplitude by <paramref name="gain"/>.</summary>
+    /// <summary>Scales the amplitude.</summary>
+    /// <param name="gain">The factor: a number, another sound (amplitude modulation) or <c>Fn(t => ...)</c>. 1 leaves the level unchanged.</param>
+    /// <example><code>Saw(110).Gain(0.5)   // same as Saw(110) * 0.5</code></example>
     public Sound Gain(Param gain) =>
         new(ctx => new GainOperator(Compile(ctx), gain.Compile(ctx)), $"{this}.Gain({gain})");
 
     /// <summary>Maps a bipolar signal in [-1, 1] to [<paramref name="min"/>, <paramref name="max"/>]; handy for LFOs.</summary>
-    public Sound Range(float min, float max) =>
-        new(ctx => new RangeOperator(Compile(ctx), min, max), $"{this}.Range({min}, {max})");
+    /// <param name="min">The value the signal's -1 maps to.</param>
+    /// <param name="max">The value the signal's +1 maps to.</param>
+    /// <example><code>Sine(0.25).Range(200, 2000)   // sweeps between 200 and 2000, four seconds per cycle</code></example>
+    public Sound Range(double min, double max) =>
+        new(ctx => new RangeOperator(Compile(ctx), (float)min, (float)max), $"{this}.Range({min}, {max})");
 
     /// <summary>
     /// Shapes the amplitude with an attack-decay-sustain-release envelope. Times are in seconds.
     /// The release starts after <paramref name="hold"/> seconds (default: once attack and decay finish).
     /// </summary>
+    /// <param name="attack">Seconds to rise from silence to full level.</param>
+    /// <param name="decay">Seconds to fall from full level to <paramref name="sustain"/>.</param>
+    /// <param name="sustain">The level held after the decay, from 0 to 1.</param>
+    /// <param name="release">Seconds to fall to silence once the release starts.</param>
+    /// <param name="hold">Seconds from the start until the release begins. Omit it to release right after the decay.</param>
+    /// <example><code>Saw(220).Adsr(0.01, 0.2, 0.6, 1.5, hold: 3)</code></example>
     public Sound Adsr(double attack, double decay, double sustain, double release, double? hold = null)
     {
         if (attack < 0) throw new ArgumentOutOfRangeException(nameof(attack), attack, "Attack must not be negative.");
@@ -71,6 +94,9 @@ public sealed class Sound
     }
 
     /// <summary>A resonant two-pole low-pass filter. <paramref name="cutoff"/> is in Hz.</summary>
+    /// <param name="cutoff">Frequency in Hz above which the sound is attenuated. A number, or a sound or <c>Fn(t => ...)</c> to sweep it.</param>
+    /// <param name="q">Resonance at the cutoff. 0.7 is flat; higher values ring. Defaults to 0.7071.</param>
+    /// <example><code>Saw(110).LowPass(Sine(0.25).Range(200, 2000), q: 4)</code></example>
     public Sound LowPass(Param cutoff, Param? q = null)
     {
         var resonance = q ?? 0.7071f;

@@ -1,0 +1,303 @@
+﻿@page "/"
+@implements IDisposable
+@inject ReplEngine Engine
+@inject IJSRuntime JS
+
+<PageTitle>Sigil.Sound REPL</PageTitle>
+
+<div class="app">
+    <header class="bar">
+        <a class="brand" href="https://sigilaud.io" target="_blank" rel="noopener noreferrer" title="Sigilgraph Audio Workbench">
+            <img src="img/logo.svg" alt="" width="53" height="32" />
+            <h1>
+                <span class="wordmark">SIGIL.SOUND</span>
+                <span class="tagline">REPL</span>
+            </h1>
+        </a>
+
+        <div class="tpg">
+            <button class="tp play" @onclick="RunAsync" disabled="@(!_ready)" aria-pressed="@(_playing ? "true" : "false")" title="Run (Ctrl+Enter)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" /></svg>
+                <span class="sr-only">Run</span>
+            </button>
+            <button class="tp" @onclick="Stop" disabled="@(!_playing)" title="Stop (Ctrl+.)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="1" /></svg>
+                <span class="sr-only">Stop</span>
+            </button>
+        </div>
+
+        <select class="sel" @onchange="LoadExampleAsync" value="" aria-label="Examples">
+            <option value="" disabled>Examples</option>
+            @foreach (var example in Examples.All)
+            {
+                <option value="@example.Name">@example.Name</option>
+            }
+        </select>
+
+        <label class="switch" title="While a sound plays, apply edits as soon as they compile">
+            <input type="checkbox" checked="@_refreshOnChange" @onchange="ToggleRefreshAsync" />
+            Refresh on change
+        </label>
+
+        <span class="sp"></span>
+
+        <a class="btn" href="https://sigilaud.io" target="_blank" rel="noopener noreferrer"
+           title="Sigilgraph Audio Workbench, the modular audio workstation this library comes from">To AudioWorkbench...</a>
+
+        <button class="btn ghost" @onclick="ShareAsync" title="Copy a link that contains this snippet">Share</button>
+        <button class="btn ghost" @onclick="DownloadAsync" disabled="@(!_ready)" title="Render 10 seconds to a WAV file">Export WAV</button>
+        @* Placeholder until the repository is public. *@
+        <a class="btn bare ic" aria-disabled="true" title="GitHub (not public yet)">
+            <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+                <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+            </svg>
+        </a>
+    </header>
+
+    <main class="work">
+        <div id="editor" class="editor" @ref="_editorHost"></div>
+
+        <aside class="side">
+            <section class="sec">
+                <div class="sec-h"><h2>Output</h2></div>
+                <div class="wave"><canvas id="scope"></canvas></div>
+            </section>
+
+            <section class="sec" aria-live="polite">
+                <div class="sec-h"><h2>Problems</h2><span class="end">@_diagnostics.Count</span></div>
+                @if (_diagnostics.Count == 0)
+                {
+                    <p class="plain dim">None.</p>
+                }
+                else
+                {
+                    <ul class="problems">
+                        @foreach (var d in _diagnostics.Take(8))
+                        {
+                            <li class="@(d.IsError ? "error" : "warning")">
+                                @if (d.StartLine > 0)
+                                {
+                                    <span class="at">@d.StartLine:@d.StartColumn</span>
+                                }
+                                <span>@d.Message</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section class="sec">
+                <div class="sec-h"><h2>Reference</h2></div>
+                <ul class="kv">
+                    <li><span class="k">Sources</span><span class="val">Sine Saw Square Noise Fn Constant</span></li>
+                    <li><span class="k">Shape</span><span class="val">LowPass Adsr Range Gain</span></li>
+                    <li><span class="k">Mix</span><span class="val">a + b, a * 0.5</span></li>
+                    <li><span class="k">Ring mod</span><span class="val">a * b</span></li>
+                    <li><span class="k">Parameters</span><span class="val">number, sound, Fn(t =&gt; ...)</span></li>
+                    <li><span class="k">Notes</span><span class="val">Notes.Parse("C4 E4"), LINQ</span></li>
+                </ul>
+                <p class="plain dim">The last expression is the sound.</p>
+            </section>
+        </aside>
+    </main>
+
+    <footer class="status">
+        <span class="@_statusKind">@_status</span>
+        <span class="sp"></span>
+        <span class="keys">Ctrl+Enter run · Ctrl+. stop · Ctrl+I suggest · Ctrl+Click docs</span>
+    </footer>
+</div>
+
+@code {
+    private ElementReference _editorHost;
+    private DotNetObjectReference<Home>? _self;
+    private DotNetObjectReference<ReplEngine>? _engineRef;
+    private bool _ready;
+    private bool _playing;
+    private bool _refreshOnChange = true;
+    private string _status = "Loading compiler";
+    private string _statusKind = "dim";
+    private IReadOnlyList<SnippetDiagnostic> _diagnostics = [];
+
+    protected override void OnInitialized() => Engine.RenderFailed += OnRenderFailed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _self = DotNetObjectReference.Create(this);
+        _engineRef = DotNetObjectReference.Create(Engine);
+        await JS.InvokeVoidAsync("sigilRepl.init", _self, _editorHost, Examples.All[0].Code);
+        _refreshOnChange = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "refreshOnChange", true);
+
+        // Let the page paint before the first, slow Roslyn run.
+        await Task.Delay(50);
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        await Task.Run(() =>
+        {
+            SnippetCompiler.Warm();
+            EditorServices.Warm();
+        });
+        _ready = true;
+        SetStatus($"Ready ({timer.ElapsedMilliseconds} ms)", "dim");
+    }
+
+    /// <summary>Run button and Ctrl+Enter: starts audio if needed and plays the editor's code.</summary>
+    [JSInvokable]
+    public async Task RunAsync()
+    {
+        if (!_ready)
+            return;
+
+        // Start audio first: this has to happen close to the click or key press that allowed it.
+        await Engine.StartAsync(_engineRef!);
+        await PlayAsync(await JS.InvokeAsync<string>("sigilRepl.getCode"));
+    }
+
+    /// <summary>
+    /// Called after a pause in typing. With refresh on change, a playing sound is replaced as soon as
+    /// the edit compiles; otherwise the code is only checked for problems.
+    /// </summary>
+    [JSInvokable]
+    public async Task<IReadOnlyList<SnippetDiagnostic>> CodeChangedAsync(string code)
+    {
+        if (!_ready)
+            return [];
+        if (_refreshOnChange && _playing)
+        {
+            await PlayAsync(code);
+            return _diagnostics;
+        }
+
+        _diagnostics = Engine.BeforeBlockingWork("analyze", () => SnippetCompiler.Check(code));
+        StateHasChanged();
+        return _diagnostics;
+    }
+
+    [JSInvokable]
+    public void Stop()
+    {
+        Engine.Stop();
+        _playing = false;
+        SetStatus("Stopped", "dim");
+    }
+
+    [JSInvokable]
+    public IReadOnlyList<CompletionItem> Complete(string code, int offset) =>
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Complete(code, offset)) : [];
+
+    [JSInvokable]
+    public string? Describe(string code, int offset) =>
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Describe(code, offset)) : null;
+
+    [JSInvokable]
+    public SignatureHelp? Signatures(string code, int offset) =>
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Signatures(code, offset)) : null;
+
+    private async Task PlayAsync(string code)
+    {
+        SetStatus("Compiling", "dim");
+        await Task.Delay(1);
+
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code));
+        long compileMs = timer.ElapsedMilliseconds;
+        ShowDiagnostics(result.Diagnostics);
+
+        if (!result.Success)
+        {
+            SetStatus(_playing ? "Not compiled; still playing the previous version" : "Not compiled", "error");
+            return;
+        }
+
+        try
+        {
+            Engine.Play(result.Run());
+            _playing = true;
+            SetStatus($"Playing (compiled in {compileMs} ms)", "ok");
+        }
+        catch (Exception e)
+        {
+            SetStatus($"{e.GetType().Name}: {e.Message}", "error");
+        }
+    }
+
+    private async Task ToggleRefreshAsync(ChangeEventArgs e)
+    {
+        _refreshOnChange = e.Value is true;
+        await JS.InvokeVoidAsync("sigilRepl.prefs.set", "refreshOnChange", _refreshOnChange);
+    }
+
+    private async Task LoadExampleAsync(ChangeEventArgs e)
+    {
+        var example = Examples.All.FirstOrDefault(x => x.Name == e.Value as string);
+        if (example is null)
+            return;
+        // Refresh on change picks the new code up; without it, a playing sound switches right away.
+        await JS.InvokeVoidAsync("sigilRepl.setCode", example.Code);
+        if (_playing && !_refreshOnChange)
+            await PlayAsync(example.Code);
+    }
+
+    private async Task ShareAsync()
+    {
+        bool copied = await JS.InvokeAsync<bool>("sigilRepl.share");
+        SetStatus(copied ? "Link copied" : "Link is in the address bar", "dim");
+    }
+
+    private async Task DownloadAsync()
+    {
+        var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
+        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code));
+        ShowDiagnostics(result.Diagnostics);
+        if (!result.Success)
+        {
+            SetStatus("Not compiled", "error");
+            return;
+        }
+
+        try
+        {
+            using var wav = new MemoryStream();
+            Engine.BeforeBlockingWork("compile", () =>
+            {
+                result.Run().RenderToWav(wav, seconds: 10, sampleRate: Engine.SampleRate);
+                return 0;
+            });
+            await JS.InvokeVoidAsync("sigilRepl.download", "sigil-sound.wav", wav.ToArray());
+            SetStatus("Exported sigil-sound.wav (10 s)", "dim");
+        }
+        catch (Exception e)
+        {
+            SetStatus($"{e.GetType().Name}: {e.Message}", "error");
+        }
+    }
+
+    private void ShowDiagnostics(IReadOnlyList<SnippetDiagnostic> diagnostics)
+    {
+        _diagnostics = diagnostics;
+        ((IJSInProcessRuntime)JS).InvokeVoid("sigilRepl.setMarkers", diagnostics);
+    }
+
+    private void OnRenderFailed(string message)
+    {
+        _playing = false;
+        SetStatus($"Stopped: {message}", "error");
+    }
+
+    private void SetStatus(string text, string kind)
+    {
+        _status = text;
+        _statusKind = kind;
+        // Calls from JavaScript (Ctrl+Enter, the audio pump) don't re-render on their own.
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Engine.RenderFailed -= OnRenderFailed;
+        _self?.Dispose();
+        _engineRef?.Dispose();
+    }
+}

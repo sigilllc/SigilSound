@@ -21,3 +21,41 @@ public interface IOperator
     /// </summary>
     void RenderBlock(Span<StereoFrame> block);
 }
+
+/// <summary>
+/// The shape of a block renderer written as a lambda; see <see cref="Operator.From"/>.
+/// A custom delegate, because <see cref="Span{T}"/> cannot be a type argument of <see cref="Action{T}"/>.
+/// </summary>
+/// <param name="block">The frames to fill, or to rework when the operator has an input.</param>
+public delegate void BlockRenderer(Span<StereoFrame> block);
+
+/// <summary>Creating <see cref="IOperator"/> instances without declaring a class.</summary>
+public static class Operator
+{
+    /// <summary>
+    /// Wraps a lambda as an operator, for use with <see cref="Sound.Through"/> and <see cref="Sound.FromOperator"/>.
+    /// State lives in variables the lambda captures; declare them where the operator is created, so every
+    /// compile of the sound starts fresh. The same real-time rules as <see cref="IOperator.RenderBlock"/> apply.
+    /// </summary>
+    /// <param name="render">Renders the next block. Must not allocate or block.</param>
+    /// <example>
+    /// <code>
+    /// Saw(110).Through(input => Operator.From(block =>
+    /// {
+    ///     input.RenderBlock(block);              // pull the input, then rework it in place
+    ///     for (int i = 0; i != block.Length; i++)
+    ///         block[i] = block[i] * 2f;
+    /// }))
+    /// </code>
+    /// </example>
+    public static IOperator From(BlockRenderer render)
+    {
+        ArgumentNullException.ThrowIfNull(render);
+        return new DelegateOperator(render);
+    }
+
+    private sealed class DelegateOperator(BlockRenderer render) : IOperator
+    {
+        public void RenderBlock(Span<StereoFrame> block) => render(block);
+    }
+}

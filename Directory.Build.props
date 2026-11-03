@@ -13,5 +13,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- Docs ship with the packages and show up in the REPL's completion. Missing docs are not an error yet. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 </Project>

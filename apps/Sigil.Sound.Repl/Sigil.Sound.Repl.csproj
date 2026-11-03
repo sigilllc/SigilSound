@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <!-- The browser REPL: type a C# expression, hear it. Everything runs client-side; there is no server. -->
+  <PropertyGroup>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Snippets can call anything in the referenced assemblies, which trimming can't see.
+         Trimming with explicit roots is a later size optimization. -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sigil.Sound.Repl.Core\Sigil.Sound.Repl.Core.csproj" />
+  </ItemGroup>
+</Project>

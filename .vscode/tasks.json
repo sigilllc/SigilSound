@@ -1,0 +1,114 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/SigilSound.sln"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "test",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "test",
+        "${workspaceFolder}/SigilSound.sln"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "repl: run",
+      "detail": "Serves the REPL at http://localhost:5214 and opens the browser",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/apps/Sigil.Sound.Repl",
+        "--launch-profile",
+        "http"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "base": "$msCompile",
+        "background": {
+          "beginsPattern": "^.*Building",
+          "endsPattern": "Now listening on"
+        }
+      }
+    },
+    {
+      "label": "repl: watch",
+      "detail": "Like repl: run, but rebuilds and reloads when files change",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "--project",
+        "${workspaceFolder}/apps/Sigil.Sound.Repl",
+        "run",
+        "--launch-profile",
+        "http"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "base": "$msCompile",
+        "background": {
+          "beginsPattern": "^.*Building",
+          "endsPattern": "Now listening on"
+        }
+      }
+    },
+    {
+      "label": "repl: run (release)",
+      "detail": "Optimized Release build of the REPL at http://localhost:5214",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/apps/Sigil.Sound.Repl",
+        "-c",
+        "Release",
+        "--launch-profile",
+        "http"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "base": "$msCompile",
+        "background": {
+          "beginsPattern": "^.*Building",
+          "endsPattern": "Now listening on"
+        }
+      }
+    },
+    {
+      "label": "repl: publish",
+      "detail": "Static site for hosting (Brotli and gzip precompressed) in artifacts/repl/wwwroot",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "publish",
+        "${workspaceFolder}/apps/Sigil.Sound.Repl",
+        "-c",
+        "Release",
+        "-o",
+        "${workspaceFolder}/artifacts/repl"
+      ],
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

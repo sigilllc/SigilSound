@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles REPL snippets and answers editor questions (completion, signatures, diagnostics) with Roslyn.
+       Kept apart from the Blazor app so it runs, and is tested, on the desktop runtime too. -->
+  <PropertyGroup>
+    <RootNamespace>Sigil.Sound.Repl</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Sigil.Sound\Sigil.Sound.csproj" />
+    <ProjectReference Include="..\..\src\Sigil.Sound.Notes\Sigil.Sound.Notes.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Sigil.Sound.Repl.Tests" />
+  </ItemGroup>
+
+  <!-- Embed the Sigil assemblies' XML docs: the browser has no file system to find them next to the DLLs. -->
+  <Target Name="EmbedSigilDocumentation" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <_SigilDocs Include="@(ReferencePath->'%(RootDir)%(Directory)%(Filename).xml')" Condition="$([System.String]::Copy('%(Filename)').StartsWith('Sigil.Sound'))" />
+      <EmbeddedResource Include="@(_SigilDocs)" Condition="Exists('%(Identity)')" LogicalName="%(Filename).xml" />
+    </ItemGroup>
+  </Target>
+</Project>

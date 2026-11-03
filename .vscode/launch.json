@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "REPL (debug in browser)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/Sigil.Sound.Repl",
+      "url": "http://localhost:5214",
+      "browser": "edge"
+    }
+  ]
+}

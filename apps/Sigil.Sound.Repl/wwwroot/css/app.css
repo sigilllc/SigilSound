@@ -1,0 +1,576 @@
+/* Tokens and components follow the Audio Workbench desktop theme (Workbench UI Theme mock):
+   Roboto Mono only, flat surfaces, 1 px rules, teal for the one thing that is active. */
+:root {
+    --canvas: #15161c;
+    --panel: #262832;
+    --well: #14151b;
+    --raise: #30323d;
+    --line: #3b3e4a;
+    --line-2: #31333e;
+    --fg: #eef0f3;
+    --fg-2: #d2d6dd;
+    --dim: #a6abb5;
+    --teal: #1de9b6;
+    --teal-ink: #05261d;
+    --teal-a: #1de9b61f;
+    --amber: #ffb000;
+    --tomato: #ff5a4f;
+    --mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --t-head: 17px;
+    --t-sec: 15px;
+    --t-body: 14px;
+    --t-small: 13px;
+    --t-badge: 12px;
+    --ctl-h: 36px;
+    --r: 5px;
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: var(--t-body);
+    line-height: 1.45;
+}
+
+button,
+input,
+select {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+}
+
+.sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ---- Layout ---------------------------------------------------------------------------- */
+
+.app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 8px;
+    text-decoration: none;
+}
+
+/* The brand lockup from the Sigilgraph site: the one place Montserrat is used. */
+.brand h1 {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    font-family: "Montserrat", sans-serif;
+    white-space: nowrap;
+}
+
+.brand .wordmark {
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: #fff;
+}
+
+.brand .tagline {
+    margin-top: 3px;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.4em;
+    color: var(--teal);
+}
+
+.sp {
+    flex: 1;
+}
+
+.work {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    min-height: 0;
+}
+
+.editor {
+    min-height: 0;
+    min-width: 0;
+    background: var(--well);
+}
+
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 14px 16px;
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--raise) transparent;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 28px;
+    padding: 0 16px;
+    font-size: var(--t-small);
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.status > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status .ok {
+    color: var(--teal);
+}
+
+.status .error {
+    color: var(--amber);
+}
+
+.status .dim,
+.status .keys {
+    color: var(--dim);
+}
+
+/* ---- Components (same names as the theme mock) ----------------------------------------- */
+
+.tpg {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.tp {
+    --s: 36px;
+    width: var(--s);
+    height: var(--s);
+    flex: none;
+    padding: 0;
+    border-radius: 6px;
+    background: #1b1c22;
+    border: 1px solid var(--line);
+    color: var(--fg-2);
+    display: inline-grid;
+    place-items: center;
+}
+
+.tp svg {
+    width: calc(var(--s) * 0.48);
+    height: calc(var(--s) * 0.48);
+}
+
+.tp:hover:not(:disabled) {
+    border-color: var(--dim);
+    color: var(--fg);
+}
+
+.tp.play {
+    color: var(--teal);
+}
+
+.tp[aria-pressed="true"] {
+    background: var(--teal-a);
+    border-color: var(--teal);
+    color: var(--teal);
+}
+
+.tp:disabled {
+    color: #5e626c;
+    border-color: var(--line-2);
+    cursor: default;
+}
+
+.btn {
+    height: var(--ctl-h);
+    padding: 0 14px;
+    border-radius: var(--r);
+    border: 1.5px solid var(--teal);
+    background: none;
+    color: var(--teal);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+    flex: none;
+    text-decoration: none;
+}
+
+.btn:hover {
+    background: var(--teal-a);
+}
+
+.btn.ghost {
+    border-color: var(--line);
+    color: var(--fg);
+}
+
+.btn.ghost:hover {
+    border-color: var(--dim);
+    background: none;
+}
+
+.btn[disabled] {
+    background: var(--raise);
+    border-color: var(--raise);
+    color: var(--dim);
+    cursor: default;
+}
+
+.btn.ic {
+    width: var(--ctl-h);
+    padding: 0;
+}
+
+.btn.bare {
+    border-color: transparent;
+    color: var(--fg-2);
+}
+
+.btn.bare:hover {
+    background: var(--raise);
+    color: var(--fg);
+}
+
+.btn[aria-disabled="true"] {
+    color: #5e626c;
+    pointer-events: none;
+}
+
+.sel {
+    height: var(--ctl-h);
+    min-width: 0;
+    background: var(--well) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a6abb5' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 0 34px 0 12px;
+    appearance: none;
+    outline: 0;
+    cursor: pointer;
+}
+
+.sel:focus {
+    border-color: var(--teal);
+}
+
+.sel option {
+    background: var(--panel);
+}
+
+.switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--ctl-h);
+    color: var(--fg-2);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.switch input {
+    appearance: none;
+    flex: none;
+    margin: 0;
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--well);
+    border: 1.5px solid #7d828e;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.switch input::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #9ca1ab;
+    transition: transform 0.15s;
+}
+
+.switch input:checked {
+    background: var(--teal);
+    border-color: var(--teal);
+}
+
+.switch input:checked::after {
+    transform: translateX(16px);
+    background: var(--teal-ink);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 4px;
+    border: 1px solid var(--teal);
+    color: var(--teal);
+    font-size: var(--t-badge);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.badge.n {
+    border-color: var(--line);
+    color: var(--fg-2);
+}
+
+.sec {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.sec-h {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 26px;
+}
+
+.sec-h h2 {
+    margin: 0;
+    font-size: var(--t-sec);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.sec-h::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+    order: 1;
+}
+
+.sec-h > .end {
+    order: 2;
+    font-size: var(--t-small);
+    color: var(--dim);
+}
+
+.wave {
+    height: 150px;
+    background: var(--well);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+
+.wave canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.plain {
+    margin: 0;
+    color: var(--fg-2);
+}
+
+.plain.dim {
+    color: var(--dim);
+    font-size: var(--t-small);
+}
+
+.kv {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.kv li {
+    display: contents;
+}
+
+.kv li > * {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line-2);
+    min-width: 0;
+}
+
+.kv li:last-child > * {
+    border-bottom: 0;
+}
+
+.kv .k {
+    color: var(--fg);
+    white-space: nowrap;
+}
+
+.kv .val {
+    color: var(--dim);
+    font-size: var(--t-small);
+    text-align: right;
+}
+
+.problems {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--t-small);
+}
+
+.problems li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--fg-2);
+    overflow-wrap: anywhere;
+}
+
+.problems li:last-child {
+    border-bottom: 0;
+}
+
+.problems .at {
+    color: var(--amber);
+}
+
+.problems .warning .at {
+    color: var(--dim);
+}
+
+/* ---- Boot -------------------------------------------------------------------------------- */
+
+.boot {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--dim);
+    font-size: var(--t-small);
+}
+
+.boot-bar {
+    width: 200px;
+    height: 2px;
+    background: var(--raise);
+}
+
+.boot-bar > div {
+    height: 100%;
+    width: var(--blazor-load-percentage, 0%);
+    background: var(--teal);
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "");
+}
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: 8px 16px;
+    background: var(--panel);
+    border-top: 1px solid var(--amber);
+    color: var(--fg);
+    font-size: var(--t-small);
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 16px;
+    top: 8px;
+}
+
+/* ---- Narrow screens ---------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .app {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .work {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .editor {
+        height: 60vh;
+    }
+
+    .side {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+    }
+
+    .status .keys {
+        display: none;
+    }
+}
+
+@media (max-width: 560px) {
+    .bar .badge,
+    .bar .btn.ghost {
+        display: none;
+    }
+}

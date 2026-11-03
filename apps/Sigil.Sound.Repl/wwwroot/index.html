@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sigil.Sound REPL</title>
+    <meta name="description" content="Type a C# expression, hear it. Sigil.Sound running entirely in your browser." />
+    <base href="/" />
+    <link rel="icon" type="image/svg+xml" href="img/logo.svg" />
+    <link rel="preload" id="webassembly" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;900&amp;family=Roboto+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script type="importmap"></script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="boot">
+            <div class="boot-bar"><div></div></div>
+            <div>Loading <span class="loading-progress-text"></span></div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">✕</span>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+    <script src="js/repl.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+</body>
+
+</html>

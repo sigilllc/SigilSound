@@ -49,6 +49,7 @@ mix.RenderToWav("demo.wav", seconds: 5);
 - **Operators:** `Gain` / `*`, mix / `+`, ring modulation (`sound * sound`), `Range`, `Adsr`, `LowPass` (resonant biquad).
 - **Parameters:** every `Param` accepts a number, another `Sound` (audio-rate modulation) or a `Func<double, float>` of time.
 - **Rendering:** `Render(seconds)` returns an in-memory `AudioBuffer`; `RenderToWav` writes 16-bit, 24-bit or 32-bit float WAV to a path or a `Stream`.
+- **Live playback and hot swap:** `SoundContext` is one running output: `Play(sound)` crossfades from whatever is playing, and an audio callback pulls frames with `Render(span)`. `new Slot(sound)` puts a swappable place anywhere in a chain; `slot.Swap(next)` compiles off the audio thread and crossfades in on the next block.
 
 ## Two layers
 
@@ -67,9 +68,25 @@ mix.RenderToWav("demo.wav", seconds: 5);
 | `Sigil.Sound.SoundFont` | SoundFont playback | Not started |
 | `Sigil.Sound.Playback` | Real-time output and input with native binaries per platform | Not started |
 
+## Browser REPL
+
+`apps/Sigil.Sound.Repl` is a page where you type a C# snippet and hear it. It runs entirely in the browser: Blazor WebAssembly hosts .NET, Roslyn compiles the snippet on the client, and the engine renders into Web Audio through an `AudioWorklet`. There is no server code. `apps/Sigil.Sound.Repl.Core` holds the compiler, completion and signature help, so they are tested on the desktop runtime (`tests/Sigil.Sound.Repl.Tests`).
+
+```bash
+dotnet run --project apps/Sigil.Sound.Repl
+```
+
+For the optimized build, add `-c Release`. `dotnet publish apps/Sigil.Sound.Repl -c Release -o artifacts/repl` writes a static site to `artifacts/repl/wwwroot`, with Brotli and gzip copies of each file (about 11 MB to download with Brotli). VS Code has matching tasks: `repl: run`, `repl: watch`, `repl: run (release)` and `repl: publish`.
+
+- A snippet is one expression, or statements ending in an expression without a semicolon; that expression is the sound. `using static Sigil.Sound.Sounds` and `System.Math` are already in scope.
+- Ctrl+Enter runs; while a sound plays, running again crossfades into the new one through `SoundContext.Play`. With **Refresh on change** on (the default), edits are applied as soon as they compile while a sound plays. Ctrl+. stops.
+- The look follows the Audio Workbench desktop theme (Roboto Mono, the same color tokens and controls).
+- Completion, parameter hints, hover documentation and live error squiggles come from Roslyn's semantic model and the library's XML docs. Hover a name, or Ctrl+Click (Ctrl+Q at the cursor), to see its signature, parameters and an example. Suggestions open as you type, or with Ctrl+I; Ctrl+Space is left alone because launchers such as Everything capture it.
+- Share puts the snippet in the URL; WAV renders 10 seconds to a file.
+- The Monaco editor and the fonts load from public CDNs; everything else is served with the app.
+
 ## Next steps
 
-- Hot-swappable `Slot` with a short crossfade (compile off the audio thread, swap on the next block).
 - Port the remaining DSP (delay, reverb, dynamics, FX, granular, convolution, spectral, tuning) to the `IOperator` contract.
 - Note timing (`Every`, `Beats`) and polyphonic `Play`.
 - Golden-render tests, BenchmarkDotNet suite, public API baseline, CI on Windows, macOS and Linux.
