@@ -11,5 +11,6 @@ internal static class ReplProfile
     public static SnippetProfile Instance { get; } = new(
         extraUsings: ["using static ReplHost.ReplApi;"],
         extraAssemblies: [typeof(ReplApi).Assembly],
-        extraAllowedNamespaces: ["ReplHost"]);
+        extraAllowedNamespaces: ["ReplHost"],
+        samples: ReplSamples.Instance.Source);
 }

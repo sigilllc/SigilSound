@@ -14,6 +14,11 @@
     --teal-ink: #05261d;
     --teal-a: #1de9b61f;
     --amber: #ffb000;
+    /* Pink marks a name that stands for a file or asset (a sample), the way teal marks what is active. */
+    --pink: #ff6fb5;
+    --pink-a: #ff6fb51f;
+    /* A waveform, used as a mask so it takes the colour of whatever draws it. */
+    --waveform: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M3 10v4M7.5 6v12M12 3v18M16.5 7v10M21 10v4'/%3E%3C/svg%3E");
     --tomato: #ff5a4f;
     --mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     --t-head: 17px;
@@ -743,6 +748,141 @@ button {
     color: var(--dim);
 }
 
+/* ---- Samples ----------------------------------------------------------------------------- */
+
+.wf {
+    display: inline-block;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    background-color: var(--pink);
+    -webkit-mask: var(--waveform) center / contain no-repeat;
+    mask: var(--waveform) center / contain no-repeat;
+}
+
+.samples {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--t-small);
+}
+
+.samples li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line-2);
+}
+
+.samples li:last-child {
+    border-bottom: 0;
+}
+
+.samples .pick {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--pink);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.samples .pick:hover {
+    text-decoration: underline;
+}
+
+.samples .meta {
+    color: var(--dim);
+    white-space: nowrap;
+}
+
+.samples .rm {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--r);
+    background: none;
+    color: var(--dim);
+}
+
+.samples .rm:hover {
+    background: var(--raise);
+    color: var(--fg);
+}
+
+.samples .tag {
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--dim);
+    font-size: var(--t-badge);
+    white-space: nowrap;
+}
+
+.sample-add {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sample-add .btn {
+    cursor: pointer;
+}
+
+.plain code {
+    color: var(--pink);
+    font-size: inherit;
+}
+
+/* Shown while files are dragged over the page; it lets the drop through to the window underneath. */
+.drop-overlay {
+    position: fixed;
+    inset: 12px;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 2px dashed var(--pink);
+    border-radius: 8px;
+    background: #14151bd9;
+    color: var(--pink);
+    font-size: var(--t-head);
+    pointer-events: none;
+}
+
+.drop-overlay .wf {
+    width: 28px;
+    height: 28px;
+}
+
+body.dragging-files .drop-overlay {
+    display: flex;
+}
+
+/* Sample names in the editor's suggestion list: Monaco's File icon becomes the waveform and the name turns pink.
+   The name already carries its quotes, which is what tells it apart from code. */
+.monaco-editor .suggest-widget .monaco-list-row .codicon-symbol-file::before {
+    content: "";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: var(--pink);
+    -webkit-mask: var(--waveform) center / contain no-repeat;
+    mask: var(--waveform) center / contain no-repeat;
+}
+
+.monaco-editor .suggest-widget .monaco-list-row:has(.codicon-symbol-file) .label-name,
+.monaco-editor .suggest-widget .monaco-list-row:has(.codicon-symbol-file) .label-name .highlight {
+    color: var(--pink);
+}
+
 /* ---- Boot -------------------------------------------------------------------------------- */
 
 .boot {
@@ -809,8 +949,12 @@ button {
         display: none;
     }
 
+    /* The editor's base rule is flex: 1, whose zero basis beats a height in a column that has no height of its own,
+       so without "flex: none" the editor collapses to a few pixels and only the sidebar shows. */
     .editor {
+        flex: none;
         height: 60vh;
+        min-height: 280px;
     }
 
     .side {

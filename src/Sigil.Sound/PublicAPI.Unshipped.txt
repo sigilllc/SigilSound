@@ -35,6 +35,9 @@ Sigil.Sound.IOperator
 Sigil.Sound.IOperator.RenderBlock(System.Span<Sigil.Sound.StereoFrame> block) -> void
 Sigil.Sound.IResettable
 Sigil.Sound.IResettable.Reset() -> void
+Sigil.Sound.ISampleSource
+Sigil.Sound.ISampleSource.Load(string name) -> Sigil.Sound.AudioBuffer
+Sigil.Sound.ISampleSource.Names.get -> System.Collections.Generic.IReadOnlyList<string>
 Sigil.Sound.Operator
 Sigil.Sound.Param
 Sigil.Sound.Param.Compile(Sigil.Sound.RenderContext context) -> Sigil.Sound.ParamSource
@@ -43,6 +46,10 @@ Sigil.Sound.Param.IsConstant.get -> bool
 Sigil.Sound.Param.Param() -> void
 Sigil.Sound.ParamSource
 Sigil.Sound.ParamSource.Next(int count) -> System.ReadOnlySpan<float>
+Sigil.Sound.PlaybackMode
+Sigil.Sound.PlaybackMode.Loop = 1 -> Sigil.Sound.PlaybackMode
+Sigil.Sound.PlaybackMode.OneShot = 0 -> Sigil.Sound.PlaybackMode
+Sigil.Sound.PlaybackMode.PingPong = 2 -> Sigil.Sound.PlaybackMode
 Sigil.Sound.RenderContext
 Sigil.Sound.RenderContext.BlockSize.get -> int
 Sigil.Sound.RenderContext.BlockSize.init -> void
@@ -55,6 +62,13 @@ Sigil.Sound.RenderContext.SamplePeriod.get -> double
 Sigil.Sound.RenderContext.SampleRate.get -> int
 Sigil.Sound.RenderContext.SampleRate.init -> void
 Sigil.Sound.RenderContext.Validate() -> Sigil.Sound.RenderContext
+Sigil.Sound.SampleLibrary
+Sigil.Sound.SampleLibrary.Contains(string name) -> bool
+Sigil.Sound.SampleLibrary.Load(string name) -> Sigil.Sound.AudioBuffer
+Sigil.Sound.SampleLibrary.Names.get -> System.Collections.Generic.IReadOnlyList<string>
+Sigil.Sound.SampleLibrary.SampleLibrary(Sigil.Sound.ISampleSource source) -> void
+Sigil.Sound.SampleNameAttribute
+Sigil.Sound.SampleNameAttribute.SampleNameAttribute() -> void
 Sigil.Sound.Slot
 Sigil.Sound.Slot.Current.get -> Sigil.Sound.Sound
 Sigil.Sound.Slot.FadeSeconds.get -> double
@@ -69,21 +83,32 @@ Sigil.Sound.Sound.BitCrush(Sigil.Sound.Param? bits = null, Sigil.Sound.Param? ra
 Sigil.Sound.Sound.Chorus(Sigil.Sound.Param? rate = null, Sigil.Sound.Param? depth = null, Sigil.Sound.Param? mix = null, int voices = 3) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Comb(Sigil.Sound.Param frequency, Sigil.Sound.Param? feedback = null, Sigil.Sound.Param? damping = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Compile(Sigil.Sound.RenderContext context) -> Sigil.Sound.IOperator
+Sigil.Sound.Sound.Compress(Sigil.Sound.Param? thresholdDb = null, Sigil.Sound.Param? ratio = null, Sigil.Sound.Param? attack = null, Sigil.Sound.Param? release = null, Sigil.Sound.Param? kneeDb = null, Sigil.Sound.Param? makeupGainDb = null, Sigil.Sound.Sound? sidechain = null, double lookahead = 0.003) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Delay(Sigil.Sound.Param time, Sigil.Sound.Param? feedback = null, Sigil.Sound.Param? mix = null, double maxTime = 2) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Distort(Sigil.Sound.Param? drive = null, Sigil.Sound.DistortionMode mode = Sigil.Sound.DistortionMode.Soft, Sigil.Sound.Param? level = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.Equalize(double lowDb = 0, double midDb = 0, double highDb = 0) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.FdnReverb(double decay = 3, double size = 1, double damping = 0.35, double predelay = 0.01, Sigil.Sound.Param? sheen = null, Sigil.Sound.Param? mix = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.Fold(Sigil.Sound.Param? amount = null, Sigil.Sound.Param? symmetry = null, Sigil.Sound.Param? mix = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.FollowEnvelope(Sigil.Sound.Param? attack = null, Sigil.Sound.Param? release = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Gain(Sigil.Sound.Param gain) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.HighPass(Sigil.Sound.Param cutoff, Sigil.Sound.Param? q = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.HighShelf(Sigil.Sound.Param frequency, Sigil.Sound.Param? gainDb = null, Sigil.Sound.Param? q = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Limit(double ceiling = 0.95, double release = 0.08) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.LowPass(Sigil.Sound.Param cutoff, Sigil.Sound.Param? q = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.LowShelf(Sigil.Sound.Param frequency, Sigil.Sound.Param? gainDb = null, Sigil.Sound.Param? q = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Notch(Sigil.Sound.Param center, Sigil.Sound.Param? q = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Pan(Sigil.Sound.Param position) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.Peak(Sigil.Sound.Param frequency, Sigil.Sound.Param? q = null, Sigil.Sound.Param? gainDb = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Phaser(Sigil.Sound.Param? rate = null, Sigil.Sound.Param? feedback = null, Sigil.Sound.Param? mix = null, int stages = 4, double minFrequency = 400, double maxFrequency = 1500) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Range(double min, double max) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Render(double seconds, int sampleRate = 48000, int blockSize = 256) -> Sigil.Sound.AudioBuffer
 Sigil.Sound.Sound.RenderToWav(string path, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16) -> void
 Sigil.Sound.Sound.RenderToWav(System.IO.Stream stream, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16) -> void
 Sigil.Sound.Sound.Reverb(double size = 1, double decay = 2.5, double damping = 0.4, Sigil.Sound.Param? mix = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.Spread(Sigil.Sound.Param width) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.TapeDelay(Sigil.Sound.Param time, Sigil.Sound.Param? feedback = null, Sigil.Sound.Param? damping = null, Sigil.Sound.Param? drive = null, Sigil.Sound.Param? mix = null, double maxTime = 2, bool pingPong = false) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Through(System.Func<Sigil.Sound.IOperator, Sigil.Sound.IOperator> wrap, string description = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.Vowel(Sigil.Sound.Param vowel, Sigil.Sound.Param? resonance = null) -> Sigil.Sound.Sound
 Sigil.Sound.SoundContext
 Sigil.Sound.SoundContext.Current.get -> Sigil.Sound.Sound
 Sigil.Sound.SoundContext.Dispose() -> void
@@ -107,8 +132,21 @@ Sigil.Sound.Wav.WavFormat
 Sigil.Sound.Wav.WavFormat.Float32 = 2 -> Sigil.Sound.Wav.WavFormat
 Sigil.Sound.Wav.WavFormat.Pcm16 = 0 -> Sigil.Sound.Wav.WavFormat
 Sigil.Sound.Wav.WavFormat.Pcm24 = 1 -> Sigil.Sound.Wav.WavFormat
+Sigil.Sound.Wav.WavInfo
+Sigil.Sound.Wav.WavInfo.BitsPerSample.get -> int
+Sigil.Sound.Wav.WavInfo.Channels.get -> int
+Sigil.Sound.Wav.WavInfo.Duration.get -> double
+Sigil.Sound.Wav.WavInfo.FrameCount.get -> int
+Sigil.Sound.Wav.WavInfo.IsFloat.get -> bool
+Sigil.Sound.Wav.WavInfo.SampleRate.get -> int
+Sigil.Sound.Wav.WavInfo.WavInfo() -> void
+Sigil.Sound.Wav.WavInfo.WavInfo(int channels, int sampleRate, int bitsPerSample, bool isFloat, int frameCount) -> void
+Sigil.Sound.Wav.WavReader
 Sigil.Sound.Wav.WavWriter
 static readonly Sigil.Sound.StereoFrame.Silence -> Sigil.Sound.StereoFrame
+static Sigil.Sound.AudioBuffer.FromWav(string path) -> Sigil.Sound.AudioBuffer
+static Sigil.Sound.AudioBuffer.FromWav(System.IO.Stream stream) -> Sigil.Sound.AudioBuffer
+static Sigil.Sound.AudioBuffer.FromWav(System.ReadOnlySpan<byte> bytes) -> Sigil.Sound.AudioBuffer
 static Sigil.Sound.Operator.From(Sigil.Sound.BlockRenderer render) -> Sigil.Sound.IOperator
 static Sigil.Sound.Operator.From(Sigil.Sound.BlockRenderer render, System.Action reset) -> Sigil.Sound.IOperator
 static Sigil.Sound.Param.implicit operator Sigil.Sound.Param(double value) -> Sigil.Sound.Param
@@ -128,15 +166,21 @@ static Sigil.Sound.Sound.operator +(Sigil.Sound.Sound a, Sigil.Sound.Sound b) ->
 static Sigil.Sound.Sounds.Constant(double value) -> Sigil.Sound.Sound
 static Sigil.Sound.Sounds.Fn(System.Func<double, double> function) -> Sigil.Sound.Sound
 static Sigil.Sound.Sounds.Noise(int seed = 1) -> Sigil.Sound.Sound
+static Sigil.Sound.Sounds.Sample(Sigil.Sound.AudioBuffer buffer, Sigil.Sound.Param frequency, double rootFrequency, Sigil.Sound.PlaybackMode mode = Sigil.Sound.PlaybackMode.OneShot, double loopStart = 0, double? loopEnd = null) -> Sigil.Sound.Sound
+static Sigil.Sound.Sounds.Sample(Sigil.Sound.AudioBuffer buffer, Sigil.Sound.Param? speed = null, Sigil.Sound.PlaybackMode mode = Sigil.Sound.PlaybackMode.OneShot, double loopStart = 0, double? loopEnd = null) -> Sigil.Sound.Sound
 static Sigil.Sound.Sounds.Saw(Sigil.Sound.Param frequency) -> Sigil.Sound.Sound
 static Sigil.Sound.Sounds.Silence.get -> Sigil.Sound.Sound
 static Sigil.Sound.Sounds.Sine(Sigil.Sound.Param frequency) -> Sigil.Sound.Sound
 static Sigil.Sound.Sounds.Square(Sigil.Sound.Param frequency, Sigil.Sound.Param? width = null) -> Sigil.Sound.Sound
+static Sigil.Sound.Sounds.Triangle(Sigil.Sound.Param frequency, Sigil.Sound.Param? skew = null) -> Sigil.Sound.Sound
 static Sigil.Sound.StereoFrame.Mono(float value) -> Sigil.Sound.StereoFrame
 static Sigil.Sound.StereoFrame.operator *(float scalar, Sigil.Sound.StereoFrame a) -> Sigil.Sound.StereoFrame
 static Sigil.Sound.StereoFrame.operator *(Sigil.Sound.StereoFrame a, float scalar) -> Sigil.Sound.StereoFrame
 static Sigil.Sound.StereoFrame.operator +(Sigil.Sound.StereoFrame a, Sigil.Sound.StereoFrame b) -> Sigil.Sound.StereoFrame
 static Sigil.Sound.StereoFrame.operator -(Sigil.Sound.StereoFrame a, Sigil.Sound.StereoFrame b) -> Sigil.Sound.StereoFrame
 static Sigil.Sound.StereoFrame.operator /(Sigil.Sound.StereoFrame a, float scalar) -> Sigil.Sound.StereoFrame
+static Sigil.Sound.Wav.WavReader.Read(System.IO.Stream stream) -> Sigil.Sound.AudioBuffer
+static Sigil.Sound.Wav.WavReader.Read(System.ReadOnlySpan<byte> bytes) -> Sigil.Sound.AudioBuffer
+static Sigil.Sound.Wav.WavReader.ReadInfo(System.ReadOnlySpan<byte> bytes) -> Sigil.Sound.Wav.WavInfo
 static Sigil.Sound.Wav.WavWriter.Write(System.IO.Stream stream, Sigil.Sound.AudioBuffer audio, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16) -> void
 virtual Sigil.Sound.ParamSource.IsConstant.get -> bool

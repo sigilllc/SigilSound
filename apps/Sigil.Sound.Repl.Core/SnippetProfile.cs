@@ -53,6 +53,7 @@ public sealed class SnippetProfile
     private readonly HashSet<string> _forbiddenSystemTypes;
     private readonly Lazy<IReadOnlyList<MetadataReference>> _references;
     private readonly Action<SnippetValidationContext>? _extraValidation;
+    private readonly ISampleSource? _samples;
 
     /// <summary>The policy the browser REPL runs with.</summary>
     public static SnippetProfile Default { get; } = new();
@@ -67,15 +68,22 @@ public sealed class SnippetProfile
     /// and can only add errors. Use it for rules about syntax or members that a list of namespaces cannot express. If it throws, the
     /// snippet is rejected.
     /// </param>
+    /// <param name="samples">
+    /// The sample library the host gives its snippets (the same source behind the <see cref="SampleLibrary"/> the host exposes).
+    /// The editor reads its <see cref="ISampleSource.Names"/> to offer file names while a <c>[SampleName]</c> argument is typed.
+    /// It is read on every request, so names added later show up without creating a new profile.
+    /// </param>
     public SnippetProfile(
         IEnumerable<string>? extraUsings = null,
         IEnumerable<Assembly>? extraAssemblies = null,
         IEnumerable<string>? extraAllowedNamespaces = null,
         IEnumerable<string>? extraBlockedNamespaces = null,
         IEnumerable<string>? extraForbiddenSystemTypes = null,
-        Action<SnippetValidationContext>? extraValidation = null)
+        Action<SnippetValidationContext>? extraValidation = null,
+        ISampleSource? samples = null)
     {
         _extraValidation = extraValidation;
+        _samples = samples;
         Usings = [.. BaseUsings, .. extraUsings ?? []];
         _blocked = [.. BaseBlockedNamespaces, .. extraBlockedNamespaces ?? []];
         _allowed = [.. extraAllowedNamespaces ?? []];
@@ -91,6 +99,9 @@ public sealed class SnippetProfile
     internal IReadOnlyList<MetadataReference> References => _references.Value;
 
     internal Action<SnippetValidationContext>? ExtraValidation => _extraValidation;
+
+    /// <summary>The sample names the host offers its snippets right now; empty when the host has no sample library.</summary>
+    public IReadOnlyList<string> SampleNames => _samples?.Names ?? [];
 
     /// <summary>True when snippets may not touch anything in <paramref name="ns"/>, however it is reached.</summary>
     public bool IsBlockedNamespace(string ns) => _blocked.Any(prefix => ns.StartsWith(prefix, StringComparison.Ordinal));

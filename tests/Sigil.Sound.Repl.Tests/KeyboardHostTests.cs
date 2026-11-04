@@ -116,7 +116,7 @@ public sealed class KeyboardHostTests : IDisposable
     }
 
     [Fact]
-    public void Keys_is_the_only_thing_the_page_api_gives_a_snippet()
+    public void Keys_and_Samples_are_the_only_things_the_page_api_gives_a_snippet()
     {
         // Everything public on this type is callable from a pasted snippet. Adding a member should be a decision.
         var members = typeof(ReplApi).GetMembers(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
@@ -126,7 +126,7 @@ public sealed class KeyboardHostTests : IDisposable
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["Keys", "get_Keys"], members);
+        Assert.Equal(["Keys", "Samples", "get_Keys", "get_Samples"], members);
     }
 
     [Fact]

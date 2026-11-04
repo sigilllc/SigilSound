@@ -2,6 +2,20 @@ using Sigil.Sound.Operators;
 
 namespace Sigil.Sound;
 
+/// <summary>How a <see cref="Sounds.Sample(AudioBuffer, Param?, PlaybackMode, double, double?)"/> plays once it reaches its loop end, or the end of the sample.</summary>
+public enum PlaybackMode
+{
+    /// <summary>Plays the sample once, from its first frame to its last, then falls silent.</summary>
+    OneShot,
+
+    /// <summary>Plays the loop region over and over: at the loop end it jumps back to the loop start.</summary>
+    Loop,
+
+    /// <summary>Plays the loop region forward, then backward, then forward again, without a jump at either end.</summary>
+    PingPong,
+}
+
+
 /// <summary>
 /// Sources: the starting points of a sound. Designed for <c>using static Sigil.Sound.Sounds;</c>.
 /// </summary>
@@ -37,6 +51,98 @@ public static class Sounds
     /// <example><code>Noise().LowPass(1000) * 0.2</code></example>
     public static Sound Noise(int seed = 1) =>
         Sound.FromOperator(_ => new NoiseOperator(seed), "Noise()");
+
+    /// <summary>
+    /// Plays a recorded or rendered sample, such as a drum hit or a loop. Speed sets the pitch: 2 is an octave up and 0.5 an
+    /// octave down. A negative speed plays backward: a one-shot starts at its last frame and runs back to its first. Blending
+    /// between frames keeps fractional speeds smooth.
+    /// </summary>
+    /// <remarks>
+    /// The sample is held in memory and read without allocating, so a single <see cref="AudioBuffer"/> can back many voices.
+    /// Its own sample rate is converted to the render rate, so a 44.1 kHz file plays at the right pitch in a 48 kHz render.
+    /// For a sampler instrument, pitch each note by its frequency over the sample's root:
+    /// <c>Sample(kick, speed: v.Frequency / 261.63)</c> plays a sample recorded at C4 at the pitch of each played note.
+    /// </remarks>
+    /// <param name="buffer">The audio to play, usually from <see cref="AudioBuffer.FromWav(Stream)"/> or a rendered sound.</param>
+    /// <param name="speed">Playback rate: 1 is the original pitch and speed. A number, or a sound or <c>Fn(t => ...)</c> to bend or vibrato it. Defaults to 1.</param>
+    /// <param name="mode">How the sample plays: once, looped, or ping-ponged. Defaults to <see cref="PlaybackMode.OneShot"/>.</param>
+    /// <param name="loopStart">Where the loop begins, in seconds from the start of the sample. Used only by <see cref="PlaybackMode.Loop"/> and <see cref="PlaybackMode.PingPong"/>. Defaults to 0.</param>
+    /// <param name="loopEnd">Where the loop ends, in seconds from the start of the sample. Null means the end of the sample. Must be after <paramref name="loopStart"/>.</param>
+    /// <exception cref="ArgumentException">The buffer has no frames.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The loop markers are outside the sample, or in the wrong order.</exception>
+    /// <example><code>Sample(kick)                                             // one hit at the recorded pitch</code></example>
+    /// <example><code>Sample(pad, speed: 0.5, mode: PlaybackMode.Loop)         // a loop an octave down</code></example>
+    /// <example><code>Sample(pad, mode: PlaybackMode.PingPong, loopStart: 0.5, loopEnd: 2.0)</code></example>
+    public static Sound Sample(AudioBuffer buffer, Param? speed = null, PlaybackMode mode = PlaybackMode.OneShot,
+        double loopStart = 0, double? loopEnd = null)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+        if (buffer.FrameCount == 0)
+            throw new ArgumentException("The sample has no frames to play.", nameof(buffer));
+        if (!Enum.IsDefined(mode))
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown playback mode.");
+
+        double end = loopEnd ?? buffer.Duration;
+        if (double.IsNaN(loopStart) || loopStart < 0 || loopStart >= end)
+            throw new ArgumentOutOfRangeException(nameof(loopStart), loopStart, "The loop must start at or after 0 and before it ends.");
+        if (end > buffer.Duration)
+            throw new ArgumentOutOfRangeException(nameof(loopEnd), loopEnd, "The loop cannot end after the sample.");
+
+        var rate = speed ?? 1f;
+        var frames = buffer.Storage;
+        int fileRate = buffer.SampleRate;
+        return Sound.FromOperator(ctx => new SampleOperator(frames, fileRate, rate.Compile(ctx), mode, loopStart, end, ctx),
+            $"Sample({buffer.Duration:0.###}s, {mode})");
+    }
+
+    /// <summary>
+    /// Plays a sample at a pitch: the sample sounds at <paramref name="rootFrequency"/> when played at that frequency, and
+    /// every other frequency transposes it by the ratio. Use it to play a sample as an instrument, one note at a time.
+    /// </summary>
+    /// <remarks>
+    /// This is <c>Sample(buffer, speed: frequency / rootFrequency)</c>, written out for the common case. The root frequency is
+    /// required so that a call with a single number cannot be mistaken for a speed.
+    /// </remarks>
+    /// <param name="buffer">The audio to play, usually from <see cref="AudioBuffer.FromWav(string)"/>.</param>
+    /// <param name="frequency">The pitch to play, in Hz: a number, or a sound such as a voice's <c>v.Frequency</c>.</param>
+    /// <param name="rootFrequency">The pitch the sample was recorded at, in Hz; for example 261.63 for a sample recorded at middle C.</param>
+    /// <param name="mode">How the sample plays: once, looped, or ping-ponged. Defaults to <see cref="PlaybackMode.OneShot"/>.</param>
+    /// <param name="loopStart">Where the loop begins, in seconds from the start of the sample. Defaults to 0.</param>
+    /// <param name="loopEnd">Where the loop ends, in seconds from the start of the sample. Null means the end of the sample.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="rootFrequency"/> is not positive, or the loop markers are invalid.</exception>
+    /// <example><code>Sample(pluck, v.Frequency, 261.63)   // plays the pluck at the pitch of each note</code></example>
+    public static Sound Sample(AudioBuffer buffer, Param frequency, double rootFrequency, PlaybackMode mode = PlaybackMode.OneShot,
+        double loopStart = 0, double? loopEnd = null)
+    {
+        if (double.IsNaN(rootFrequency) || rootFrequency <= 0)
+            throw new ArgumentOutOfRangeException(nameof(rootFrequency), rootFrequency, "The root frequency must be positive.");
+
+        return Sample(buffer, FromParam(frequency) * (1.0 / rootFrequency), mode, loopStart, loopEnd);
+    }
+
+    /// <summary>
+    /// A band-limited triangle wave: a straight ramp up and a straight ramp down, from -1 to 1. Its corners are rounded so
+    /// high pitches stay clean. Use it as a source, or at low rates as a bipolar modulator for <c>Range</c>.
+    /// </summary>
+    /// <remarks>
+    /// Skew sets where the peak falls in each cycle. Skew 0.5 is symmetric, and a skew of 0.8 gives a slow rise and a quick
+    /// fall. Skew 0 and 1 are limited to 0.01 and 0.99. A true saw needs a jump, and a triangle has none, so the extreme
+    /// skews are a very steep ramp rather than a saw.
+    /// </remarks>
+    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> to modulate it.</param>
+    /// <param name="skew">Where the peak falls in the cycle, from 0 to 1. 0.5 is symmetric. Defaults to 0.5.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The constant skew is outside 0 to 1.</exception>
+    /// <example><code>Triangle(220, skew: 0.5) * 0.3</code></example>
+    /// <example><code>Sine(440) * Triangle(4, skew: 0.8).Range(0.9, 1.0)   // a tremolo that ramps up and snaps back</code></example>
+    public static Sound Triangle(Param frequency, Param? skew = null)
+    {
+        var curve = skew ?? 0.5f;
+        if (curve.IsConstant && curve.ConstantValue is < 0 or > 1)
+            throw new ArgumentOutOfRangeException(nameof(skew), curve.ConstantValue, "The skew must be between 0 and 1.");
+
+        return Sound.FromOperator(ctx => new TriangleOperator(frequency.Compile(ctx), curve.Compile(ctx), ctx),
+            $"Triangle({frequency}, {curve})");
+    }
 
     /// <summary>
     /// A sound whose value is a function of time in seconds, such as <c>Fn(t => 200 + 100 * t)</c>.

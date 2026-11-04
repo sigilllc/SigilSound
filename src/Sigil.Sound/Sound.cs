@@ -151,6 +151,62 @@ public sealed partial class Sound
     /// <example><code>Saw(110).Notch(1000, q: 4)</code></example>
     public Sound Notch(Param center, Param? q = null) => Filter(FilterMode.Notch, center, q);
 
+    /// <summary>
+    /// A peaking (bell) equalizer band: boosts or cuts a band around <paramref name="frequency"/> and leaves the rest of
+    /// the spectrum alone. Chain several for a parametric EQ.
+    /// </summary>
+    /// <param name="frequency">Centre of the band in Hz. A number, or a sound or <c>Fn(t => ...)</c> to sweep it.</param>
+    /// <param name="q">How narrow the band is: 0.7 is broad and musical, 3 to 10 is surgical. Defaults to 0.7071.</param>
+    /// <param name="gainDb">Boost (positive) or cut (negative) at the centre, in decibels. 0 changes nothing. Defaults to 0.</param>
+    /// <example><code>lead.Peak(2500, q: 3, gainDb: 4)   // lifts the presence band</code></example>
+    public Sound Peak(Param frequency, Param? q = null, Param? gainDb = null) =>
+        Band(EqualizerShape.Peak, frequency, q, gainDb);
+
+    /// <summary>
+    /// A low shelf: boosts or cuts everything below <paramref name="frequency"/> by the same amount, for bass weight or thinning.
+    /// </summary>
+    /// <param name="frequency">The shelf's corner in Hz, roughly where the change is half of <paramref name="gainDb"/>. A number, or a sound or <c>Fn(t => ...)</c>.</param>
+    /// <param name="gainDb">Boost (positive) or cut (negative) below the corner, in decibels. Defaults to 0.</param>
+    /// <param name="q">How steep the transition is: 0.7 is gentle and musical, higher is sharper. Defaults to 0.7071.</param>
+    /// <example><code>bass.LowShelf(120, gainDb: 3)   // a little more weight</code></example>
+    public Sound LowShelf(Param frequency, Param? gainDb = null, Param? q = null) =>
+        Band(EqualizerShape.LowShelf, frequency, q, gainDb);
+
+    /// <summary>
+    /// A high shelf: boosts or cuts everything above <paramref name="frequency"/> by the same amount, for air or for taming hiss.
+    /// </summary>
+    /// <param name="frequency">The shelf's corner in Hz, roughly where the change is half of <paramref name="gainDb"/>. A number, or a sound or <c>Fn(t => ...)</c>.</param>
+    /// <param name="gainDb">Boost (positive) or cut (negative) above the corner, in decibels. Defaults to 0.</param>
+    /// <param name="q">How steep the transition is: 0.7 is gentle and musical, higher is sharper. Defaults to 0.7071.</param>
+    /// <example><code>pad.HighShelf(8000, gainDb: -4)   // softens the top end</code></example>
+    public Sound HighShelf(Param frequency, Param? gainDb = null, Param? q = null) =>
+        Band(EqualizerShape.HighShelf, frequency, q, gainDb);
+
+    /// <summary>
+    /// A simple three-band tone control: a low shelf at 200 Hz, a broad bell at 1 kHz and a high shelf at 5 kHz.
+    /// Bands at 0 dB are skipped, so an all-zero call returns this sound unchanged.
+    /// </summary>
+    /// <param name="lowDb">Boost or cut of the low shelf, in decibels. Defaults to 0.</param>
+    /// <param name="midDb">Boost or cut of the 1 kHz bell, in decibels. Defaults to 0.</param>
+    /// <param name="highDb">Boost or cut of the high shelf, in decibels. Defaults to 0.</param>
+    /// <example><code>mix.Equalize(lowDb: 2, midDb: -1.5, highDb: 3)</code></example>
+    public Sound Equalize(double lowDb = 0, double midDb = 0, double highDb = 0)
+    {
+        var sound = this;
+        if (lowDb != 0) sound = sound.LowShelf(200, lowDb);
+        if (midDb != 0) sound = sound.Peak(1000, 0.7071, midDb);
+        if (highDb != 0) sound = sound.HighShelf(5000, highDb);
+        return sound;
+    }
+
+    private Sound Band(EqualizerShape shape, Param frequency, Param? q, Param? gainDb)
+    {
+        var resonance = q ?? 0.7071f;
+        var gain = gainDb ?? 0f;
+        return new(ctx => new EqualizerOperator(Compile(ctx), shape, frequency.Compile(ctx), resonance.Compile(ctx), gain.Compile(ctx), ctx),
+            $"{this}.{shape}({frequency}, {gain})");
+    }
+
     private Sound Filter(FilterMode mode, Param cutoff, Param? q)
     {
         var resonance = q ?? 0.7071f;

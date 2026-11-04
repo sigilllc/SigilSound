@@ -177,5 +177,58 @@ public static class Examples
                 .Adsr(4, 0, 1, 0)
                 * 0.15
             """),
+        new("Sampler",
+            """
+            // A sample is just frames of audio held in memory. This one is built in code: a plucked C3
+            // with a few harmonics, fading over 1.5 s. Sample(pluck, frequency, root) plays it at a pitch:
+            // the root is the pitch the sample was recorded at (C3 = 130.81 Hz).
+            const int rate = 48_000;
+            const double root = 130.81;
+
+            var frames = new StereoFrame[rate * 3 / 2];
+            for (int i = 0; i < frames.Length; i++)
+            {
+                double t = i / (double)rate;
+                double w = 2 * PI * root * t;
+                double tone = Sin(w) + 0.5 * Sin(2 * w) + 0.25 * Sin(3 * w);
+                frames[i] = StereoFrame.Mono((float)(tone * Exp(-3 * t) * 0.4));
+            }
+            var pluck = new AudioBuffer(frames, rate);
+
+            var tune = Notes.Parse("C3 E3 G3 B3 C4 B3 G3 E3")
+                .Every(Beats.Eighth, gate: 2)
+                .Loop();
+
+            // Each note plays the sample at its own speed. A one-shot rings out once per note.
+            tune.Play(v => Sample(pluck, v.Frequency, root) * v.Velocity, polyphony: 8) * 0.5
+            """),
+        new("Pumping pad",
+            """
+            // The kick is the sidechain: while it sounds, the compressor turns the pad down, then lets it
+            // come back as the kick fades. This is ducking, the sound behind a lot of dance music.
+            var kick = Sine(Fn(t => 45 + 80 * Exp(-(t % 0.5) * 30)))   // the pitch drops every half second
+                * Fn(t => Exp(-(t % 0.5) * 7));                        // and the kick fades out
+
+            var pad = (Saw(110) + Saw(165) + Saw(220))
+                .LowPass(900, q: 1.5)
+                .Chorus(rate: 0.5, depth: 0.5, voices: 3);
+
+            (pad.Compress(thresholdDb: -24, ratio: 10, attack: 0.002, release: 0.25, sidechain: kick) * 0.3
+                + kick * 0.6)
+                .Limit()
+            """),
+        new("Tape echo",
+            """
+            // Each repeat is darker and more saturated than the one before. When the delay time wobbles,
+            // the repeats glide in pitch instead of clicking, the way a tape head does.
+            var pluck = (Saw(220) + Saw(330) * 0.5)
+                .LowPass(1500)
+                * Fn(t => Exp(-(t % 0.5) * 9));          // a pluck every half second
+
+            pluck
+                .TapeDelay(time: Sine(0.25).Range(0.36, 0.40), feedback: 0.55, damping: 2500, drive: 1.6, mix: 0.4)
+                .Reverb(decay: 2.5, mix: 0.2)
+                * 0.4
+            """),
     ];
 }

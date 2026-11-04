@@ -24,4 +24,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Sigil.Sound.Repl.Core\Sigil.Sound.Repl.Core.csproj" />
   </ItemGroup>
+
+  <!-- Samples that ship with the page (see BuiltInSamples). Embedded rather than served from wwwroot, so they are there
+       the moment the runtime starts and need no request. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Host\BuiltIn\*.wav" LogicalName="BuiltIn/%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

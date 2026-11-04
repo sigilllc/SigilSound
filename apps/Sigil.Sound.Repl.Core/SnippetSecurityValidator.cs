@@ -223,6 +223,14 @@ public static class SnippetSecurityValidator
                     return;
                 }
 
+                // The path overload reads a file from the host. Overloads taking a stream or bytes stay allowed.
+                if (method.Name == "FromWav" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.AudioBuffer" &&
+                    method.Parameters.Length > 0 && method.Parameters[0].Type.SpecialType == SpecialType.System_String)
+                {
+                    diagnostics.Add(CreateDiagnostic("SIGIL_SEC09", "Loading a WAV file from disk with 'AudioBuffer.FromWav(path)' is not permitted in the REPL.", node.GetLocation()));
+                    return;
+                }
+
                 if (method.Name == "Render" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.Sound")
                 {
                     diagnostics.Add(CreateDiagnostic(

@@ -61,20 +61,28 @@
 
     function registerLanguageServices(monaco) {
         monaco.languages.registerCompletionItemProvider("csharp", {
-            triggerCharacters: ["."],
+            // A quote opens the list of sample names when the string is the argument of Samples.Load.
+            triggerCharacters: [".", "\""],
             async provideCompletionItems(model, position) {
                 const items = await page.invokeMethodAsync("Complete", model.getValue(), model.getOffsetAt(position));
                 const word = model.getWordUntilPosition(position);
-                const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
+                const wordRange = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
                 return {
                     suggestions: items.map(i => ({
                         label: i.label,
-                        kind: monaco.languages.CompletionItemKind[i.kind] ?? monaco.languages.CompletionItemKind.Text,
+                        // Sample names use the File kind, which the stylesheet draws as a pink waveform.
+                        kind: i.kind === "Sample"
+                            ? monaco.languages.CompletionItemKind.File
+                            : monaco.languages.CompletionItemKind[i.kind] ?? monaco.languages.CompletionItemKind.Text,
                         detail: i.detail,
                         documentation: i.documentation ? { value: i.documentation } : undefined,
-                        insertText: i.label,
+                        insertText: i.insertText ?? i.label,
+                        filterText: i.filterText ?? undefined,
                         sortText: i.sortText,
-                        range,
+                        // A name inside quotes replaces the whole string; the server counts the characters each side of the caret.
+                        range: i.replaceBefore != null
+                            ? new monaco.Range(position.lineNumber, position.column - i.replaceBefore, position.lineNumber, position.column + i.replaceAfter)
+                            : wordRange,
                     })),
                 };
             },
@@ -339,10 +347,124 @@
         });
     }
 
+    // ---- Samples ------------------------------------------------------------------------------
+    // WAV files the user drops on the page. C# keeps them in its virtual folder (that is what snippets read); this
+    // file moves them in from the drop and keeps a copy in IndexedDB so they are there on the next visit.
+
+    const samples = {
+        dbPromise: null,
+        kept: false,
+
+        open() {
+            samples.dbPromise ??= new Promise((resolve, reject) => {
+                if (!window.indexedDB) return reject(new Error("IndexedDB is not available."));
+                const request = indexedDB.open("sigil-repl", 1);
+                request.onupgradeneeded = () => request.result.createObjectStore("samples", { keyPath: "name" });
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            return samples.dbPromise;
+        },
+
+        async transact(mode, work) {
+            const db = await samples.open();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction("samples", mode);
+                const request = work(tx.objectStore("samples"));
+                tx.oncomplete = () => resolve(request.result);
+                tx.onerror = tx.onabort = () => reject(tx.error);
+            });
+        },
+
+        // Storage can be refused (private windows, full disk); samples then last for this visit only.
+        async save(name, bytes) {
+            try { await samples.transact("readwrite", store => store.put({ name, bytes })); } catch { }
+        },
+
+        async forget(name) {
+            try { await samples.transact("readwrite", store => store.delete(name)); } catch { }
+        },
+
+        // Puts the samples of earlier visits back into C#'s folder. Returns whether the browser keeps samples at all.
+        async restore() {
+            try {
+                const saved = await samples.transact("readonly", store => store.getAll());
+                for (const entry of saved) {
+                    await page.invokeMethodAsync("RestoreSample", entry.name, entry.bytes);
+                }
+                samples.kept = true;
+            } catch {
+                samples.kept = false;
+            }
+            return samples.kept;
+        },
+    };
+
+    async function addSampleFiles(files) {
+        if (!page) return;
+        for (const file of files) {
+            // C# decides first, so a file that can never be kept is not read into memory.
+            if (!(await page.invokeMethodAsync("CanAddSample", file.name, file.size))) continue;
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            const result = await page.invokeMethodAsync("AddSample", file.name, bytes);
+            if (result.ok) await samples.save(result.name, bytes);
+        }
+    }
+
+    // Dropping files anywhere on the page adds them as samples; the overlay in index.html shows where they will go.
+    function initSampleDrop() {
+        const carriesFiles = e => !!e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files");
+        let depth = 0; // dragenter/dragleave fire for every element crossed, so count them
+
+        window.addEventListener("dragenter", e => {
+            if (!carriesFiles(e)) return;
+            e.preventDefault();
+            depth++;
+            document.body.classList.add("dragging-files");
+        }, true);
+
+        window.addEventListener("dragover", e => {
+            if (!carriesFiles(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "copy";
+        }, true);
+
+        window.addEventListener("dragleave", e => {
+            if (!carriesFiles(e)) return;
+            depth = Math.max(0, depth - 1);
+            if (depth === 0) document.body.classList.remove("dragging-files");
+        }, true);
+
+        window.addEventListener("drop", e => {
+            if (!carriesFiles(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            depth = 0;
+            document.body.classList.remove("dragging-files");
+            // The list is only valid during the event, so copy it before waiting for anything.
+            addSampleFiles(Array.from(e.dataTransfer.files));
+        }, true);
+
+        const picker = document.getElementById("sample-picker");
+        picker?.addEventListener("change", () => {
+            const files = Array.from(picker.files);
+            picker.value = "";
+            addSampleFiles(files);
+        });
+    }
+
     // ---- API used from C# --------------------------------------------------------------------
 
     window.sigilRepl = {
         audio,
+        samples,
+
+        // Types text at the cursor, replacing the selection. Used to insert Samples.Load("...") from the sample list.
+        insertText(text) {
+            editor.executeEdits("samples", [{ range: editor.getSelection(), text, forceMoveMarkers: true }]);
+            editor.focus();
+        },
 
         async init(pageRef, host, fallbackCode) {
             page = pageRef;
@@ -391,6 +513,7 @@
             }, true);
             editor.onDidChangeModelContent(scheduleCheck);
             initResizer();
+            initSampleDrop();
             editor.focus();
         },
 

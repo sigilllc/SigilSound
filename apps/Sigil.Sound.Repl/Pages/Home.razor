@@ -111,6 +111,37 @@
             </section>
 
             <section class="sec">
+                <div class="sec-h"><h2>Samples</h2><span class="end">@_samples.Count</span></div>
+                <ul class="samples">
+                    @foreach (var sample in _samples)
+                    {
+                        var name = sample.Name;
+                        <li>
+                            <span class="wf" aria-hidden="true"></span>
+                            <button class="pick" title="Insert Samples.Load(&quot;@name&quot;) at the cursor" @onclick="() => InsertSampleAsync(name)">@name</button>
+                            <span class="meta">@DescribeSample(sample)</span>
+                            @if (sample.BuiltIn)
+                            {
+                                <span class="tag" title="Comes with the page. Drop a file with the same name to replace it.">built-in</span>
+                            }
+                            else
+                            {
+                                <button class="rm" aria-label="Remove @name" title="Remove @name" @onclick="() => RemoveSampleAsync(name)">✕</button>
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (_samples.All(s => s.BuiltIn))
+                {
+                    <p class="plain dim">Drop .wav files anywhere on this page to add your own, then play one with <code>Sample(Samples.Load("kick.wav"))</code>.</p>
+                }
+                <div class="sample-add">
+                    <label class="btn ghost" for="sample-picker" title="Choose .wav files to add">Add .wav files</label>
+                    <span class="plain dim">@(_samplesKept ? "Kept in this browser." : "Gone when you close this tab.")</span>
+                </div>
+            </section>
+
+            <section class="sec">
                 <div class="sec-h"><h2>Reference</h2></div>
                 <ul class="kv">
                     <li><span class="k">Sources</span><span class="val">Sine Saw Square Noise Fn Constant</span></li>
@@ -123,6 +154,7 @@
                     <li><span class="k">Notes</span><span class="val">Notes.Parse("C4 E4"), LINQ</span></li>
                     <li><span class="k">Sequence</span><span class="val">.Every(Beats.Eighth).Loop().Play(v =&gt; ...)</span></li>
                     <li><span class="k">Keyboard</span><span class="val">Keys.Play(v =&gt; ...)</span></li>
+                    <li><span class="k">Samples</span><span class="val">Sample(Samples.Load("kick.wav"))</span></li>
                 </ul>
                 <p class="plain dim">The last expression is the sound.</p>
             </section>
@@ -152,6 +184,8 @@
     private bool _refreshOnChange = true;
     private bool _showDisclaimer = true;
     private bool _usesKeys;
+    private bool _samplesKept;
+    private IReadOnlyList<SampleEntry> _samples = [];
     private string _status = "Loading compiler";
     private string _statusKind = "dim";
     private IReadOnlyList<SnippetDiagnostic> _diagnostics = [];
@@ -168,6 +202,9 @@
         await JS.InvokeVoidAsync("sigilRepl.init", _self, _editorHost, ReplExamples.All[0].Code);
         UpdateKeyboard(await JS.InvokeAsync<string>("sigilRepl.getCode"));
         _refreshOnChange = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "refreshOnChange", true);
+        // Samples from earlier visits go back into the virtual folder before any snippet can ask for them.
+        _samplesKept = await JS.InvokeAsync<bool>("sigilRepl.samples.restore");
+        RefreshSamples();
         bool dismissed = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "disclaimerDismissed", false);
         if (dismissed && _showDisclaimer)
         {
@@ -256,6 +293,64 @@
     [JSInvokable]
     public SignatureHelp? Signatures(string code, int offset) =>
         _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Signatures(code, offset, ReplProfile.Instance)) : null;
+
+    /// <summary>
+    /// Asked before a dropped file is read into memory, so one that can never be kept (not a .wav, far too big) is refused
+    /// without loading it. The reason goes to the status bar.
+    /// </summary>
+    [JSInvokable]
+    public bool CanAddSample(string fileName, double size)
+    {
+        if (ReplSamples.CleanName(fileName) is null)
+        {
+            SetStatus($"\"{fileName}\" was not added: only .wav files can be used as samples.", "error");
+            return false;
+        }
+        if (size > ReplSamples.MaxFileBytes)
+        {
+            SetStatus($"\"{fileName}\" was not added: it is {size / (1024 * 1024):0} MB and the limit is {ReplSamples.MaxFileBytes / (1024 * 1024)} MB.", "error");
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>Keeps a dropped or picked .wav file in the virtual folder. The page stores a copy in the browser if this says it was kept.</summary>
+    [JSInvokable]
+    public SampleAddResult AddSample(string fileName, byte[] bytes)
+    {
+        var result = ReplSamples.Instance.Add(fileName, bytes);
+        SetStatus(result.Message, result.Ok ? "ok" : "error");
+        RefreshSamples();
+        return result;
+    }
+
+    /// <summary>Puts back a sample saved by an earlier visit, without announcing it.</summary>
+    [JSInvokable]
+    public bool RestoreSample(string fileName, byte[] bytes) => ReplSamples.Instance.Restore(fileName, bytes);
+
+    private void RefreshSamples()
+    {
+        _samples = ReplSamples.Instance.Entries();
+        StateHasChanged();
+    }
+
+    private async Task RemoveSampleAsync(string name)
+    {
+        if (!ReplSamples.Instance.Remove(name))
+            return;
+        await JS.InvokeVoidAsync("sigilRepl.samples.forget", name);
+        RefreshSamples();
+        SetStatus($"Removed \"{name}\"", "dim");
+    }
+
+    private async Task InsertSampleAsync(string name) =>
+        await JS.InvokeVoidAsync("sigilRepl.insertText", $"Samples.Load(\"{name}\")");
+
+    private static string DescribeSample(SampleEntry sample)
+    {
+        string size = sample.Bytes >= 1024 * 1024 ? $"{sample.Bytes / (1024.0 * 1024):0.#} MB" : $"{Math.Max(1, sample.Bytes / 1024)} KB";
+        return sample.Seconds > 0 ? $"{sample.Seconds:0.##} s · {size}" : size;
+    }
 
     private async Task PlayAsync(string code)
     {

@@ -7,8 +7,32 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Sigil.Sound.Repl;
 
-/// <summary>One completion suggestion. <see cref="Kind"/> uses Monaco's names (Method, Property, Class, ...).</summary>
-public sealed record CompletionItem(string Label, string Kind, string Detail, string? Documentation, string SortText);
+/// <summary>
+/// One completion suggestion. <see cref="Kind"/> uses Monaco's names (Method, Property, Class, ...), plus <c>Sample</c> for a name from the
+/// host's sample library.
+/// </summary>
+/// <param name="Label">What the list shows. For a sample it includes the quotes, as in <c>"kick.wav"</c>.</param>
+/// <param name="Kind">The kind of symbol, which picks the icon.</param>
+/// <param name="Detail">A short description shown beside the label, such as the signature.</param>
+/// <param name="Documentation">The symbol's summary, when it has one.</param>
+/// <param name="SortText">Orders the list.</param>
+/// <param name="InsertText">The text to put in the editor when it differs from <paramref name="Label"/>; null means the label.</param>
+/// <param name="FilterText">The text typing is matched against when it differs from <paramref name="Label"/>; null means the label.</param>
+/// <param name="ReplaceBefore">
+/// How many characters before the caret the inserted text replaces; null means the word being typed. Counted in characters on the
+/// caret's line, so it does not depend on the editor's line endings.
+/// </param>
+/// <param name="ReplaceAfter">How many characters after the caret the inserted text replaces; null means the word being typed.</param>
+public sealed record CompletionItem(
+    string Label,
+    string Kind,
+    string Detail,
+    string? Documentation,
+    string SortText,
+    string? InsertText = null,
+    string? FilterText = null,
+    int? ReplaceBefore = null,
+    int? ReplaceAfter = null);
 
 /// <summary>One overload in a signature popup; each parameter is a [start, end) range in <see cref="Label"/>.</summary>
 public sealed record SignatureInfo(string Label, string? Documentation, IReadOnlyList<ParameterInfo> Parameters);
@@ -118,6 +142,10 @@ public static partial class EditorServices
         else if (token.Span.End > position)
             token = token.GetPreviousToken();
 
+        // Inside the quotes of a sample name: the library's names, and nothing else.
+        if (SampleNameLiteralAt(model, root, position) is { } literal)
+            return SampleItems(document.Profile, literal);
+
         if (token.IsKind(SyntaxKind.DotToken))
             return MemberCompletions(model, token, position, document.Profile);
 
@@ -129,6 +157,99 @@ public static partial class EditorServices
             .Where(s => Visible(s, document.Profile));
         var items = Group(symbols, model, position, rank: s => s.ContainingType?.ContainingNamespace?.ToDisplayString().StartsWith("Sigil") == true ? "0" : "1");
         items.AddRange(Keywords.Select(k => new CompletionItem(k, "Keyword", "keyword", null, "2" + k)));
+
+        // An empty argument that takes a sample name: offer the names already in quotes, ahead of everything else.
+        if (TakesSampleName(model, token))
+            items.InsertRange(0, SampleItems(document.Profile, literal: null));
+        return items;
+    }
+
+    /// <summary>Where the caret sits inside a string argument that takes a sample name: how much of the string lies each side of it.</summary>
+    private readonly record struct SampleLiteral(int Before, int After);
+
+    /// <summary>
+    /// The sample-name string the caret is inside, or null. A string is a sample name when it is the argument of a parameter marked
+    /// <c>[SampleName]</c>, found through the semantic model so it follows overloads and named arguments.
+    /// </summary>
+    private static SampleLiteral? SampleNameLiteralAt(SemanticModel model, SyntaxNode root, int position)
+    {
+        var token = root.FindToken(Math.Max(0, position - 1));
+        if (!token.IsKind(SyntaxKind.StringLiteralToken) || token.Parent is not LiteralExpressionSyntax { Parent: ArgumentSyntax argument })
+            return null;
+
+        // The caret has to be after the opening quote and before the closing one; an unfinished string runs to the end of its line.
+        int contentStart = token.SpanStart + 1;
+        bool closed = token.Text.Length >= 2 && token.Text[^1] == '"';
+        int contentEnd = closed ? token.Span.End - 1 : token.Span.End;
+        if (position < contentStart || position > contentEnd)
+            return null;
+        if (argument.Parent is not ArgumentListSyntax list || list.Parent is not InvocationExpressionSyntax invocation)
+            return null;
+
+        int index = list.Arguments.IndexOf(argument);
+        string? name = argument.NameColon?.Name.Identifier.ValueText;
+        if (!ParameterTakesSampleName(model, invocation, index, name))
+            return null;
+
+        return new SampleLiteral(position - contentStart, contentEnd - position);
+    }
+
+    /// <summary>Whether the caret is at an empty argument slot (right after <c>(</c>, a comma or <c>name:</c>) of a parameter marked <c>[SampleName]</c>.</summary>
+    private static bool TakesSampleName(SemanticModel model, SyntaxToken previous)
+    {
+        if (previous.Kind() is not (SyntaxKind.OpenParenToken or SyntaxKind.CommaToken or SyntaxKind.ColonToken))
+            return false;
+
+        if (previous.IsKind(SyntaxKind.ColonToken))
+        {
+            // "name: " inside an argument list.
+            return previous.Parent is NameColonSyntax { Parent: ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax call } list } argument }
+                   && ParameterTakesSampleName(model, call, list.Arguments.IndexOf(argument), argument.NameColon!.Name.Identifier.ValueText);
+        }
+
+        if (previous.Parent is not ArgumentListSyntax { Parent: InvocationExpressionSyntax invocation } arguments)
+            return false;
+
+        int index = previous.IsKind(SyntaxKind.OpenParenToken) ? 0 : arguments.Arguments.GetSeparators().ToList().FindIndex(s => s == previous) + 1;
+        return ParameterTakesSampleName(model, invocation, index, name: null);
+    }
+
+    private static bool ParameterTakesSampleName(SemanticModel model, InvocationExpressionSyntax invocation, int index, string? name)
+    {
+        // A call being typed rarely binds cleanly, so every overload that could be meant is looked at.
+        var info = model.GetSymbolInfo(invocation);
+        IEnumerable<IMethodSymbol> methods = info.Symbol is IMethodSymbol bound
+            ? [bound]
+            : info.CandidateSymbols.OfType<IMethodSymbol>().Concat(model.GetMemberGroup(invocation.Expression).OfType<IMethodSymbol>());
+
+        foreach (var method in methods)
+        {
+            var parameter = name is null
+                ? index >= 0 && index < method.Parameters.Length ? method.Parameters[index] : null
+                : method.Parameters.FirstOrDefault(p => p.Name == name);
+            if (parameter is not null && parameter.GetAttributes().Any(a => a.AttributeClass?.Name == nameof(SampleNameAttribute)))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The library's names as suggestions. Inside quotes they replace what is between the quotes; with no quotes yet they bring their own.
+    /// The label always shows the quotes, which is how a name is told apart from code.
+    /// </summary>
+    private static List<CompletionItem> SampleItems(SnippetProfile profile, SampleLiteral? literal)
+    {
+        var items = new List<CompletionItem>();
+        foreach (string name in profile.SampleNames)
+        {
+            string quoted = "\"" + name + "\"";
+            items.Add(new CompletionItem(
+                quoted, "Sample", "sample", null, "0" + name,
+                InsertText: literal is null ? quoted : name,
+                FilterText: literal is null ? quoted : name,
+                ReplaceBefore: literal?.Before,
+                ReplaceAfter: literal?.After));
+        }
         return items;
     }
 

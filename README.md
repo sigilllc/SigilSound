@@ -28,9 +28,12 @@ var mix = (pad * 0.5 + lead * 0.3).Limit();
 mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 ```
 
-- **Sources:** `Sine`, `Saw` and `Square` (PolyBLEP band-limited, variable pulse width), `Noise` (seeded), `Constant`, `Fn(t => ...)`.
+- **Sources:** `Sine`, `Saw` and `Square` (PolyBLEP band-limited, variable pulse width), `Triangle` (band-limited, with a variable skew), `Noise` (seeded), `Constant`, `Fn(t => ...)`, and `Sample` (plays an `AudioBuffer` at any speed, or at a pitch, with one-shot, loop and ping-pong modes). Low-frequency modulation is ordinary math: a slow `Sine` or `Triangle` through `Range`, or an `Fn` for stepped values.
+- **Samples:** `AudioBuffer.FromWav(path)`, `FromWav(stream)` and `FromWav(bytes)` decode 8, 16, 24 and 32-bit PCM and 32-bit float WAV, mono or stereo, and `WavReader.ReadInfo(bytes)` reads a file's format and length without decoding it. Snippets do not give file paths: they name a sample, `Samples.Load("kick.wav")`, and the host decides where samples live (`SampleLibrary` over an `ISampleSource`; `FolderSampleSource` in `Sigil.Sound.Repl` for a folder). In the browser REPL, drop `.wav` files on the page; the editor offers the names as you type the quotes. The path overload is blocked in snippets.
 - **Operators:** `Gain` / `*`, mix / `+`, offset / `+ 12`, ring modulation (`sound * sound`), `Range`, `Adsr`, `LowPass`, `HighPass`, `BandPass`, `Notch` (topology-preserving state-variable filter), `Pan`, `Limit`.
-- **Effects:** `Delay`, `Reverb` (Schroeder stereo decorrelated), `Comb` (tuned resonator; Karplus-Strong string), `Distort` (soft, hard, fold, fuzz), `BitCrush`, `Chorus`, `Phaser`. Each takes `mix` where applicable, and continuous parameters accept numbers, sounds, or `Fn(t => ...)`.
+- **Tone:** `Peak` (bell), `LowShelf`, `HighShelf` (RBJ biquads), `Equalize` (three-band tone control), `Vowel` (four formants, morphs A to U), `Fold` (West Coast wavefolder).
+- **Dynamics:** `Compress` (soft knee, sidechain, lookahead), `FollowEnvelope` (loudness as a control signal), `Spread` (mid/side stereo width).
+- **Effects:** `Delay`, `TapeDelay` (slewed read head, saturating and damped feedback), `Reverb` (Schroeder stereo decorrelated), `FdnReverb` (eight-line feedback network, optional shimmer), `Comb` (tuned resonator; Karplus-Strong string), `Distort` (soft, hard, fold, fuzz), `BitCrush`, `Chorus`, `Phaser`. Each takes `mix` where applicable, and continuous parameters accept numbers, sounds, or `Fn(t => ...)`.
 - **Parameters:** Every `Param` accepts a number, another `Sound` (audio-rate modulation), or a `Func<double, float>` of time. Constant parameters are evaluated with zero per-block overhead.
 - **Sequences & Notes:** `Notes.Parse("C4 Eb4 G4")`, LINQ transformations (`Where`, `Select`, `Transpose`), timing (`Every`, `Beats`), and zero-allocation polyphonic playback (`Play`).
 - **Rendering:** `Render(seconds)` returns an in-memory `AudioBuffer`; `RenderToWav` writes 16-bit, 24-bit, or 32-bit float WAV to a path or a `Stream`.
@@ -48,7 +51,7 @@ mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 
 | Package | Contents | Status |
 | --- | --- | --- |
-| `Sigil.Sound` | `Sound`, `Param`, `RenderContext`, `IOperator`, oscillators, envelopes, TP-SVF filters, effects, offline render, WAV writing. Zero dependencies, browser-wasm clean. | Scaffold |
+| `Sigil.Sound` | `Sound`, `Param`, `RenderContext`, `IOperator`, oscillators, envelopes, TP-SVF filters, effects, samples, offline render, WAV reading and writing. Zero dependencies, browser-wasm clean. | Scaffold |
 | `Sigil.Sound.Notes` | Notes, pitch parsing, note sequences, timing patterns, polyphonic voice engine. | Scaffold |
 | `Sigil.Sound.Testing` | `SignalAnalysis` and `AudioAssert` for tolerance-based audio assertions | Scaffold |
 | `Sigil.Sound.SoundFont` | SoundFont playback | Planned |

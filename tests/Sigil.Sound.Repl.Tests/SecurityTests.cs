@@ -42,6 +42,17 @@ public class SecurityTests
         Assert.Contains(result.Diagnostics, d => d.IsError && d.Id == "SIGIL_SEC07");
     }
 
+    [Theory]
+    [InlineData("AudioBuffer.FromWav(\"secrets.wav\");\nSine(440)")]
+    [InlineData("var path = \"secrets.wav\";\nAudioBuffer.FromWav(path);\nSine(440)")]
+    public void Loading_a_wav_file_from_disk_is_rejected(string code)
+    {
+        var result = SnippetCompiler.Compile(code);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, d => d.IsError && d.Id == "SIGIL_SEC09");
+    }
+
     [Fact]
     public void RenderToWav_disk_io_is_rejected()
     {

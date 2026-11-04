@@ -25,6 +25,13 @@
         </div>
     </div>
 
+    <!-- Outside #app, so Blazor's renders never touch them. repl.js listens for drops on the window and the picker's change. -->
+    <input type="file" id="sample-picker" accept=".wav,audio/wav,audio/x-wav,audio/wave" multiple hidden />
+    <div class="drop-overlay" aria-hidden="true">
+        <span class="wf"></span>
+        <span>Drop .wav files to add them as samples</span>
+    </div>
+
     <div id="blazor-error-ui">
         An unhandled error has occurred.
         <a href="." class="reload">Reload</a>
