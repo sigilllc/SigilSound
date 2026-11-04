@@ -62,32 +62,60 @@ internal sealed class FilterOperator : IOperator, IResettable
         var cutoff = _cutoff.Next(block.Length);
         var q = _q.Next(block.Length);
 
+        // The sample loop is written out in one piece, with the filter state in locals: a voice runs it for every
+        // frame, and where the .NET interpreter runs (the browser) each call and ref argument is a large part of the cost.
+        // A fixed cutoff and Q (the usual case) are applied once per block instead of tested for every frame.
+        bool fixedCoefficients = _cutoff.IsConstant && _q.IsConstant;
+        if (fixedCoefficients)
+            UpdateCoefficients(Dsp.Finite(cutoff[0], 1000f), Dsp.Finite(q[0], 0.7071f));
+
+        var mode = _mode;
+        float lIc1 = _lIc1, lIc2 = _lIc2, rIc1 = _rIc1, rIc2 = _rIc2;
+        float a1 = _a1, a2 = _a2, a3 = _a3, k = _k;
+
         for (int i = 0; i < block.Length; i++)
         {
-            UpdateCoefficients(Dsp.Finite(cutoff[i], 1000f), Dsp.Finite(q[i], 0.7071f));
+            if (!fixedCoefficients)
+            {
+                UpdateCoefficients(Dsp.Finite(cutoff[i], 1000f), Dsp.Finite(q[i], 0.7071f));
+                a1 = _a1;
+                a2 = _a2;
+                a3 = _a3;
+                k = _k;
+            }
 
             var x = block[i];
-            block[i] = new StereoFrame(
-                Process(Dsp.Safe(x.Left), ref _lIc1, ref _lIc2),
-                Process(Dsp.Safe(x.Right), ref _rIc1, ref _rIc2));
+            // NaN and infinity both fail x - x == 0, and become silence so one bad value cannot poison the state.
+            float l = x.Left - x.Left == 0f ? x.Left : 0f;
+            float r = x.Right - x.Right == 0f ? x.Right : 0f;
+
+            float v3 = l + DenormalOffset - lIc2;
+            float v1 = a1 * lIc1 + a2 * v3;
+            float v2 = lIc2 + a2 * lIc1 + a3 * v3;
+            lIc1 = 2f * v1 - lIc1;
+            lIc2 = 2f * v2 - lIc2;
+            float outLeft = mode == FilterMode.LowPass ? v2
+                : mode == FilterMode.BandPass ? v1 * k
+                : mode == FilterMode.HighPass ? l - k * v1 - v2
+                : l - k * v1;
+
+            v3 = r + DenormalOffset - rIc2;
+            v1 = a1 * rIc1 + a2 * v3;
+            v2 = rIc2 + a2 * rIc1 + a3 * v3;
+            rIc1 = 2f * v1 - rIc1;
+            rIc2 = 2f * v2 - rIc2;
+            float outRight = mode == FilterMode.LowPass ? v2
+                : mode == FilterMode.BandPass ? v1 * k
+                : mode == FilterMode.HighPass ? r - k * v1 - v2
+                : r - k * v1;
+
+            block[i] = new StereoFrame(outLeft, outRight);
         }
-    }
 
-    private float Process(float v0, ref float ic1, ref float ic2)
-    {
-        float v3 = v0 + DenormalOffset - ic2;
-        float v1 = _a1 * ic1 + _a2 * v3;
-        float v2 = ic2 + _a2 * ic1 + _a3 * v3;
-        ic1 = 2f * v1 - ic1;
-        ic2 = 2f * v2 - ic2;
-
-        return _mode switch
-        {
-            FilterMode.LowPass => v2,
-            FilterMode.BandPass => v1 * _k,
-            FilterMode.HighPass => v0 - _k * v1 - v2,
-            _ => v0 - _k * v1,
-        };
+        _lIc1 = lIc1;
+        _lIc2 = lIc2;
+        _rIc1 = rIc1;
+        _rIc2 = rIc2;
     }
 
     private void UpdateCoefficients(float cutoff, float q)

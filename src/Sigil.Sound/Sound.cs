@@ -104,16 +104,26 @@ public sealed partial class Sound
     /// <param name="release">Seconds to fall to silence once the release starts.</param>
     /// <param name="hold">Seconds from the start until the release begins. Omit it to follow the note, or to sustain.</param>
     /// <example><code>Saw(220).Adsr(0.01, 0.2, 0.6, 1.5, hold: 3)</code></example>
-    public Sound Adsr(double attack, double decay, double sustain, double release, double? hold = null)
+    public Sound Adsr(double attack, double decay, double sustain, double release, double? hold = null) =>
+        Adsr((Param)attack, (Param)decay, (Param)sustain, (Param)release, hold);
+
+    /// <summary>Applies an attack-decay-sustain-release envelope driven by constant or modulated parameters. Times are in seconds; sustain is a level from 0 to 1.</summary>
+    /// <param name="attack">Seconds to ramp from 0 to peak. A number, or a sound/knob to modulate it.</param>
+    /// <param name="decay">Seconds to fall from peak to the sustain level. A number, or a sound/knob to modulate it.</param>
+    /// <param name="sustain">Level held until release begins, between 0 and 1. A number, or a sound/knob to modulate it.</param>
+    /// <param name="release">Seconds to fade to silence once released. A number, or a sound/knob to modulate it.</param>
+    /// <param name="hold">Seconds from the start until the release begins. Omit it to follow the note, or to sustain.</param>
+    /// <example><code>Saw(220).Adsr(0.01, 0.2, 0.6, 1.5, hold: 3)</code></example>
+    public Sound Adsr(Param attack, Param decay, Param sustain, Param release, double? hold = null)
     {
-        if (attack < 0) throw new ArgumentOutOfRangeException(nameof(attack), attack, "Attack must not be negative.");
-        if (decay < 0) throw new ArgumentOutOfRangeException(nameof(decay), decay, "Decay must not be negative.");
-        if (sustain is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(sustain), sustain, "Sustain must be between 0 and 1.");
-        if (release < 0) throw new ArgumentOutOfRangeException(nameof(release), release, "Release must not be negative.");
+        if (attack.IsConstant && attack.ConstantValue < 0) throw new ArgumentOutOfRangeException(nameof(attack), attack.ConstantValue, "Attack must not be negative.");
+        if (decay.IsConstant && decay.ConstantValue < 0) throw new ArgumentOutOfRangeException(nameof(decay), decay.ConstantValue, "Decay must not be negative.");
+        if (sustain.IsConstant && sustain.ConstantValue is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(sustain), sustain.ConstantValue, "Sustain must be between 0 and 1.");
+        if (release.IsConstant && release.ConstantValue < 0) throw new ArgumentOutOfRangeException(nameof(release), release.ConstantValue, "Release must not be negative.");
 
         if (hold is < 0 or double.NaN) throw new ArgumentOutOfRangeException(nameof(hold), hold, "Hold must not be negative.");
 
-        return new(ctx => new AdsrOperator(Compile(ctx), attack, decay, (float)sustain, release, hold, ctx),
+        return new(ctx => new AdsrOperator(Compile(ctx), attack.Compile(ctx), decay.Compile(ctx), sustain.Compile(ctx), release.Compile(ctx), hold, ctx),
             $"{this}.Adsr({attack}, {decay}, {sustain}, {release})");
     }
 

@@ -83,13 +83,36 @@ public static class SnippetCompiler
     {
         try
         {
-            return new AssemblyLoadContext(null, isCollectible: true).LoadFromStream(new MemoryStream(image));
+            var host = AssemblyLoadContext.GetLoadContext(typeof(SnippetCompiler).Assembly) ?? AssemblyLoadContext.Default;
+            return new SnippetLoadContext(host).LoadFromStream(new MemoryStream(image));
         }
         catch (Exception e) when (e is PlatformNotSupportedException or NotSupportedException)
         {
             return Assembly.Load(image);
         }
     }
+    /// <summary>
+    /// Where a snippet is loaded. It finds the assemblies it was compiled against (Sigil.Sound and whatever the host added) in the context
+    /// that loaded this compiler, and only then falls back to the default one.
+    /// </summary>
+    /// <remarks>
+    /// A host that keeps its assemblies in a context of its own, as Godot does for a game, would otherwise have the snippet look for them in
+    /// the default context: not finding them, or worse, finding a second copy whose types are not the host's.
+    /// </remarks>
+    private sealed class SnippetLoadContext(AssemblyLoadContext host) : AssemblyLoadContext(null, isCollectible: true)
+    {
+        protected override Assembly? Load(AssemblyName assemblyName)
+        {
+            foreach (var loaded in host.Assemblies)
+            {
+                if (AssemblyName.ReferenceMatchesDefinition(assemblyName, loaded.GetName()))
+                    return loaded;
+            }
+
+            return null;
+        }
+    }
+
     // Touches every operator, lambdas, arrays, LINQ and the custom-operator escape hatch, so the runtime has seen them.
     private const string WarmSnippet =
         """

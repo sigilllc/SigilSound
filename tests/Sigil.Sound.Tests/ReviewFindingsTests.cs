@@ -42,6 +42,15 @@ public class ReviewFindingsTests
         Assert.InRange(At(samples, 0.75), 0.2f, 0.3f);
     }
 
+    [Fact]
+    public void Adsr_accepts_param_for_envelope_times()
+    {
+        var releaseMod = Sine(1).Range(0.2, 0.6);
+        var sound = Constant(1).Adsr(0.01, 0.1, 0.5, releaseMod, hold: 0.5);
+        var samples = Mono(sound, 1.5);
+        Assert.InRange(At(samples, 0.2), 0.45f, 0.55f);
+    }
+
     // ---- Note voices ----
 
     [Fact]

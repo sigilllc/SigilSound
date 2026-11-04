@@ -28,7 +28,7 @@
 
         <select class="sel" @onchange="LoadExampleAsync" value="" aria-label="Examples">
             <option value="" disabled>Examples</option>
-            @foreach (var example in Examples.All)
+            @foreach (var example in ReplExamples.All)
             {
                 <option value="@example.Name">@example.Name</option>
             }
@@ -71,7 +71,13 @@
     }
 
     <main class="work">
-        <div id="editor" class="editor" @ref="_editorHost"></div>
+        <div class="code">
+            <div id="editor" class="editor" @ref="_editorHost"></div>
+            @if (_usesKeys)
+            {
+                <PianoKeyboard Input="ReplApi.Keys" Active="_playing" />
+            }
+        </div>
 
         <div id="resizer" class="resizer" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" tabindex="0"></div>
 
@@ -116,6 +122,7 @@
                     <li><span class="k">Parameters</span><span class="val">number, sound, Fn(t =&gt; ...)</span></li>
                     <li><span class="k">Notes</span><span class="val">Notes.Parse("C4 E4"), LINQ</span></li>
                     <li><span class="k">Sequence</span><span class="val">.Every(Beats.Eighth).Loop().Play(v =&gt; ...)</span></li>
+                    <li><span class="k">Keyboard</span><span class="val">Keys.Play(v =&gt; ...)</span></li>
                 </ul>
                 <p class="plain dim">The last expression is the sound.</p>
             </section>
@@ -144,6 +151,7 @@
     private bool _playing;
     private bool _refreshOnChange = true;
     private bool _showDisclaimer = true;
+    private bool _usesKeys;
     private string _status = "Loading compiler";
     private string _statusKind = "dim";
     private IReadOnlyList<SnippetDiagnostic> _diagnostics = [];
@@ -157,7 +165,8 @@
 
         _self = DotNetObjectReference.Create(this);
         _engineRef = DotNetObjectReference.Create(Engine);
-        await JS.InvokeVoidAsync("sigilRepl.init", _self, _editorHost, Examples.All[0].Code);
+        await JS.InvokeVoidAsync("sigilRepl.init", _self, _editorHost, ReplExamples.All[0].Code);
+        UpdateKeyboard(await JS.InvokeAsync<string>("sigilRepl.getCode"));
         _refreshOnChange = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "refreshOnChange", true);
         bool dismissed = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "disclaimerDismissed", false);
         if (dismissed && _showDisclaimer)
@@ -173,6 +182,9 @@
         {
             SnippetCompiler.Warm();
             EditorServices.Warm();
+            // The page's own policy binds its own references; do that now rather than on the first keystroke.
+            SnippetCompiler.Compile("Keys.Play(v => Sine(v.Frequency))", ReplProfile.Instance).Run();
+            _ = EditorServices.Complete("Keys.", 5, ReplProfile.Instance);
         });
         _ready = true;
         SetStatus($"Ready ({timer.ElapsedMilliseconds} ms)", "dim");
@@ -199,7 +211,9 @@
 
         // Start audio first: this has to happen close to the click or key press that allowed it.
         await Engine.StartAsync(_engineRef!);
-        await PlayAsync(await JS.InvokeAsync<string>("sigilRepl.getCode"));
+        var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
+        UpdateKeyboard(code);
+        await PlayAsync(code);
     }
 
     /// <summary>
@@ -209,6 +223,7 @@
     [JSInvokable]
     public async Task<IReadOnlyList<SnippetDiagnostic>> CodeChangedAsync(string code)
     {
+        UpdateKeyboard(code);
         if (!_ready)
             return [];
         if (_refreshOnChange && _playing)
@@ -217,7 +232,7 @@
             return _diagnostics;
         }
 
-        _diagnostics = Engine.BeforeBlockingWork("analyze", () => SnippetCompiler.Check(code));
+        _diagnostics = Engine.BeforeBlockingWork("analyze", () => SnippetCompiler.Check(code, ReplProfile.Instance));
         StateHasChanged();
         return _diagnostics;
     }
@@ -232,15 +247,15 @@
 
     [JSInvokable]
     public IReadOnlyList<CompletionItem> Complete(string code, int offset) =>
-        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Complete(code, offset)) : [];
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Complete(code, offset, ReplProfile.Instance)) : [];
 
     [JSInvokable]
     public string? Describe(string code, int offset) =>
-        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Describe(code, offset)) : null;
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Describe(code, offset, ReplProfile.Instance)) : null;
 
     [JSInvokable]
     public SignatureHelp? Signatures(string code, int offset) =>
-        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Signatures(code, offset)) : null;
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Signatures(code, offset, ReplProfile.Instance)) : null;
 
     private async Task PlayAsync(string code)
     {
@@ -248,7 +263,7 @@
         await Task.Delay(1);
 
         var timer = System.Diagnostics.Stopwatch.StartNew();
-        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code));
+        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code, ReplProfile.Instance));
         long compileMs = timer.ElapsedMilliseconds;
         ShowDiagnostics(result.Diagnostics);
 
@@ -278,9 +293,10 @@
 
     private async Task LoadExampleAsync(ChangeEventArgs e)
     {
-        var example = Examples.All.FirstOrDefault(x => x.Name == e.Value as string);
+        var example = ReplExamples.All.FirstOrDefault(x => x.Name == e.Value as string);
         if (example is null)
             return;
+        UpdateKeyboard(example.Code);
         // Refresh on change picks the new code up; without it, a playing sound switches right away.
         await JS.InvokeVoidAsync("sigilRepl.setCode", example.Code);
         if (_playing && !_refreshOnChange)
@@ -296,7 +312,7 @@
     private async Task DownloadAsync()
     {
         var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
-        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code));
+        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code, ReplProfile.Instance));
         ShowDiagnostics(result.Diagnostics);
         if (!result.Success)
         {
@@ -319,6 +335,16 @@
         {
             SetStatus($"{e.GetType().Name}: {e.Message}", "error");
         }
+    }
+
+    // The keyboard is for snippets that use Keys; for any other it would do nothing.
+    private void UpdateKeyboard(string code)
+    {
+        bool uses = KeyboardUsage.Uses(code);
+        if (uses == _usesKeys)
+            return;
+        _usesKeys = uses;
+        StateHasChanged();
     }
 
     private void ShowDiagnostics(IReadOnlyList<SnippetDiagnostic> diagnostics)

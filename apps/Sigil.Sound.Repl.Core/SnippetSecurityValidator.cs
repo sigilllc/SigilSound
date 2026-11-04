@@ -34,6 +34,20 @@ public static class SnippetSecurityValidator
         var walker = new SecurityWalker(model, document, diagnostics);
         walker.Visit(root);
 
+        // 4. The host's own rule, only on a snippet the built-in checks accepted.
+        if (diagnostics.Count == 0 && document.Profile.ExtraValidation is { } hostRule)
+        {
+            try
+            {
+                hostRule(new SnippetValidationContext(model, document, diagnostics));
+            }
+            catch (Exception e)
+            {
+                // A rule that cannot run is not a rule that passed.
+                diagnostics.Add(CreateDiagnostic("SIGIL_SEC13", $"The host's snippet rule failed: {e.Message}", root.GetLocation()));
+            }
+        }
+
         // Deduplicate diagnostics by position and ID
         return diagnostics
             .GroupBy(d => (d.Id, d.StartLine, d.StartColumn, d.Message))

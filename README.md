@@ -2,7 +2,7 @@
 
 Composable sound synthesis for .NET: describe a sound as an immutable value, compose it like LINQ, and render it when you need it.
 
-> **Status: pre-alpha, private.** Nothing here is a stable API yet. No license has been chosen, so no `LICENSE` file is included and no rights are granted.
+> **Status: pre-alpha.** Active development. Licensed under the [MIT License](LICENSE).
 
 ## Quick Start
 
@@ -76,3 +76,17 @@ dotnet test
 ## Heritage
 
 Sigil.Sound is a clean, modern rewrite of the engine powering Sigilgraph Audio Workbench (`AudioWorkbench.Core`), eliminating legacy singletons, per-sample abstractions, and desktop coupling in favor of a fluent, functional, allocation-free architecture.
+
+## License & Trademarks
+
+This project is licensed under the [MIT License](LICENSE).
+
+### Trademarks
+
+The "Sigil", "Sigil.Sound", and "AudioWorkbench" names, logos, and iconography are trademarks. You may fork and build on the code under the MIT license, but you may not use our brand assets or represent third-party forks as official Sigil products.
+
+### Canonical Distribution Channels
+
+- **Official NuGet Packages:** Available exclusively under the verified `Sigil.Sound` namespace on [nuget.org](https://www.nuget.org).
+- **Official Live REPL:** Hosted at [sigilaud.io](https://sigilaud.io) and official project domains.
+- **Official Source Repository:** [github.com/sigilllc/SigilSound](https://github.com/sigilllc/SigilSound).

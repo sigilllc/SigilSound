@@ -240,10 +240,151 @@ button {
     outline: none;
 }
 
+/* The editor and the keyboard under it share the left column; the editor takes whatever the keyboard leaves. */
+.code {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
 .editor {
+    flex: 1;
     min-height: 0;
     min-width: 0;
     background: var(--well);
+}
+
+/* ---- Keyboard ---------------------------------------------------------------------------- */
+
+.keys {
+    flex: none;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+}
+
+.keys-h {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    padding: 4px 12px;
+}
+
+.keys-h h2 {
+    margin: 0;
+    font-size: var(--t-small);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+    white-space: nowrap;
+}
+
+.keys-hint {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--t-small);
+    color: var(--dim);
+}
+
+.keys-hint code {
+    color: var(--teal);
+}
+
+.mini {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    border-radius: var(--r);
+    border: 1px solid var(--line);
+    background: #1b1c22;
+    color: var(--fg-2);
+}
+
+.mini:hover:not(:disabled) {
+    border-color: var(--dim);
+    color: var(--fg);
+}
+
+.mini:disabled {
+    color: #5e626c;
+    border-color: var(--line-2);
+    cursor: default;
+}
+
+.oct {
+    min-width: 2.5em;
+    text-align: center;
+    font-size: var(--t-small);
+    color: var(--fg-2);
+}
+
+.piano {
+    position: relative;
+    height: 112px;
+    margin: 0 12px 12px;
+    border-radius: 0 0 var(--r) var(--r);
+    user-select: none;
+    -webkit-user-select: none;
+    /* Dragging across the keys is a glissando, not a scroll or a zoom. */
+    touch-action: none;
+    outline: none;
+}
+
+.piano:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 3px;
+}
+
+.wk,
+.bk {
+    position: absolute;
+    top: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 6px;
+    font-size: var(--t-badge);
+    cursor: pointer;
+}
+
+.wk {
+    bottom: 0;
+    background: var(--fg-2);
+    border: 1px solid var(--well);
+    border-radius: 0 0 4px 4px;
+    color: #5e626c;
+}
+
+.bk {
+    height: 62%;
+    z-index: 1;
+    background: #1b1c22;
+    border: 1px solid #000;
+    border-radius: 0 0 3px 3px;
+    color: var(--dim);
+}
+
+.wk.down {
+    background: var(--teal);
+    color: var(--teal-ink);
+}
+
+.bk.down {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--teal-ink);
+}
+
+/* Letters on the keys are labels; clicks belong to the key under them. */
+.lbl {
+    pointer-events: none;
 }
 
 .side {

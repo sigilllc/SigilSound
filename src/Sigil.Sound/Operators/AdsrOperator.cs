@@ -9,10 +9,10 @@ namespace Sigil.Sound.Operators;
 internal sealed class AdsrOperator : IOperator, IResettable
 {
     private readonly IOperator _input;
-    private readonly double _attack;
-    private readonly double _decay;
-    private readonly float _sustain;
-    private readonly double _release;
+    private readonly ParamSource _attack;
+    private readonly ParamSource _decay;
+    private readonly ParamSource _sustain;
+    private readonly ParamSource _release;
     private readonly double? _hold;
     private readonly VoiceControl? _voice;
     private readonly double _samplePeriod;
@@ -21,7 +21,7 @@ internal sealed class AdsrOperator : IOperator, IResettable
     private double _time;
     private float _releaseStartLevel = -1;
 
-    public AdsrOperator(IOperator input, double attack, double decay, float sustain, double release,
+    public AdsrOperator(IOperator input, ParamSource attack, ParamSource decay, ParamSource sustain, ParamSource release,
         double? hold, RenderContext context)
     {
         _input = input;
@@ -39,6 +39,10 @@ internal sealed class AdsrOperator : IOperator, IResettable
         _time = 0;
         _releaseStartLevel = -1;
         _input.ResetState();
+        _attack.Reset();
+        _decay.Reset();
+        _sustain.Reset();
+        _release.Reset();
     }
 
     public void RenderBlock(Span<StereoFrame> block)
@@ -47,36 +51,99 @@ internal sealed class AdsrOperator : IOperator, IResettable
         _releaseAt = Math.Max(0, _hold ?? _voice?.HoldSeconds ?? double.PositiveInfinity);
 
         _input.RenderBlock(block);
-        for (int i = 0; i < block.Length; i++)
+
+        double time = _time;
+        double period = _samplePeriod;
+        double releaseAt = _releaseAt;
+
+        if (_attack.IsConstant && _decay.IsConstant && _sustain.IsConstant && _release.IsConstant)
         {
-            block[i] *= NextLevel();
-            _time += _samplePeriod;
+            float attack = _attack.Next(1)[0];
+            float decay = _decay.Next(1)[0];
+            float sustain = _sustain.Next(1)[0];
+            float release = _release.Next(1)[0];
+            double attackAndDecay = attack + decay;
+
+            for (int i = 0; i < block.Length; i++)
+            {
+                float level;
+                if (time < releaseAt)
+                {
+                    if (attack > 0 && time < attack)
+                        level = (float)(time / attack);
+                    else if (decay > 0 && time < attackAndDecay)
+                        level = 1.0f - (1.0f - sustain) * (float)((time - attack) / decay);
+                    else
+                        level = sustain;
+                }
+                else
+                {
+                    if (_releaseStartLevel < 0)
+                        _releaseStartLevel = Envelope(releaseAt, attack, decay, sustain);
+
+                    double intoRelease = time - releaseAt;
+                    level = intoRelease >= release || release <= 0
+                        ? 0f
+                        : _releaseStartLevel * (float)(1.0 - intoRelease / release);
+                }
+
+                var frame = block[i];
+                block[i] = new StereoFrame(frame.Left * level, frame.Right * level);
+                time += period;
+            }
         }
+        else
+        {
+            var attackSpan = _attack.Next(block.Length);
+            var decaySpan = _decay.Next(block.Length);
+            var sustainSpan = _sustain.Next(block.Length);
+            var releaseSpan = _release.Next(block.Length);
+
+            for (int i = 0; i < block.Length; i++)
+            {
+                float attack = attackSpan[i];
+                float decay = decaySpan[i];
+                float sustain = sustainSpan[i];
+                float release = releaseSpan[i];
+                double attackAndDecay = attack + decay;
+
+                float level;
+                if (time < releaseAt)
+                {
+                    if (attack > 0 && time < attack)
+                        level = (float)(time / attack);
+                    else if (decay > 0 && time < attackAndDecay)
+                        level = 1.0f - (1.0f - sustain) * (float)((time - attack) / decay);
+                    else
+                        level = sustain;
+                }
+                else
+                {
+                    if (_releaseStartLevel < 0)
+                        _releaseStartLevel = Envelope(releaseAt, attack, decay, sustain);
+
+                    double intoRelease = time - releaseAt;
+                    level = intoRelease >= release || release <= 0
+                        ? 0f
+                        : _releaseStartLevel * (float)(1.0 - intoRelease / release);
+                }
+
+                var frame = block[i];
+                block[i] = new StereoFrame(frame.Left * level, frame.Right * level);
+                time += period;
+            }
+        }
+
+        _time = time;
     }
 
     // The level before any release: rise, fall to the sustain, hold it.
-    private float Envelope(double time)
+    private static float Envelope(double time, float attack, float decay, float sustain)
     {
-        if (time < _attack)
-            return (float)(time / _attack);
-        if (time < _attack + _decay)
-            return 1.0f - (1.0f - _sustain) * (float)((time - _attack) / _decay);
-        return _sustain;
-    }
-
-    private float NextLevel()
-    {
-        if (_time < _releaseAt)
-            return Envelope(_time);
-
-        // Ramp down from what the envelope would have been at the moment of release. Reading it from the previous
-        // frame instead would start the release from silence when the release begins on the very first frame.
-        if (_releaseStartLevel < 0)
-            _releaseStartLevel = Envelope(_releaseAt);
-
-        double intoRelease = _time - _releaseAt;
-        return intoRelease >= _release || _release <= 0
-            ? 0f
-            : _releaseStartLevel * (float)(1.0 - intoRelease / _release);
+        if (attack > 0 && time < attack)
+            return (float)(time / attack);
+        if (decay > 0 && time < attack + decay)
+            return 1.0f - (1.0f - sustain) * (float)((time - attack) / decay);
+        return sustain;
     }
 }

@@ -43,7 +43,11 @@ public static class Sounds
     /// Use it wherever a <see cref="Param"/> is expected; C# cannot convert a bare lambda to <see cref="Param"/>.
     /// The function runs on the audio thread once per frame, so it must not allocate.
     /// </summary>
-    /// <param name="function">Maps time in seconds since the sound started to a value in [-1, 1] when played, or to any number when used as a parameter.</param>
+    /// <param name="function">
+    /// Maps time in seconds since the sound started to a value in [-1, 1] when played, or to any number when used as a parameter.
+    /// When the render context has a <see cref="HostClock"/>, time is the host's instead, so a replacement sound carries on from where the old one was.
+    /// Inside a note voice it is always the time since the note began.
+    /// </param>
     /// <example><code>Sine(Fn(t => 200 + 100 * t))   // a rising pitch</code></example>
     public static Sound Fn(Func<double, double> function)
     {

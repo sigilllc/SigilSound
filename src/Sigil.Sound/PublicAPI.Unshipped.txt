@@ -21,6 +21,16 @@ Sigil.Sound.DistortionMode.Fold = 2 -> Sigil.Sound.DistortionMode
 Sigil.Sound.DistortionMode.Fuzz = 3 -> Sigil.Sound.DistortionMode
 Sigil.Sound.DistortionMode.Hard = 1 -> Sigil.Sound.DistortionMode
 Sigil.Sound.DistortionMode.Soft = 0 -> Sigil.Sound.DistortionMode
+Sigil.Sound.HostClock
+Sigil.Sound.HostClock.Advance(int frames) -> void
+Sigil.Sound.HostClock.Beats.get -> double
+Sigil.Sound.HostClock.Bpm.get -> double
+Sigil.Sound.HostClock.Bpm.set -> void
+Sigil.Sound.HostClock.HostClock(int sampleRate, double bpm = 120) -> void
+Sigil.Sound.HostClock.SamplePosition.get -> long
+Sigil.Sound.HostClock.SampleRate.get -> int
+Sigil.Sound.HostClock.Seconds.get -> double
+Sigil.Sound.HostClock.Seek(long samplePosition, double beats) -> void
 Sigil.Sound.IOperator
 Sigil.Sound.IOperator.RenderBlock(System.Span<Sigil.Sound.StereoFrame> block) -> void
 Sigil.Sound.IResettable
@@ -36,6 +46,8 @@ Sigil.Sound.ParamSource.Next(int count) -> System.ReadOnlySpan<float>
 Sigil.Sound.RenderContext
 Sigil.Sound.RenderContext.BlockSize.get -> int
 Sigil.Sound.RenderContext.BlockSize.init -> void
+Sigil.Sound.RenderContext.Clock.get -> Sigil.Sound.HostClock
+Sigil.Sound.RenderContext.Clock.init -> void
 Sigil.Sound.RenderContext.Nyquist.get -> double
 Sigil.Sound.RenderContext.RenderContext() -> void
 Sigil.Sound.RenderContext.RenderContext(int SampleRate, int BlockSize = 256) -> void
@@ -51,6 +63,7 @@ Sigil.Sound.Slot.Sound.get -> Sigil.Sound.Sound
 Sigil.Sound.Slot.Swap(Sigil.Sound.Sound next, double? fadeSeconds = null) -> void
 Sigil.Sound.Sound
 Sigil.Sound.Sound.Adsr(double attack, double decay, double sustain, double release, double? hold = null) -> Sigil.Sound.Sound
+Sigil.Sound.Sound.Adsr(Sigil.Sound.Param attack, Sigil.Sound.Param decay, Sigil.Sound.Param sustain, Sigil.Sound.Param release, double? hold = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.BandPass(Sigil.Sound.Param center, Sigil.Sound.Param? q = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.BitCrush(Sigil.Sound.Param? bits = null, Sigil.Sound.Param? rate = null) -> Sigil.Sound.Sound
 Sigil.Sound.Sound.Chorus(Sigil.Sound.Param? rate = null, Sigil.Sound.Param? depth = null, Sigil.Sound.Param? mix = null, int voices = 3) -> Sigil.Sound.Sound
@@ -78,7 +91,7 @@ Sigil.Sound.SoundContext.FramesRendered.get -> long
 Sigil.Sound.SoundContext.Play(Sigil.Sound.Sound sound, double? fadeSeconds = null) -> void
 Sigil.Sound.SoundContext.Render(System.Span<Sigil.Sound.StereoFrame> output) -> void
 Sigil.Sound.SoundContext.RenderContext.get -> Sigil.Sound.RenderContext
-Sigil.Sound.SoundContext.SoundContext(int sampleRate = 48000, int blockSize = 256, double fadeSeconds = 0.02) -> void
+Sigil.Sound.SoundContext.SoundContext(int sampleRate = 48000, int blockSize = 256, double fadeSeconds = 0.02, Sigil.Sound.HostClock clock = null) -> void
 Sigil.Sound.SoundContext.Stop(double? fadeSeconds = null) -> void
 Sigil.Sound.SoundContext.Time.get -> double
 Sigil.Sound.Sounds

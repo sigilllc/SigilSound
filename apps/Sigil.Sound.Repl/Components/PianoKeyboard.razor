@@ -1,0 +1,276 @@
+@implements IDisposable
+@inject IJSRuntime JS
+
+<section class="keys" aria-label="Keyboard">
+    <div class="keys-h">
+        <h2>Keyboard</h2>
+        @if (!Active)
+        {
+            <span class="keys-hint">Press Run to hear it</span>
+        }
+        else
+        {
+            <span class="keys-hint">Click the keys, or click here and use A S D F G H J K &middot; W E T Y U &middot; Z X octave</span>
+        }
+        <span class="sp"></span>
+        @if (_open)
+        {
+            <button class="mini" @onclick="() => Shift(-12)" disabled="@(_base <= MinBase)" title="Octave down (Z)" aria-label="Octave down">&minus;</button>
+            <span class="oct" title="Lowest key on screen">@NoteName(_base)</span>
+            <button class="mini" @onclick="() => Shift(12)" disabled="@(_base >= MaxBase)" title="Octave up (X)" aria-label="Octave up">+</button>
+        }
+        <button class="mini fold" @onclick="ToggleAsync" aria-expanded="@(_open ? "true" : "false")" title="@(_open ? "Hide the keyboard" : "Show the keyboard")" aria-label="Toggle keyboard">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="@(_open ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6")" />
+            </svg>
+        </button>
+    </div>
+
+    @if (_open)
+    {
+        <div class="piano" tabindex="0" role="group" aria-label="Piano keys"
+             @onkeydown="OnKeyDown" @onkeyup="OnKeyUp" @onfocusout="OnFocusOut">
+            @foreach (var key in _keys)
+            {
+                var pitch = key.Pitch;
+                <div class="@KeyClass(key)" style="@key.Style" data-note="@pitch"
+                     @onpointerdown="e => PointerDown(e, pitch)"
+                     @onpointerup="PointerUp"
+                     @onpointercancel="PointerUp"
+                     @onpointerenter="e => PointerEnter(e, pitch)"
+                     @onpointerleave="e => PointerLeave(e, pitch)">
+                    @if (key.Label is { } label)
+                    {
+                        <span class="lbl">@label</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private const int MinBase = 0;
+    private const int MaxBase = 84;
+    private const int Octaves = 3;
+    private const float Velocity = 0.8f;
+
+    // The computer keys play the middle octave of what is on screen, laid out like the keys of a piano:
+    // the home row for the white keys, the row above for the black ones.
+    private static readonly Dictionary<string, int> ComputerKeys = new()
+    {
+        ["KeyA"] = 0, ["KeyW"] = 1, ["KeyS"] = 2, ["KeyE"] = 3, ["KeyD"] = 4, ["KeyF"] = 5, ["KeyT"] = 6,
+        ["KeyG"] = 7, ["KeyY"] = 8, ["KeyH"] = 9, ["KeyU"] = 10, ["KeyJ"] = 11, ["KeyK"] = 12,
+        ["KeyO"] = 13, ["KeyL"] = 14, ["KeyP"] = 15, ["Semicolon"] = 16,
+    };
+
+    private static readonly Dictionary<string, string> ComputerLabels = new()
+    {
+        ["KeyA"] = "A", ["KeyW"] = "W", ["KeyS"] = "S", ["KeyE"] = "E", ["KeyD"] = "D", ["KeyF"] = "F", ["KeyT"] = "T",
+        ["KeyG"] = "G", ["KeyY"] = "Y", ["KeyH"] = "H", ["KeyU"] = "U", ["KeyJ"] = "J", ["KeyK"] = "K",
+        ["KeyO"] = "O", ["KeyL"] = "L", ["KeyP"] = "P", ["Semicolon"] = ";",
+    };
+
+    private sealed record KeyModel(int Pitch, bool IsBlack, string Style, string? Label);
+
+    /// <summary>Where the notes go. The panel knows nothing about snippets: it only presses and releases keys.</summary>
+    [Parameter, EditorRequired]
+    public NoteInput Input { get; set; } = null!;
+
+    /// <summary>True while a sound is playing; only changes the hint text.</summary>
+    [Parameter]
+    public bool Active { get; set; }
+
+    private bool _open = true;
+    private int _base = 48; // C3, so the computer keys start on middle C
+    private List<KeyModel> _keys = [];
+
+    // How many sources are holding each pitch (mouse, touches, computer keys), so one letting go does not cut the others.
+    private readonly Dictionary<int, int> _holds = [];
+    private readonly Dictionary<long, int> _pointerPitch = [];
+    private readonly Dictionary<string, int> _codePitch = [];
+
+    protected override void OnInitialized() => _keys = BuildKeys();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        bool open = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "keyboardOpen", true);
+        if (open != _open)
+        {
+            _open = open;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAsync()
+    {
+        _open = !_open;
+        if (!_open)
+            ReleaseAll();
+        await JS.InvokeVoidAsync("sigilRepl.prefs.set", "keyboardOpen", _open);
+    }
+
+    private void Shift(int semitones)
+    {
+        _base = Math.Clamp(_base + semitones, MinBase, MaxBase);
+        _keys = BuildKeys();
+    }
+
+    private List<KeyModel> BuildKeys()
+    {
+        int lowest = _base;
+        int highest = Math.Min(127, _base + Octaves * 12);
+        int whiteCount = Enumerable.Range(lowest, highest - lowest + 1).Count(p => !IsBlack(p));
+        double width = 100.0 / whiteCount;
+        int computerBase = _base + 12;
+
+        var keys = new List<KeyModel>();
+        int whiteIndex = 0;
+        for (int pitch = lowest; pitch <= highest; pitch++)
+        {
+            string? label = null;
+            int offset = pitch - computerBase;
+            foreach (var (code, at) in ComputerKeys)
+            {
+                if (at == offset)
+                    label = ComputerLabels[code];
+            }
+
+            if (IsBlack(pitch))
+            {
+                // Centered on the line between the two white keys it sits between.
+                double left = whiteIndex * width - width * 0.3;
+                keys.Add(new KeyModel(pitch, true, Css($"left:{left}%;width:{width * 0.6}%"), label));
+            }
+            else
+            {
+                keys.Add(new KeyModel(pitch, false, Css($"left:{whiteIndex * width}%;width:{width}%"), label));
+                whiteIndex++;
+            }
+        }
+
+        // Black keys are drawn after the white ones so they sit on top.
+        return [.. keys.Where(k => !k.IsBlack), .. keys.Where(k => k.IsBlack)];
+    }
+
+    private static string Css(FormattableString style) => FormattableString.Invariant(style);
+
+    private static bool IsBlack(int pitch) => (pitch % 12) is 1 or 3 or 6 or 8 or 10;
+
+    private static string NoteName(int pitch) => $"C{pitch / 12 - 1}";
+
+    private string KeyClass(KeyModel key) =>
+        (key.IsBlack ? "bk" : "wk") + (_holds.ContainsKey(key.Pitch) ? " down" : "");
+
+    // --- Pointer -------------------------------------------------------------------------------------------------
+
+    private void PointerDown(PointerEventArgs e, int pitch)
+    {
+        if (e.Button != 0)
+            return;
+        // A pointer-up that never arrived must not leave its earlier key held for good.
+        if (_pointerPitch.Remove(e.PointerId, out int previous))
+            Release(previous);
+        _pointerPitch[e.PointerId] = pitch;
+        Press(pitch);
+    }
+
+    private void PointerUp(PointerEventArgs e)
+    {
+        if (_pointerPitch.Remove(e.PointerId, out int pitch))
+            Release(pitch);
+    }
+
+    // Dragging across the keys with the button down plays a glissando: the key left is released, the one entered pressed.
+    private void PointerEnter(PointerEventArgs e, int pitch)
+    {
+        if (e.Buttons != 0 && !_pointerPitch.ContainsKey(e.PointerId))
+        {
+            _pointerPitch[e.PointerId] = pitch;
+            Press(pitch);
+        }
+    }
+
+    private void PointerLeave(PointerEventArgs e, int pitch)
+    {
+        if (_pointerPitch.TryGetValue(e.PointerId, out int held) && held == pitch)
+        {
+            _pointerPitch.Remove(e.PointerId);
+            Release(pitch);
+        }
+    }
+
+    // --- Computer keyboard ---------------------------------------------------------------------------------------
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Repeat || e.CtrlKey || e.AltKey || e.MetaKey)
+            return;
+
+        if (e.Code == "KeyZ")
+        {
+            Shift(-12);
+            return;
+        }
+        if (e.Code == "KeyX")
+        {
+            Shift(12);
+            return;
+        }
+
+        if (!ComputerKeys.TryGetValue(e.Code, out int offset) || _codePitch.ContainsKey(e.Code))
+            return;
+
+        int pitch = _base + 12 + offset;
+        if (pitch > 127)
+            return;
+        _codePitch[e.Code] = pitch;
+        Press(pitch);
+    }
+
+    private void OnKeyUp(KeyboardEventArgs e)
+    {
+        // Released by the pitch that was pressed, so changing the octave while a key is down does not strand its note.
+        if (_codePitch.Remove(e.Code, out int pitch))
+            Release(pitch);
+    }
+
+    private void OnFocusOut() => ReleaseAll();
+
+    // --- Notes ---------------------------------------------------------------------------------------------------
+
+    private void Press(int pitch)
+    {
+        _holds[pitch] = _holds.GetValueOrDefault(pitch) + 1;
+        Input.NoteOn(pitch, Velocity);
+    }
+
+    private void Release(int pitch)
+    {
+        if (!_holds.TryGetValue(pitch, out int count))
+            return;
+
+        if (count > 1)
+        {
+            _holds[pitch] = count - 1;
+            return;
+        }
+
+        _holds.Remove(pitch);
+        Input.NoteOff(pitch);
+    }
+
+    private void ReleaseAll()
+    {
+        _pointerPitch.Clear();
+        _codePitch.Clear();
+        foreach (int pitch in _holds.Keys.ToArray())
+            Input.NoteOff(pitch);
+        _holds.Clear();
+    }
+
+    public void Dispose() => ReleaseAll();
+}

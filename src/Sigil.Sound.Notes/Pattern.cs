@@ -87,6 +87,8 @@ public sealed class Pattern
 /// <summary>Placing notes in time and playing them: <c>notes.Every(Beats.Eighth).Loop().Play(v => ...)</c>.</summary>
 public static class Patterns
 {
+    private const double DefaultBpm = 120;
+
     /// <summary>
     /// Places the notes one after another, <paramref name="step"/> beats apart.
     /// </summary>
@@ -111,7 +113,11 @@ public static class Patterns
     /// </summary>
     /// <param name="pattern">The notes to play.</param>
     /// <param name="voice">Describes the sound of one note from its <see cref="Voice"/> signals. Called while the sound is built, not per note.</param>
-    /// <param name="bpm">Beats (quarter notes) per minute. Defaults to 120.</param>
+    /// <param name="bpm">
+    /// Beats (quarter notes) per minute; the pattern then keeps its own time, starting when the sound does. Leave it out
+    /// to follow the host: with a <see cref="HostClock"/> on the render context, a looping pattern stays on the host's
+    /// beat grid at the host's tempo (so replacing the sound keeps the notes in time), and without one the tempo is 120.
+    /// </param>
     /// <param name="polyphony">The most notes sounding at once, from 1 to 64. Defaults to 8.</param>
     /// <remarks>
     /// Each voice is scaled by the note's velocity, and an <c>Adsr</c> inside it releases when the note ends.
@@ -123,13 +129,17 @@ public static class Patterns
     ///     .Play(v => Saw(v.Frequency).Adsr(0.003, 0.15, 0.4, 0.3), bpm: 110)
     /// </code>
     /// </example>
-    public static Sound Play(this Pattern pattern, Func<Voice, Sound> voice, double bpm = 120, int polyphony = 8)
+    public static Sound Play(this Pattern pattern, Func<Voice, Sound> voice, double? bpm = null, int polyphony = 8)
     {
         ArgumentNullException.ThrowIfNull(pattern);
         ArgumentNullException.ThrowIfNull(voice);
-        if (bpm <= 0) throw new ArgumentOutOfRangeException(nameof(bpm), bpm, "The tempo must be positive.");
+        if (bpm is { } tempo && !(double.IsFinite(tempo) && tempo > 0)) throw new ArgumentOutOfRangeException(nameof(bpm), bpm, "The tempo must be positive.");
         if (polyphony is < 1 or > 64) throw new ArgumentOutOfRangeException(nameof(polyphony), polyphony, "Polyphony must be between 1 and 64.");
 
-        return Sound.FromOperator(ctx => new PatternOperator(pattern, voice, bpm, polyphony, ctx), $"Play({pattern.Events.Count} notes)");
+        return Sound.FromOperator(
+            ctx => bpm is null && ctx.TimeClock is not null
+                ? new HostPatternOperator(pattern, voice, polyphony, ctx)
+                : new PatternOperator(pattern, voice, bpm ?? DefaultBpm, polyphony, ctx),
+            $"Play({pattern.Events.Count} notes)");
     }
 }

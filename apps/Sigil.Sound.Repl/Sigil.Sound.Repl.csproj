@@ -8,6 +8,14 @@
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
+  <!-- A Release *build* (what `dotnet run -c Release` serves) still starts the browser runtime with the debugger enabled:
+       the .NET interpreter keeps sequence points and skips optimizations, which made this DSP run roughly six times slower
+       than the same code published. The audio renders on the page's only thread, so that was the difference between a
+       busy arpeggio playing cleanly and breaking up after a few seconds. Release turns it off; Debug keeps it for debugging. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <WasmDebugLevel>0</WasmDebugLevel>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />

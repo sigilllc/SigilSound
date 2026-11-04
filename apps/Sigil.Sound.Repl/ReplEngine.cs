@@ -124,9 +124,12 @@ public sealed class ReplEngine(IJSRuntime js)
 
         // Protect ears and speakers from runaway snippets: no NaN, nothing past full scale.
         var samples = MemoryMarshal.Cast<StereoFrame, float>(block);
+        // Almost every sample is in range, so that is the only test they pay for (this loop runs on the interpreter).
         for (int i = 0; i < samples.Length; i++)
         {
             float s = samples[i];
+            if (s >= -1f && s <= 1f)
+                continue;
             samples[i] = float.IsFinite(s) ? Math.Clamp(s, -1f, 1f) : 0f;
         }
 

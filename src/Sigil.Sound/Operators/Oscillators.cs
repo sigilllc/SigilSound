@@ -7,23 +7,34 @@ internal sealed class SineOperator : IOperator, IResettable
 
     private readonly ParamSource _frequency;
     private readonly double _twoPiSamplePeriod;
+    private readonly HostClock? _clock;
     private double _phase;
+    private bool _synced;
 
     public SineOperator(ParamSource frequency, RenderContext context)
     {
         _frequency = frequency;
         _twoPiSamplePeriod = TwoPi / context.SampleRate;
+        _clock = context.TimeClock;
     }
 
     public void Reset()
     {
         _phase = 0;
+        _synced = false;
         _frequency.Reset();
     }
 
     public void RenderBlock(Span<StereoFrame> block)
     {
         var frequency = _frequency.Next(block.Length);
+        if (!_synced)
+        {
+            _synced = true;
+            if (_clock is not null && _frequency.IsConstant)
+                _phase = TwoPi * HostTime.Cycles(Dsp.Finite(frequency[0], 0f), _clock);
+        }
+
         for (int i = 0; i < block.Length; i++)
         {
             block[i] = StereoFrame.Mono((float)Math.Sin(_phase));
@@ -43,36 +54,76 @@ internal sealed class SawOperator : IOperator, IResettable
 {
     private readonly ParamSource _frequency;
     private readonly double _samplePeriod;
+    private readonly HostClock? _clock;
     private double _phase;
+    private bool _synced;
 
     public SawOperator(ParamSource frequency, RenderContext context)
     {
         _frequency = frequency;
         _samplePeriod = context.SamplePeriod;
+        _clock = context.TimeClock;
     }
 
     public void Reset()
     {
         _phase = 0;
+        _synced = false;
         _frequency.Reset();
     }
 
     public void RenderBlock(Span<StereoFrame> block)
     {
         var frequency = _frequency.Next(block.Length);
+        if (!_synced)
+        {
+            _synced = true;
+            if (_clock is not null && _frequency.IsConstant)
+                _phase = HostTime.Cycles(Dsp.Finite(frequency[0], 0f), _clock);
+        }
+
+        // PolyBlep.Correction and Advance are written out here: one voice runs this loop for every frame, and where
+        // the .NET interpreter runs (the browser) each call and its struct copies are a large part of the cost.
+        double phase = _phase;
+        double samplePeriod = _samplePeriod;
         for (int i = 0; i < block.Length; i++)
         {
-            double step = Dsp.Finite(frequency[i], 0f) * _samplePeriod;
+            float hz = frequency[i];
+            // NaN and infinity both fail this (x - x is NaN for them) and are treated as a frequency of zero.
+            if (hz - hz != 0f)
+                hz = 0f;
+            double step = hz * samplePeriod;
             // Past Nyquist the band-limiting correction has nothing sensible to do; cap it.
-            float increment = (float)Math.Min(Math.Abs(step), PolyBlep.MaxIncrement);
-            float phase = (float)_phase;
+            float increment = (float)(step < 0 ? -step : step);
+            if (increment > PolyBlep.MaxIncrement)
+                increment = PolyBlep.MaxIncrement;
+            float p = (float)phase;
 
             // Naive ramp from -1 to +1, with the discontinuity at the wrap smoothed out.
-            float value = 2.0f * phase - 1.0f - PolyBlep.Correction(phase, increment);
-            block[i] = StereoFrame.Mono(value);
+            float correction = 0f;
+            if (increment > 0)
+            {
+                if (p < increment)
+                {
+                    float t = p / increment;
+                    correction = t + t - t * t - 1.0f;
+                }
+                else if (p > 1.0f - increment)
+                {
+                    float t = (p - 1.0f) / increment;
+                    correction = t * t + t + t + 1.0f;
+                }
+            }
 
-            _phase = PolyBlep.Advance(_phase, step);
+            float value = 2.0f * p - 1.0f - correction;
+            block[i] = new StereoFrame(value, value);
+
+            phase += step;
+            if (phase >= 1.0 || phase < 0)
+                phase -= Math.Floor(phase);
         }
+
+        _phase = phase;
     }
 }
 
@@ -85,18 +136,22 @@ internal sealed class SquareOperator : IOperator, IResettable
     private readonly ParamSource _frequency;
     private readonly ParamSource _width;
     private readonly double _samplePeriod;
+    private readonly HostClock? _clock;
     private double _phase;
+    private bool _synced;
 
     public SquareOperator(ParamSource frequency, ParamSource width, RenderContext context)
     {
         _frequency = frequency;
         _width = width;
         _samplePeriod = context.SamplePeriod;
+        _clock = context.TimeClock;
     }
 
     public void Reset()
     {
         _phase = 0;
+        _synced = false;
         _frequency.Reset();
         _width.Reset();
     }
@@ -105,6 +160,13 @@ internal sealed class SquareOperator : IOperator, IResettable
     {
         var frequency = _frequency.Next(block.Length);
         var width = _width.Next(block.Length);
+        if (!_synced)
+        {
+            _synced = true;
+            if (_clock is not null && _frequency.IsConstant)
+                _phase = HostTime.Cycles(Dsp.Finite(frequency[0], 0f), _clock);
+        }
+
         for (int i = 0; i < block.Length; i++)
         {
             double step = Dsp.Finite(frequency[i], 0f) * _samplePeriod;
@@ -168,20 +230,24 @@ internal sealed class FunctionOperator : IOperator, IResettable
 {
     private readonly Func<double, double> _function;
     private readonly double _samplePeriod;
+    private readonly HostClock? _clock;
     private long _position;
 
     public FunctionOperator(Func<double, double> function, RenderContext context)
     {
         _function = function;
         _samplePeriod = context.SamplePeriod;
+        _clock = context.TimeClock;
     }
 
     public void Reset() => _position = 0;
 
     public void RenderBlock(Span<StereoFrame> block)
     {
+        // With a host clock, time is the host's, so a swapped-in function carries on where the old one was.
+        long start = _clock?.SamplePosition ?? _position;
         for (int i = 0; i < block.Length; i++)
-            block[i] = StereoFrame.Mono((float)_function((_position + i) * _samplePeriod));
+            block[i] = StereoFrame.Mono((float)_function((start + i) * _samplePeriod));
         _position += block.Length;
     }
 }

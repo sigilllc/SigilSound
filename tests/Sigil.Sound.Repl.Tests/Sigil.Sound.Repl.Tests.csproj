@@ -11,6 +11,11 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+  <!-- The REPL page's own snippet API, profile and examples are plain C#, so they are compiled into the tests as source
+       rather than by referencing the Blazor app: the page depends on the compiler, never the other way round. -->
+  <ItemGroup>
+    <Compile Include="..\..\apps\Sigil.Sound.Repl\Host\*.cs" LinkBase="Host" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\apps\Sigil.Sound.Repl.Core\Sigil.Sound.Repl.Core.csproj" />
     <ProjectReference Include="..\..\src\Sigil.Sound.Testing\Sigil.Sound.Testing.csproj" />

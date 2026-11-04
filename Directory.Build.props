@@ -24,6 +24,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <!-- NuGet package metadata, symbols and source link, so debugging into the package works. -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>audio;synthesizer;dsp;sound;music;wasm</PackageTags>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -36,5 +37,6 @@
 
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

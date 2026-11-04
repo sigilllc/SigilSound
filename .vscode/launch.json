@@ -2,6 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "REPL (Release)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/Sigil.Sound.Repl",
+      "url": "http://localhost:5214",
+      "browser": "edge",
+      "preLaunchTask": "repl: run (release)"
+    },
+    {
+      "name": "REPL (Release - Chrome)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/Sigil.Sound.Repl",
+      "url": "http://localhost:5214",
+      "browser": "chrome",
+      "preLaunchTask": "repl: run (release)"
+    },
+    {
       "name": "REPL (debug in browser)",
       "type": "blazorwasm",
       "request": "launch",

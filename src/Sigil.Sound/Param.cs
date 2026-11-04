@@ -107,20 +107,23 @@ internal sealed class FunctionParamSource : ParamSource
 {
     private readonly Func<double, float> _function;
     private readonly double _samplePeriod;
+    private readonly HostClock? _clock;
     private long _position;
 
     public FunctionParamSource(Func<double, float> function, RenderContext context) : base(context)
     {
         _function = function;
         _samplePeriod = context.SamplePeriod;
+        _clock = context.TimeClock;
     }
 
     internal override void Reset() => _position = 0;
 
     private protected override void Fill(Span<float> values)
     {
+        long start = _clock?.SamplePosition ?? _position;
         for (int i = 0; i < values.Length; i++)
-            values[i] = _function((_position + i) * _samplePeriod);
+            values[i] = _function((start + i) * _samplePeriod);
         _position += values.Length;
     }
 }
@@ -142,7 +145,11 @@ internal sealed class SoundParamSource : ParamSource
     {
         var frames = _scratch.AsSpan(0, values.Length);
         _operator.RenderBlock(frames);
+        // ToMono is written out: this copy runs per frame for every modulated parameter, including each voice's pitch.
         for (int i = 0; i < values.Length; i++)
-            values[i] = frames[i].ToMono();
+        {
+            var frame = frames[i];
+            values[i] = 0.5f * (frame.Left + frame.Right);
+        }
     }
 }

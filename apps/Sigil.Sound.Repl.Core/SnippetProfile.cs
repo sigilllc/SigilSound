@@ -52,6 +52,7 @@ public sealed class SnippetProfile
     private readonly string[] _allowed;
     private readonly HashSet<string> _forbiddenSystemTypes;
     private readonly Lazy<IReadOnlyList<MetadataReference>> _references;
+    private readonly Action<SnippetValidationContext>? _extraValidation;
 
     /// <summary>The policy the browser REPL runs with.</summary>
     public static SnippetProfile Default { get; } = new();
@@ -61,13 +62,20 @@ public sealed class SnippetProfile
     /// <param name="extraAllowedNamespaces">Namespaces (and everything under them) snippets may use, such as the host's API.</param>
     /// <param name="extraBlockedNamespaces">Namespace prefixes snippets may not use, in addition to the base policy.</param>
     /// <param name="extraForbiddenSystemTypes">Names of types in <c>System</c> snippets may not use, in addition to the base policy.</param>
+    /// <param name="extraValidation">
+    /// The host's own rule, run on every snippet after the built-in checks passed. It reports problems through the context it is given,
+    /// and can only add errors. Use it for rules about syntax or members that a list of namespaces cannot express. If it throws, the
+    /// snippet is rejected.
+    /// </param>
     public SnippetProfile(
         IEnumerable<string>? extraUsings = null,
         IEnumerable<Assembly>? extraAssemblies = null,
         IEnumerable<string>? extraAllowedNamespaces = null,
         IEnumerable<string>? extraBlockedNamespaces = null,
-        IEnumerable<string>? extraForbiddenSystemTypes = null)
+        IEnumerable<string>? extraForbiddenSystemTypes = null,
+        Action<SnippetValidationContext>? extraValidation = null)
     {
+        _extraValidation = extraValidation;
         Usings = [.. BaseUsings, .. extraUsings ?? []];
         _blocked = [.. BaseBlockedNamespaces, .. extraBlockedNamespaces ?? []];
         _allowed = [.. extraAllowedNamespaces ?? []];
@@ -81,6 +89,8 @@ public sealed class SnippetProfile
     public IReadOnlyList<string> Usings { get; }
 
     internal IReadOnlyList<MetadataReference> References => _references.Value;
+
+    internal Action<SnippetValidationContext>? ExtraValidation => _extraValidation;
 
     /// <summary>True when snippets may not touch anything in <paramref name="ns"/>, however it is reached.</summary>
     public bool IsBlockedNamespace(string ns) => _blocked.Any(prefix => ns.StartsWith(prefix, StringComparison.Ordinal));

@@ -22,10 +22,20 @@ public sealed class SoundContext : IDisposable
     private readonly Slot _slot;
     private readonly IOperator _output;
 
+    private readonly HostClock? _clock;
+
+    /// <param name="sampleRate">Frames per second.</param>
+    /// <param name="blockSize">The largest block rendered at once.</param>
+    /// <param name="fadeSeconds">The default crossfade length of <see cref="Play"/> and <see cref="Stop"/>.</param>
+    /// <param name="clock">
+    /// A host clock for sounds to follow; see <see cref="HostClock"/>. This context advances it after every block it
+    /// renders, so do not advance it elsewhere. Its sample rate must equal <paramref name="sampleRate"/>.
+    /// </param>
     public SoundContext(int sampleRate = RenderContext.DefaultSampleRate, int blockSize = RenderContext.DefaultBlockSize,
-        double fadeSeconds = Slot.DefaultFadeSeconds)
+        double fadeSeconds = Slot.DefaultFadeSeconds, HostClock? clock = null)
     {
-        RenderContext = new RenderContext(sampleRate, blockSize).Validate();
+        _clock = clock;
+        RenderContext = new RenderContext(sampleRate, blockSize) { Clock = clock }.Validate();
         _slot = new Slot(Sounds.Silence, fadeSeconds);
         _output = _slot.Sound.Compile(RenderContext);
     }
@@ -56,7 +66,11 @@ public sealed class SoundContext : IDisposable
     {
         int blockSize = RenderContext.BlockSize;
         for (int offset = 0; offset < output.Length; offset += blockSize)
-            _output.RenderBlock(output.Slice(offset, Math.Min(blockSize, output.Length - offset)));
+        {
+            var block = output.Slice(offset, Math.Min(blockSize, output.Length - offset));
+            _output.RenderBlock(block);
+            _clock?.Advance(block.Length);
+        }
         FramesRendered += output.Length;
     }
 }
