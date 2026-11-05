@@ -8,7 +8,7 @@ namespace Sigil.Sound;
 /// <remarks>
 /// <para>
 /// Without a clock every sound counts time from its own first frame, which is right for rendering a file and for one-shot
-/// demos. With one, these follow the clock instead: <see cref="Sounds.Fn"/> and function parameters read host time,
+/// demos. With one, these follow the clock instead: <see cref="Sounds.Fn(Func{double, double})"/> and function parameters read host time,
 /// sines, saws and pulses with a constant frequency continue the phase they would have had, and
 /// <c>Pattern.Play</c> without an explicit tempo follows <see cref="Bpm"/> and <see cref="Beats"/>.
 /// Notes played by a voice keep their own time, starting at zero with each note.
@@ -24,6 +24,7 @@ public sealed class HostClock
     private long _samplePosition;
     private double _beats;
     private double _bpm;
+    private int _running = 1;
 
     /// <param name="sampleRate">Frames per second; must equal the sample rate of every <see cref="RenderContext"/> that uses the clock.</param>
     /// <param name="bpm">Beats (quarter notes) per minute. Defaults to 120.</param>
@@ -59,13 +60,28 @@ public sealed class HostClock
         }
     }
 
-    /// <summary>Moves the clock past a rendered block of <paramref name="frames"/>, advancing the beat position at the current tempo.</summary>
+    /// <summary>
+    /// Whether the musical position moves. A host sets it to false while its transport is paused or stopped: <see cref="Beats"/> then
+    /// stays where it is while <see cref="SamplePosition"/> keeps counting, so sounds that read host time (a live-coded LFO, an
+    /// oscillator's phase) are not disturbed. <c>Pattern.Play</c> starts no new notes while the clock is held and carries on from the same
+    /// beat, without repeating or skipping one, when it runs again. Notes already sounding finish. Safe to set from any thread.
+    /// </summary>
+    public bool Running
+    {
+        get => Volatile.Read(ref _running) != 0;
+        set => Volatile.Write(ref _running, value ? 1 : 0);
+    }
+
+    /// <summary>
+    /// Moves the clock past a rendered block of <paramref name="frames"/>, advancing the beat position at the current tempo
+    /// (unless <see cref="Running"/> is false, which advances only the sample position).
+    /// </summary>
     public void Advance(int frames)
     {
         if (frames < 0)
             throw new ArgumentOutOfRangeException(nameof(frames), frames, "Frames must not be negative.");
-        double beats = _beats + frames / (double)SampleRate * Bpm / 60.0;
-        Volatile.Write(ref _beats, beats);
+        if (Running)
+            Volatile.Write(ref _beats, _beats + frames / (double)SampleRate * Bpm / 60.0);
         Volatile.Write(ref _samplePosition, _samplePosition + frames);
     }
 

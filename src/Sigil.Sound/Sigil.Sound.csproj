@@ -7,5 +7,6 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Sigil.Sound.Tests" />
     <InternalsVisibleTo Include="Sigil.Sound.Notes" />
+    <InternalsVisibleTo Include="Sigil.Sound.Testing" />
   </ItemGroup>
 </Project>

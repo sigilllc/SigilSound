@@ -12,25 +12,32 @@ public readonly struct Param
     private readonly Sound? _sound;
     private readonly Func<double, float>? _function;
 
-    private Param(float constant, Sound? sound, Func<double, float>? function)
+    private readonly Control? _control;
+    private readonly ControlMap? _controlMap;
+
+    private Param(float constant, Sound? sound, Func<double, float>? function, Control? control = null, ControlMap? controlMap = null)
     {
         _constant = constant;
         _sound = sound;
         _function = function;
+        _control = control;
+        _controlMap = controlMap;
     }
+
+    internal static Param FromControl(Control control, ControlMap? map) => new(0, null, null, control, map);
 
     public static implicit operator Param(float value) => new(value, null, null);
 
     public static implicit operator Param(double value) => new((float)value, null, null);
 
     public static implicit operator Param(Sound sound) =>
-        new(0, sound ?? throw new ArgumentNullException(nameof(sound)), null);
+        (sound ?? throw new ArgumentNullException(nameof(sound))).BackingParam ?? new(0, sound, null);
 
     public static implicit operator Param(Func<double, float> function) =>
         new(0, null, function ?? throw new ArgumentNullException(nameof(function)));
 
     /// <summary>True when this parameter never changes.</summary>
-    public bool IsConstant => _sound is null && _function is null;
+    public bool IsConstant => _sound is null && _function is null && _control is null;
 
     /// <summary>The constant value; only meaningful when <see cref="IsConstant"/> is true.</summary>
     public float ConstantValue => _constant;
@@ -42,12 +49,15 @@ public readonly struct Param
             return new SoundParamSource(_sound.Compile(context), context);
         if (_function is not null)
             return new FunctionParamSource(_function, context);
+        if (_control is not null)
+            return new ControlParamSource(_control, _controlMap, context);
         return new ConstantParamSource(_constant, context);
     }
 
     public override string ToString() =>
         _sound is not null ? _sound.ToString()
         : _function is not null ? "f(t)"
+        : _control is not null ? _control.ToString()
         : _constant.ToString(CultureInfo.InvariantCulture);
 }
 

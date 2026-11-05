@@ -51,12 +51,61 @@ internal sealed class LimiterOperator : IOperator, IResettable
 }
 
 /// <summary>Balances the channels: the side you pan away from is turned down, the other is left alone.</summary>
-internal sealed class PanOperator : IOperator, IResettable
+internal sealed class BalanceOperator : IOperator, IResettable
 {
     private readonly IOperator _input;
     private readonly ParamSource _position;
 
     // The cosines are only recomputed when the position moves, so a fixed pan costs nothing per frame.
+    private float _lastPosition = float.NaN;
+    private float _left = 1f, _right = 1f;
+
+    public BalanceOperator(IOperator input, ParamSource position)
+    {
+        _input = input;
+        _position = position;
+    }
+
+    public void Reset()
+    {
+        _input.ResetState();
+        _position.Reset();
+    }
+
+    public void RenderBlock(Span<StereoFrame> block)
+    {
+        _input.RenderBlock(block);
+        var position = _position.Next(block.Length);
+        for (int i = 0; i < block.Length; i++)
+        {
+            float p = Math.Clamp(Dsp.Finite(position[i], 0f), -1f, 1f);
+            if (p != _lastPosition)
+            {
+                _lastPosition = p;
+                // A quarter-cosine turns the far side down smoothly to silence at the extreme.
+                _left = p > 0 ? MathF.Cos(p * MathF.PI * 0.5f) : 1f;
+                _right = p < 0 ? MathF.Cos(-p * MathF.PI * 0.5f) : 1f;
+                // cos(pi/2) in single precision is about -4e-8, which would leak a faint inverted signal at a hard balance.
+                if (p >= 1f) _left = 0f;
+                if (p <= -1f) _right = 0f;
+            }
+
+            block[i] = new StereoFrame(block[i].Left * _left, block[i].Right * _right);
+        }
+    }
+}
+
+/// <summary>
+/// Places a source in the stereo field with an equal-power law: the left and right gains are sqrt(2) times the cosine and sine
+/// of the position angle, so the total power is the same everywhere and a centered mono source keeps its level.
+/// Stereo input is folded to mono first.
+/// </summary>
+internal sealed class PanOperator : IOperator, IResettable
+{
+    private readonly IOperator _input;
+    private readonly ParamSource _position;
+
+    // The trigonometry is only recomputed when the position moves, so a fixed pan costs nothing per frame.
     private float _lastPosition = float.NaN;
     private float _left = 1f, _right = 1f;
 
@@ -82,12 +131,16 @@ internal sealed class PanOperator : IOperator, IResettable
             if (p != _lastPosition)
             {
                 _lastPosition = p;
-                // A quarter-cosine turns the far side down smoothly to silence at the extreme.
-                _left = p > 0 ? MathF.Cos(p * MathF.PI * 0.5f) : 1f;
-                _right = p < 0 ? MathF.Cos(-p * MathF.PI * 0.5f) : 1f;
+                float angle = (p + 1f) * MathF.PI * 0.25f;
+                _left = MathF.Sqrt(2f) * MathF.Cos(angle);
+                _right = MathF.Sqrt(2f) * MathF.Sin(angle);
+                // Exactly silent at the extremes rather than 1e-8, so a hard pan is a clean zero.
+                if (p >= 1f) _left = 0f;
+                if (p <= -1f) _right = 0f;
             }
 
-            block[i] = new StereoFrame(block[i].Left * _left, block[i].Right * _right);
+            float mono = block[i].ToMono();
+            block[i] = new StereoFrame(mono * _left, mono * _right);
         }
     }
 }

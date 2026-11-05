@@ -231,24 +231,68 @@ internal sealed class FunctionOperator : IOperator, IResettable
     private readonly Func<double, double> _function;
     private readonly double _samplePeriod;
     private readonly HostClock? _clock;
+    private readonly int _stepFrames;
     private long _position;
 
-    public FunctionOperator(Func<double, double> function, RenderContext context)
+    // Control rate: the function's values at two neighbouring step boundaries, and the index of the first.
+    private long _segment = long.MinValue;
+    private double _segmentStart, _segmentEnd;
+
+    /// <param name="function">Maps time in seconds to a value.</param>
+    /// <param name="context">The render settings.</param>
+    /// <param name="stepFrames">0 evaluates every frame; otherwise the function is evaluated every this many frames, with linear interpolation between.</param>
+    public FunctionOperator(Func<double, double> function, RenderContext context, int stepFrames = 0)
     {
         _function = function;
         _samplePeriod = context.SamplePeriod;
         _clock = context.TimeClock;
+        _stepFrames = stepFrames;
     }
 
-    public void Reset() => _position = 0;
+    public void Reset()
+    {
+        _position = 0;
+        _segment = long.MinValue;
+    }
 
     public void RenderBlock(Span<StereoFrame> block)
     {
         // With a host clock, time is the host's, so a swapped-in function carries on where the old one was.
         long start = _clock?.SamplePosition ?? _position;
-        for (int i = 0; i < block.Length; i++)
-            block[i] = StereoFrame.Mono((float)_function((start + i) * _samplePeriod));
+        if (_stepFrames <= 0)
+        {
+            for (int i = 0; i < block.Length; i++)
+                block[i] = StereoFrame.Mono((float)_function((start + i) * _samplePeriod));
+        }
+        else
+        {
+            // Step boundaries sit on absolute frame numbers, so the result does not depend on the block size.
+            // Each chunk runs to the next boundary along a straight line: divisions happen once per chunk, not per frame.
+            int i = 0;
+            while (i < block.Length)
+            {
+                long frame = start + i;
+                long segment = Math.DivRem(frame, _stepFrames, out long offset);
+                if (segment != _segment)
+                    EnterSegment(segment);
+
+                int chunk = (int)Math.Min(block.Length - i, _stepFrames - offset);
+                double slope = (_segmentEnd - _segmentStart) / _stepFrames;
+                double value = _segmentStart + slope * offset;
+                for (int k = 0; k < chunk; k++, value += slope)
+                    block[i + k] = StereoFrame.Mono((float)value);
+                i += chunk;
+            }
+        }
         _position += block.Length;
+    }
+
+    private void EnterSegment(long segment)
+    {
+        // Moving to the next segment reuses the value already computed at the shared boundary.
+        _segmentStart = segment == _segment + 1 ? _segmentEnd : _function(segment * _stepFrames * _samplePeriod);
+        _segmentEnd = _function((segment + 1) * _stepFrames * _samplePeriod);
+        _segment = segment;
     }
 }
 

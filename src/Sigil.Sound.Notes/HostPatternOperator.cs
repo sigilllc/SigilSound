@@ -57,6 +57,15 @@ internal sealed class HostPatternOperator : IOperator, IResettable, IDisposable
     public void RenderBlock(Span<StereoFrame> block)
     {
         block.Clear();
+
+        // A held host clock starts nothing new; the handled-to beat is left alone so the pattern resumes exactly there.
+        if (!_clock.Running)
+        {
+            _voices.Render(block, _position);
+            _position += block.Length;
+            return;
+        }
+
         double bpm = _clock.Bpm;
         double beatsPerFrame = bpm / 60.0 / _sampleRate;
 

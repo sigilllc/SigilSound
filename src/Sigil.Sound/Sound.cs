@@ -21,6 +21,15 @@ public sealed partial class Sound
     }
 
     /// <summary>
+    /// Set when this sound is only a parameter seen as a signal (a control, say). Converting it back to a <see cref="Param"/>
+    /// returns that parameter itself, instead of rendering it as stereo audio and averaging it down to mono again.
+    /// </summary>
+    internal Param? BackingParam { get; private init; }
+
+    internal static Sound FromBackingParam(Param param, Func<RenderContext, IOperator> factory) =>
+        new(factory, param.ToString()) { BackingParam = param };
+
+    /// <summary>
     /// Wraps a custom operator. The factory is called once per <see cref="Compile"/>
     /// and must return a fresh instance each time.
     /// </summary>
@@ -242,8 +251,16 @@ public sealed partial class Sound
     /// <summary>Scales <paramref name="a"/> by a parameter (a constant, a function or another sound).</summary>
     public static Sound operator *(Param gain, Sound a) => a * gain;
 
-    /// <summary>Ring modulation: multiplies <paramref name="a"/> by the mono value of <paramref name="b"/>.</summary>
-    public static Sound operator *(Sound a, Sound b) => a * (Param)b;
+    /// <summary>
+    /// Ring modulation: multiplies <paramref name="a"/> by <paramref name="b"/> channel by channel, left by left and right by right.
+    /// A mono modulator (an LFO) scales both sides alike; to scale by the mono mix of a stereo sound, use <c>a * (Param)b</c>.
+    /// </summary>
+    public static Sound operator *(Sound a, Sound b)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        ArgumentNullException.ThrowIfNull(b);
+        return new(ctx => new MultiplyOperator(a.Compile(ctx), b.Compile(ctx), ctx), $"({a} * {b})");
+    }
 
     /// <summary>Renders <paramref name="seconds"/> of audio offline.</summary>
     public AudioBuffer Render(double seconds, int sampleRate = RenderContext.DefaultSampleRate,

@@ -161,6 +161,23 @@ public static class Sounds
         return Sound.FromOperator(ctx => new FunctionOperator(function, ctx), "Fn(t)");
     }
 
+    /// <summary>
+    /// Like <see cref="Fn(Func{double, double})"/>, but evaluated at the chosen rate. <see cref="FunctionRate.PerMillisecond"/>
+    /// calls the function about once a millisecond and draws a straight line between the answers: far cheaper for slow
+    /// movement such as a stepped melody, filter sweep or envelope, and the same at any block size.
+    /// </summary>
+    /// <param name="function">Maps time in seconds to a value; see <see cref="Fn(Func{double, double})"/>.</param>
+    /// <param name="rate">How often the function runs.</param>
+    /// <example><code>LowPass(Fn(t => 200 + 4000 * Math.Abs(Math.Sin(t)), FunctionRate.PerMillisecond))</code></example>
+    public static Sound Fn(Func<double, double> function, FunctionRate rate)
+    {
+        ArgumentNullException.ThrowIfNull(function);
+        if (!Enum.IsDefined(rate)) throw new ArgumentOutOfRangeException(nameof(rate), rate, "Unknown rate.");
+        return rate == FunctionRate.PerSample
+            ? Fn(function)
+            : Sound.FromOperator(ctx => new FunctionOperator(function, ctx, Math.Max(1, (int)Math.Round(ctx.SampleRate * 0.001))), "Fn(t, 1 ms)");
+    }
+
     /// <summary>A constant signal (DC). Mostly useful as a building block.</summary>
     /// <param name="value">The level to output.</param>
     public static Sound Constant(double value) =>
@@ -168,8 +185,18 @@ public static class Sounds
 
     // A parameter as a sound, for arithmetic such as sound + 12.
     internal static Sound FromParam(Param param) =>
-        Sound.FromOperator(ctx => new ParamOperator(param.Compile(ctx)), param.ToString());
+        Sound.FromBackingParam(param, ctx => new ParamOperator(param.Compile(ctx)));
 
     /// <summary>Silence.</summary>
     public static Sound Silence => Constant(0);
+}
+
+/// <summary>How often <see cref="Sounds.Fn(Func{double, double}, FunctionRate)"/> runs its function.</summary>
+public enum FunctionRate
+{
+    /// <summary>Every frame: exact, and the most expensive.</summary>
+    PerSample,
+
+    /// <summary>About once a millisecond, with a straight line between the answers.</summary>
+    PerMillisecond,
 }

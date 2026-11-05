@@ -18,6 +18,17 @@ public static class AudioAssert
             Fail($"Expected frequency {expectedHz} Hz ± {toleranceHz}, measured {actual:0.###} Hz.");
     }
 
+    /// <summary>
+    /// Checks the strongest spectral component, which unlike <see cref="FrequencyNear"/> works for chords, noisy signals and
+    /// anything with a dominant partial, and is exact to a fraction of an FFT bin.
+    /// </summary>
+    public static void PeakFrequencyNear(AudioBuffer audio, double expectedHz, double toleranceHz)
+    {
+        double actual = SignalAnalysis.PeakFrequency(audio.ToMono(), audio.SampleRate);
+        if (Math.Abs(actual - expectedHz) > toleranceHz)
+            Fail($"Expected the spectral peak at {expectedHz} Hz ± {toleranceHz}, measured {actual:0.###} Hz.");
+    }
+
     public static void PeakNear(AudioBuffer audio, float expected, float tolerance)
     {
         float actual = Math.Max(SignalAnalysis.Peak(audio.Left()), SignalAnalysis.Peak(audio.Right()));

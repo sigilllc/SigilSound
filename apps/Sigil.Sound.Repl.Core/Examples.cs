@@ -230,5 +230,117 @@ public static class Examples
                 .Reverb(decay: 2.5, mix: 0.2)
                 * 0.4
             """),
+        new("Pattern groove",
+            """
+            // Patterns written as text. One cycle is 4 beats; the steps of a sequence share it equally:
+            //   "a b c"      three steps          "a ~ b"     a rest
+            //   "a [b c]"    b and c share a step "a*2"       twice as fast
+            //   "a(3,8)"     3 hits spread over 8 steps (a Euclidean rhythm)
+            //   "<a b>"      one per cycle, in turn   "a?"     sometimes dropped (always the same ones)
+            // Scales turn degrees into notes; Every, Rev, Degrade and friends reshape a pattern like data.
+            var bpm = 120;
+            var scale = Scale.Minor(Pitch.C2);              // degree 0 is the root, 7 is the root an octave up
+
+            var bass = scale.Notes(Mini.Integers("0 ~ 0 [3 5] ~ 7 <5 3> ~"))
+                .Every(4, p => p.Rev());                     // every fourth cycle plays backwards
+            var lead = scale.Notes(Mini.Integers("7 9 [10 12] ~ 14(3,8) <10 9>"))
+                .Degrade(0.2, seed: 1);
+            var kick = Mini.Notes("c1(5,8)");
+            var snare = Mini.Notes("~ c3");
+            var hats = Mini.Notes("c4*8").Degrade(0.25, seed: 3);
+
+            // Each lambda describes ONE note. Inside it, Fn(t => ...) counts from the start of that note,
+            // so every bass note gets its own filter sweep and every kick its own pitch drop.
+            var bassLine = bass.Play(v =>
+                Saw(v.Frequency).LowPass(Fn(t => 300 + 1800 * Exp(-t * 10)), q: 3).Adsr(0.003, 0.2, 0.4, 0.1), bpm);
+            var leadLine = lead.Play(v =>
+                (Square(v.Frequency) + Saw(v.Frequency * 1.005)).LowPass(3200).Adsr(0.005, 0.1, 0.4, 0.2) * 0.5, bpm);
+            var drums =
+                kick.Play(v => Sine(Fn(t => 48 + 110 * Exp(-t * 28))).Adsr(0.001, 0.25, 0, 0.02), bpm) * 0.8
+                + snare.Play(v => Noise().BandPass(1800, q: 1.2).Adsr(0.001, 0.12, 0, 0.05), bpm) * 0.35
+                + hats.Play(v => Noise(4).HighPass(7000).Adsr(0.001, 0.04, 0, 0.01), bpm) * 0.25;
+
+            (bassLine * 0.4 + leadLine * 0.25 + drums * 0.8)
+                .Reverb(decay: 1.5, mix: 0.12)
+                .Limit()
+            """),
+        new("Chords, arps and shimmer",
+            """
+            // A progression written as chord names ("root:quality"), played two ways at once: as block chords
+            // for the pad and as an up-and-down arpeggio. The arpeggio then feeds back through an echo that
+            // shifts each repeat up an octave, so the repeats climb and fade into a shimmer.
+            var bpm = 100;
+            var changes = Mini.Chords("<c3:min7 ab2:maj7 eb3:maj7 bb2:7>");     // one chord per cycle
+
+            var pad = changes.Notes().Play(v =>
+                (Saw(v.Frequency) + Saw(v.Frequency * 1.004)).LowPass(1800).Adsr(0.4, 0.3, 0.7, 0.8) * 0.2,
+                bpm, polyphony: 12);
+
+            var arp = changes.Arp(ArpMode.UpDown, octaves: 2)     // each chord's cycle is divided among its notes
+                .Transpose(12)
+                .Play(v => (Sine(v.Frequency) + Saw(v.Frequency) * 0.25).LowPass(4500).Adsr(0.002, 0.12, 0, 0.1), bpm);
+
+            // Feedback: the output goes round the loop again, a moment later. Keep the loop gain below 1.
+            var shimmer = arp.Feedback(echo =>
+                echo.Delay(0.3, mix: 1).PitchShift(12).LowPass(6000) * 0.5);
+
+            (pad * 0.8 + shimmer * 0.3)
+                .Reverb(decay: 3.5, mix: 0.3)
+                .Limit()
+            """),
+        new("Acid line",
+            """
+            // A monosynth line whose filter is driven by a pattern of numbers, locked to the same tempo:
+            // ToSignal turns "400 900 2400 ..." into a control signal that steps along with the notes.
+            // Jux plays the line on the left and a transformed copy (up an octave, a sixteenth late) on the right.
+            var bpm = 132;
+            var line = Mini.Notes("c2:1 c2:0.6 [c3 c2:0.7] ~ eb2:1 c2:0.6 [g2:1 f2] c2:0.7");
+
+            var cutoff = Mini.Numbers("400 900 2400 600 1500 350 2800 700")
+                .ToSignal(bpm: bpm, smoothSeconds: 0.03);          // one value per step of the line
+
+            line.Jux(p => p.Transpose(12).Shift(new Fraction(1, 16)),
+                    v => Saw(v.Frequency).Adsr(0.002, 0.15, 0.5, 0.05),
+                    bpm, polyphony: 4, width: 0.7)
+                .LowPass(cutoff, q: 8)                              // the resonant sweep
+                .Distort(drive: 4)
+                .TapeDelay(time: 60.0 / bpm * 0.75, feedback: 0.45, damping: 3000, drive: 1.3, mix: 0.3)  // dotted eighth
+                .Limit()
+                * 0.4
+            """),
+        new("Harmonizer",
+            """
+            // One melody, three voices. `tune` appears three times below but is built once and shared, and
+            // PitchShift moves its whole spectrum: a fifth above and an octave below. The shifted voices arrive
+            // about 40 ms after the original (the spectral frame), which reads as a doubling.
+            var tune = Mini.Notes("c4 [e4 g4] <b4 a4> g4")
+                .Play(v => Saw(v.Frequency).LowPass(2600).Adsr(0.01, 0.15, 0.5, 0.25), bpm: 100);
+
+            (tune * 0.5
+                + tune.PitchShift(7) * 0.3
+                + tune.PitchShift(-12) * 0.35)
+                .Chorus(rate: 0.5, depth: 0.4, voices: 3)
+                .Reverb(decay: 2.5, mix: 0.25)
+                .Limit()
+                * 1.2
+            """),
+        new("Bomb drop",
+            """
+            // A dive: the whole sound slides down two octaves over six seconds, then snaps back and falls again.
+            // PitchShift moves the entire spectrum, so as the pitch drops the brightness goes with it:
+            // the top of the spectrum falls to a quarter by the bottom of the dive, which is what makes it feel like falling.
+            var cycle = 6.0;
+            var dive = Fn(t => -24 * Pow(t % cycle / cycle, 1.5));      // 0 down to -24 semitones, accelerating
+
+            var body = Saw(110) + Saw(110.7) + Saw(165) * 0.5 + Square(55) * 0.6
+                + Noise(2).HighPass(2000) * 0.15;                        // the noise shows the top end falling
+
+            body
+                .LowPass(9000)
+                .PitchShift(dive)
+                .Reverb(decay: 2.5, mix: 0.2)
+                .Limit()
+                * 0.35
+            """),
     ];
 }

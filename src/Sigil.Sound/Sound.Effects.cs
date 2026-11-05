@@ -159,13 +159,22 @@ public sealed partial class Sound
     }
 
     /// <summary>
-    /// Balances the stereo field by turning down the side you pan away from; the other side is left alone.
-    /// A mono source panned to one side ends up silent on the other, as with a balance knob.
+    /// Places the sound in the stereo field with an equal-power law, so it keeps the same loudness wherever it sits.
+    /// A stereo sound is folded to mono first; use <see cref="Balance"/> to keep a stereo image.
     /// </summary>
-    /// <param name="position">-1 is hard left, 0 the center (unchanged), 1 hard right. A number, or a sound or <c>Fn(t => ...)</c> to move it.</param>
+    /// <param name="position">-1 is hard left, 0 the center (a mono source keeps its level), 1 hard right. A number, or a sound or <c>Fn(t => ...)</c> to move it.</param>
     /// <example><code>Saw(110).Pan(Sine(0.3))   // drifts between the speakers</code></example>
     public Sound Pan(Param position) =>
         new(ctx => new PanOperator(Compile(ctx), position.Compile(ctx)), $"{this}.Pan({position})");
+
+    /// <summary>
+    /// Balances the stereo field by turning down the side you pan away from; the other side is left alone.
+    /// A mono source balanced to one side ends up silent on the other, as with a balance knob, and a stereo image is kept.
+    /// </summary>
+    /// <param name="position">-1 is hard left, 0 the center (unchanged), 1 hard right. A number, or a sound or <c>Fn(t => ...)</c> to move it.</param>
+    /// <example><code>pad.Reverb().Balance(-0.3)   // nudge a wide pad left without narrowing it</code></example>
+    public Sound Balance(Param position) =>
+        new(ctx => new BalanceOperator(Compile(ctx), position.Compile(ctx)), $"{this}.Balance({position})");
 
     /// <summary>
     /// A dynamic range compressor: turns down the parts above <paramref name="thresholdDb"/>, so loud and quiet passages

@@ -57,6 +57,36 @@ internal sealed class MixOperator : IOperator, IResettable
     }
 }
 
+/// <summary>Multiplies two inputs channel by channel: left by left, right by right.</summary>
+internal sealed class MultiplyOperator : IOperator, IResettable
+{
+    private readonly IOperator _a;
+    private readonly IOperator _b;
+    private readonly StereoFrame[] _scratch;
+
+    public MultiplyOperator(IOperator a, IOperator b, RenderContext context)
+    {
+        _a = a;
+        _b = b;
+        _scratch = new StereoFrame[context.BlockSize];
+    }
+
+    public void Reset()
+    {
+        _a.ResetState();
+        _b.ResetState();
+    }
+
+    public void RenderBlock(Span<StereoFrame> block)
+    {
+        _a.RenderBlock(block);
+        var other = _scratch.AsSpan(0, block.Length);
+        _b.RenderBlock(other);
+        for (int i = 0; i < block.Length; i++)
+            block[i] = new StereoFrame(block[i].Left * other[i].Left, block[i].Right * other[i].Right);
+    }
+}
+
 /// <summary>Maps a bipolar input in [-1, 1] linearly to [min, max] on each channel.</summary>
 internal sealed class RangeOperator(IOperator input, float min, float max) : IOperator, IResettable
 {

@@ -237,10 +237,49 @@ public class EffectsTests
         var left = Saw(220).Pan(-1).Render(0.1, SampleRate);
         var right = Saw(220).Pan(1).Render(0.1, SampleRate);
 
-        Assert.Equal(Saw(220).Render(0.1, SampleRate).Left(), center.Left());
+        var dry = Saw(220).Render(0.1, SampleRate).Left();
+        Assert.All(dry.Zip(center.Left()), pair => Assert.Equal(pair.First, pair.Second, 1e-5f));
         AudioAssert.IsSilent(left.Right());
         AudioAssert.IsSilent(right.Left());
-        Assert.Equal(center.Left(), left.Left());
+        // Equal power: a hard pan carries the whole signal on one side, sqrt(2) above the centered level.
+        var expected = center.Left().Select(x => x * MathF.Sqrt(2)).ToArray();
+        Assert.All(expected.Zip(left.Left()), pair => Assert.Equal(pair.First, pair.Second, 1e-4f));
+    }
+
+    [Fact]
+    public void Pan_keeps_the_same_power_at_every_position()
+    {
+        double Power(double position)
+        {
+            var audio = Saw(220).Pan(position).Render(0.1, SampleRate);
+            double l = Measure.Rms(audio.Left()), r = Measure.Rms(audio.Right());
+            return l * l + r * r;
+        }
+
+        double center = Power(0);
+        foreach (double p in new[] { -1.0, -0.5, 0.3, 1.0 })
+            Assert.Equal(center, Power(p), center * 1e-3);
+    }
+
+    [Fact]
+    public void Balance_leaves_the_near_side_alone_and_keeps_stereo()
+    {
+        var source = Measure.Stereo(0.6f, 0.2f);
+
+        var right = source.Balance(1).Render(0.01, SampleRate);
+
+        AudioAssert.IsSilent(right.Left());
+        Assert.Equal(0.2f, right.Right()[^1], 4);
+        Assert.Equal(0.6f, source.Balance(-1).Render(0.01, SampleRate).Left()[^1], 4);
+    }
+
+    [Fact]
+    public void Multiplying_two_sounds_works_channel_by_channel()
+    {
+        var product = (Measure.Stereo(0.5f, 1f) * Measure.Stereo(0.5f, 0.25f)).Render(0.01, SampleRate);
+
+        Assert.Equal(0.25f, product.Left()[^1], 5);
+        Assert.Equal(0.25f, product.Right()[^1], 5);
     }
 
     [Fact]

@@ -30,6 +30,9 @@ public sealed class Slot
     private readonly List<WeakReference<SlotOperator>> _instances = [];
     private Sound _current;
 
+    // One timer per slot, re-armed by each swap, instead of a task and closure per swap per running render.
+    private Timer? _cleanup;
+
     public Slot(Sound initial, double fadeSeconds = DefaultFadeSeconds)
     {
         ArgumentNullException.ThrowIfNull(initial);
@@ -76,8 +79,9 @@ public sealed class Slot
                 instance.DisposeRetired();
                 var op = next.Compile(instance.Context);
                 instance.Post(op, (int)Math.Round(fade * instance.Context.SampleRate));
-                ScheduleCleanup(instance, fade);
             }
+
+            ScheduleCleanup(fade);
         }
     }
 
@@ -101,14 +105,28 @@ public sealed class Slot
 
     // Once the crossfade is over the audio thread has retired the old sound; dispose it then, rather than
     // leaving it until the next swap. If nothing is rendering, the next swap or disposal still collects it.
-    private static void ScheduleCleanup(SlotOperator instance, double fadeSeconds)
+    // Called under the gate. A later swap supersedes an earlier fade, so re-arming for the latest one is enough.
+    private void ScheduleCleanup(double fadeSeconds)
     {
-        var weak = new WeakReference<SlotOperator>(instance);
-        _ = Task.Delay(TimeSpan.FromSeconds(fadeSeconds + 0.25)).ContinueWith(_ =>
+        var delay = TimeSpan.FromSeconds(fadeSeconds + 0.25);
+        if (_cleanup is null)
+            _cleanup = new Timer(static state => ((Slot)state!).DisposeRetired(), this, delay, Timeout.InfiniteTimeSpan);
+        else
+            _cleanup.Change(delay, Timeout.InfiniteTimeSpan);
+    }
+
+    private void DisposeRetired()
+    {
+        lock (_gate)
         {
-            if (weak.TryGetTarget(out var target))
-                target.DisposeRetired();
-        }, TaskScheduler.Default);
+            for (int i = _instances.Count - 1; i >= 0; i--)
+            {
+                if (_instances[i].TryGetTarget(out var instance))
+                    instance.DisposeRetired();
+                else
+                    _instances.RemoveAt(i);
+            }
+        }
     }
 
     private static void ValidateFade(double fadeSeconds)
