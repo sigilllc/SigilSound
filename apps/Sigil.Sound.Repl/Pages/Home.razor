@@ -177,7 +177,7 @@
                     <li><span class="k">Parameters</span><span class="val">number, sound, Fn(t =&gt; ...)</span></li>
                     <li><span class="k">Notes</span><span class="val">Notes.Parse("C4 E4"), LINQ</span></li>
                     <li><span class="k">Sequence</span><span class="val">.Every(Beats.Eighth).Loop().Play(v =&gt; ...)</span></li>
-                    <li><span class="k">Keyboard</span><span class="val">Keys.Play(v =&gt; ...)  &middot;  Sigilgraph: Poly(8, v =&gt; ...)</span></li>
+                    <li><span class="k">Keyboard</span><span class="val">Keys.Play(v =&gt; ...), Sigilgraph: Poly(8, v =&gt; ...)</span></li>
                     <li><span class="k">Samples</span><span class="val">Sample(Samples.Load("kick.wav"))</span></li>
                 </ul>
                 <p class="plain dim">The last expression is the sound.</p>
@@ -188,14 +188,7 @@
     <footer class="status">
         <span class="@_statusKind">@_status</span>
         <span class="sp"></span>
-        <button class="status-shield" @onclick="ToggleDisclaimer" title="Snippets compile and run locally in your browser sandbox. Click to toggle security notice.">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            <span>Sandboxed REPL · Run trusted code only</span>
-        </button>
-        <span class="sp"></span>
-        <span class="keys">Ctrl+Enter run · Ctrl+. stop · Ctrl+I suggest · Ctrl+Click docs</span>
+        <span class="keys"><span>Ctrl+Enter run</span><span>Ctrl+. stop</span><span>Ctrl+I suggest</span><span>Ctrl+Click docs</span></span>
     </footer>
 </div>
 
@@ -206,7 +199,8 @@
     private bool _ready;
     private bool _playing;
     private bool _refreshOnChange = true;
-    private bool _showDisclaimer = true;
+    private bool _showDisclaimer;
+    private bool _disclaimerDismissed;
     private bool _usesKeys;
     private bool _sigilgraph;
     private bool _offerSigilgraph;
@@ -242,12 +236,7 @@
         // Samples from earlier visits go back into the virtual folder before any snippet can ask for them.
         _samplesKept = await JS.InvokeAsync<bool>("sigilRepl.samples.restore");
         RefreshSamples();
-        bool dismissed = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "disclaimerDismissed", false);
-        if (dismissed && _showDisclaimer)
-        {
-            _showDisclaimer = false;
-            StateHasChanged();
-        }
+        _disclaimerDismissed = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "disclaimerDismissed", false);
 
         // Let the page paint before the first, slow Roslyn run.
         await Task.Delay(50);
@@ -267,13 +256,18 @@
     private async Task DismissDisclaimer()
     {
         _showDisclaimer = false;
+        _disclaimerDismissed = true;
         await JS.InvokeVoidAsync("sigilRepl.prefs.set", "disclaimerDismissed", true);
     }
 
-    private async Task ToggleDisclaimer()
+    /// <summary>The editor saw a sizeable paste. The notice appears only then, so visitors who just type are not alarmed, and
+    /// never again once dismissed.</summary>
+    [JSInvokable]
+    public void Pasted()
     {
-        _showDisclaimer = !_showDisclaimer;
-        await JS.InvokeVoidAsync("sigilRepl.prefs.set", "disclaimerDismissed", !_showDisclaimer);
+        if (_disclaimerDismissed || _showDisclaimer) return;
+        _showDisclaimer = true;
+        StateHasChanged();
     }
 
     /// <summary>Run button and Ctrl+Enter: starts audio if needed and plays the editor's code.</summary>
@@ -386,7 +380,7 @@
     private static string DescribeSample(SampleEntry sample)
     {
         string size = sample.Bytes >= 1024 * 1024 ? $"{sample.Bytes / (1024.0 * 1024):0.#} MB" : $"{Math.Max(1, sample.Bytes / 1024)} KB";
-        return sample.Seconds > 0 ? $"{sample.Seconds:0.##} s · {size}" : size;
+        return sample.Seconds > 0 ? $"{sample.Seconds:0.##} s, {size}" : size;
     }
 
     private async Task PlayAsync(string code)

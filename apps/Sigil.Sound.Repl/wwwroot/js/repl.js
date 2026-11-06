@@ -543,6 +543,11 @@
                 }
             }, true);
             editor.onDidChangeModelContent(scheduleCheck);
+            // Code that arrived by paste is code the visitor did not write: that is when the safety notice is worth showing.
+            editor.onDidPaste(e => {
+                const pasted = editor.getModel().getValueInRange(e.range);
+                if (pasted.length >= 40 || pasted.includes("\n")) page.invokeMethodAsync("Pasted").catch(() => { });
+            });
             initResizer();
             initSampleDrop();
             editor.focus();
