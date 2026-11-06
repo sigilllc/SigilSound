@@ -7,8 +7,14 @@ namespace Sigil.Sound.Repl;
 /// .wav files in <c>Host/BuiltIn</c>, embedded in the assembly under the logical name <c>BuiltIn/&lt;file&gt;</c>.
 /// </summary>
 /// <remarks>
+/// <para>
 /// <c>pluck.wav</c>: a plucked C3 (130.81 Hz), mono, 16-bit, 32 kHz, 1.2 s. Computed rather than recorded: eight harmonics
 /// whose upper partials die away faster, plus a few milliseconds of noise for the pick, so it has no licence to carry.
+/// </para>
+/// <para>
+/// <c>IR_Speakers_Living_Room.wav</c>: a recorded living room for the "Room from an IR" example. Creative Commons 0 (public domain),
+/// by mansardian, https://freesound.org/people/mansardian/sounds/172677/.
+/// </para>
 /// </remarks>
 internal static class BuiltInSamples
 {

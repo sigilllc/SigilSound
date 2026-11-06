@@ -26,7 +26,29 @@ internal static class ReplExamples
         tune.Play(v => Sample(pluck, v.Frequency, root) * v.Velocity, polyphony: 8) * 0.5
         """);
 
-    private static readonly Examples.Example Keyboard = new("Live notes (Keys)",
+    // A drum groove in a recorded room: what Convolve is for, so this loads a real room rather than synthesising a tail. Placed after the Cabinet (IR) example.
+    private static readonly Examples.Example RoomFromIr = new("Room from an IR",
+        """
+        // A drum groove played through a recorded room: IR_Speakers_Living_Room.wav comes with the page
+        // (a living room, CC0, by mansardian on Freesound). Convolve puts the sound in that room, so every hit
+        // comes back with the room's reflections, and the dry hits alone would sound flat and close by comparison.
+        // Drop your own impulse responses on the page and load them the same way.
+        var bpm = 110;
+        var room = Samples.Load("IR_Speakers_Living_Room.wav");
+
+        var kick = Mini.Notes("c1 ~ ~ c1 ~ c1 ~ ~");
+        var snare = Mini.Notes("~ c3 ~ c3");
+        var hats = Mini.Notes("c4*8").Degrade(0.2, seed: 3);
+
+        var drums =
+            kick.Play(v => Sine(Fn(t => 48 + 110 * Exp(-t * 28))).Adsr(0.001, 0.25, 0, 0.02), bpm) * 0.9
+            + snare.Play(v => Noise().BandPass(1800, q: 1.2).Adsr(0.001, 0.12, 0, 0.05), bpm) * 0.5
+            + hats.Play(v => Noise(4).HighPass(7000).Adsr(0.001, 0.04, 0, 0.01), bpm) * 0.25;
+
+        drums.Convolve(room, mix: 0.5) * 0.7
+        """);
+
+    private static readonly Examples.Example Keyboard =new("Live notes (Keys)",
         """
         // For a Sigil.Sound project: Keys is a NoteInput, the library's live notes, and it exists on this page only.
         // To write the same thing for the Sigilgraph Sound Script device, use Poly instead (see the Sigilgraph "Keyboard" example).
@@ -76,6 +98,8 @@ internal static class ReplExamples
         var all = Examples.All.ToList();
         int sampler = all.FindIndex(e => e.Name == "Sampler");
         all.Insert(sampler < 0 ? all.Count : sampler + 1, SamplerFromFile);
+        int cabinet = all.FindIndex(e => e.Name == "Cabinet (IR)");
+        all.Insert(cabinet < 0 ? all.Count : cabinet + 1, RoomFromIr);
         all.Add(Keyboard);
         all.Add(FallingNotes);
         return all;

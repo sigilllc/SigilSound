@@ -649,6 +649,19 @@ namespace Sigil.Sound.Repl.Tests
         }
 
         [Fact]
+        public void The_room_example_convolves_the_shipped_recorded_room_under_the_page_profile()
+        {
+            Assert.True(BuiltInSamples.FromAssembly().ContainsKey("IR_Speakers_Living_Room.wav"), "the room IR should be embedded");
+
+            var result = SnippetCompiler.Compile(ReplExamples.All.Single(e => e.Name == "Room from an IR").Code, ReplProfile.Instance);
+            Assert.True(result.Success, string.Join("\n", result.Diagnostics));
+            var audio = result.Run().Render(1.0, 48_000);
+
+            AudioAssert.IsFinite(audio);
+            Assert.True(SignalAnalysis.Peak(audio.ToMono()) > 0.05f, "the room example is silent");
+        }
+
+        [Fact]
         public void Completion_offers_the_built_in_sample_under_the_page_profile()
         {
             const string code = "Samples.Load(\"\")";

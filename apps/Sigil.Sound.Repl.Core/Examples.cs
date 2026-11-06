@@ -297,23 +297,6 @@ public static class Examples
 
             Saw(110).Distort(drive: 4).Convolve(cabinet) * 0.4
             """),
-        new("Room from an IR",
-            """
-            // A room from noise: a response that starts loud and dies away over 1.5 s is what a reverb tail is.
-            // Left and right get different noise, so the room is wide. Plucks go in, the room comes back with them.
-            const int rate = 48_000;
-            var random = new Random(7);
-            var frames = new StereoFrame[rate * 3 / 2];
-            for (int i = 0; i < frames.Length; i++)
-            {
-                double fade = Exp(-4.6 * i / frames.Length);
-                frames[i] = new StereoFrame((float)((random.NextDouble() * 2 - 1) * fade), (float)((random.NextDouble() * 2 - 1) * fade));
-            }
-            var room = new AudioBuffer(frames, rate);
-
-            var pluck = Saw(220).LowPass(2000).Adsr(0.002, 0.2, 0, 0.1) * Fn(t => t % 1 < 0.5 ? 1 : 0);
-            pluck.Convolve(room, mix: 0.4) * 0.5
-            """),
         new("Drone",
             """
             Sound Voice(double hz, double detune) =>
