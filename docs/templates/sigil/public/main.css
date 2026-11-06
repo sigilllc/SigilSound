@@ -1,0 +1,407 @@
+/* Sigil theme for the docfx "modern" template.
+   Colours come from the REPL (apps/Sigil.Sound.Repl/wwwroot/css/app.css). Text is a plain sans-serif; monospace is for
+   code only. Space and background tint separate things, not borders. The top bar is the one place that carries chrome. */
+
+:root {
+  --sg-teal: #1de9b6;
+  --sg-teal-a: #1de9b61a;
+  --sg-amber: #ffb000;
+  --sg-blue: #5cc8ff;
+  --sg-bar: #262832;
+  --sg-bar-line: #3b3e4a;
+  --sg-bar-fg: #d2d6dd;
+  --sg-bar-dim: #a6abb5;
+  --sg-bar-well: #14151b;
+  --sg-bar-hover: #30323d;
+  --bs-font-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bs-font-monospace: Consolas, "Roboto Mono", ui-monospace, Menlo, monospace;
+}
+
+[data-bs-theme="dark"] {
+  --bs-body-bg: #15161c;
+  --bs-body-color: #e6e8ec;
+  --bs-emphasis-color: #fff;
+  --bs-secondary-color: #9aa0aa;
+  --bs-secondary-bg: #1c1d24;
+  --bs-tertiary-bg: #1f2028;
+  --bs-border-color: #2a2c35;
+  --bs-link-color: var(--sg-teal);
+  --bs-link-color-rgb: 29, 233, 182;
+  --bs-link-hover-color: #6ff5d6;
+  --bs-link-hover-color-rgb: 111, 245, 214;
+  --bs-code-color: #e6e8ec;
+  --sg-panel: #1c1d24;
+  --sg-well: #1f2028;
+  --sg-hover: #262832;
+  --sg-accent: var(--sg-teal);
+  --sg-c: #8c929c;
+  --sg-k: var(--sg-blue);
+  --sg-n: var(--sg-teal);
+  --sg-s: var(--sg-amber);
+}
+
+/* The light theme keeps the same structure; teal is darkened so it stays readable on white. */
+[data-bs-theme="light"] {
+  --bs-link-color: #0a7d65;
+  --bs-link-color-rgb: 10, 125, 101;
+  --bs-link-hover-color: #075f4c;
+  --bs-link-hover-color-rgb: 7, 95, 76;
+  --bs-code-color: #212529;
+  --sg-panel: #f5f6f8;
+  --sg-well: #f0f2f5;
+  --sg-hover: #e9ecf0;
+  --sg-accent: #0a7d65;
+  --sg-c: #6b7280;
+  --sg-k: #0b6fa8;
+  --sg-n: #0a7d65;
+  --sg-s: #a86a00;
+}
+
+body {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sg-accent);
+  outline-offset: 2px;
+}
+
+/* ---- Top bar: dark in both themes, like the REPL header --------------------------------- */
+
+header {
+  position: relative;
+  background: var(--sg-bar) !important;
+  border-bottom: 1px solid var(--sg-bar-line) !important;
+  --bs-body-color: var(--sg-bar-fg);
+  --bs-link-color: var(--sg-bar-fg);
+  --bs-link-hover-color: #fff;
+  --bs-emphasis-color: #fff;
+  --bs-border-color: var(--sg-bar-line);
+  --bs-tertiary-bg: var(--sg-bar-hover);
+  color: var(--sg-bar-fg);
+}
+
+/* The brand gradient, as a hairline. */
+header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, #c3a3f0 0%, #27a7f3 50%, #47cdab 100%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+header .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 10px;
+  padding: 0;
+  color: #fff;
+}
+
+header .navbar-brand img#logo {
+  height: 30px;
+  width: auto;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  font-family: "Montserrat", sans-serif;
+  white-space: nowrap;
+}
+
+.brand-text .wordmark {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.brand-text .tagline {
+  margin-top: 3px;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.4em;
+  color: var(--sg-teal);
+}
+
+/* Tabs on the left, search and the REPL button on the right. */
+header #navpanel {
+  align-items: center;
+  gap: 10px;
+}
+
+header #navbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+header #navbar > .navbar-nav {
+  order: 1;
+  flex-direction: row;
+  gap: 2px;
+}
+
+header #navbar > form.search {
+  order: 2 !important;
+  margin-left: auto;
+  width: min(300px, 30vw);
+}
+
+header #navbar > form.icons {
+  order: 3 !important;
+  margin-left: 0 !important;
+}
+
+header .nav-link {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--sg-bar-fg);
+}
+
+header .nav-link:hover {
+  background: var(--sg-bar-hover);
+  color: #fff;
+}
+
+header .nav-link.active {
+  background: var(--sg-teal-a);
+  border-color: var(--sg-teal);
+  color: var(--sg-teal);
+}
+
+header form.search .form-control {
+  height: 32px;
+  background-color: var(--sg-bar-well);
+  border: 1px solid var(--sg-bar-line);
+  border-radius: 5px;
+  color: #eef0f3;
+}
+
+header form.search .form-control:focus {
+  border-color: var(--sg-teal);
+  box-shadow: none;
+}
+
+header form.search .bi,
+header .btn {
+  color: var(--sg-bar-dim);
+}
+
+.repl-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1.5px solid var(--sg-teal);
+  border-radius: 5px;
+  color: var(--sg-teal) !important;
+  white-space: nowrap;
+  text-decoration: none !important;
+}
+
+.repl-open:hover {
+  background: var(--sg-teal-a);
+}
+
+/* ---- Fewer lines: separate with space instead --------------------------------------------- */
+
+footer,
+.next-article,
+#affix h5,
+article hr,
+article h2,
+article table,
+article th,
+article td {
+  border-color: transparent !important;
+}
+
+footer {
+  background: var(--sg-panel);
+  margin-top: 2rem;
+}
+
+/* Contents tree: quiet links, the current page tinted in teal. */
+.toc .filter .form-control {
+  background-color: var(--sg-well);
+  border: 0;
+  border-radius: 6px;
+}
+
+.toc .filter .form-control:focus {
+  box-shadow: 0 0 0 2px var(--sg-accent);
+}
+
+.toc li > a {
+  border-radius: 5px;
+  color: var(--bs-body-color);
+}
+
+.toc li > a:hover {
+  background: var(--sg-hover);
+  text-decoration: none;
+}
+
+.toc li.active > a {
+  background: var(--sg-teal-a);
+  color: var(--sg-accent);
+  font-weight: 500;
+}
+
+/* "In this article". */
+#affix h5 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+}
+
+#affix a {
+  color: var(--bs-secondary-color);
+}
+
+#affix a:hover {
+  color: var(--bs-body-color);
+}
+
+#affix a.active {
+  color: var(--sg-accent);
+}
+
+/* ---- Article ---------------------------------------------------------------------------- */
+
+article h1 {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+article h2 {
+  margin-top: 1.9rem;
+  font-size: 21px;
+  font-weight: 600;
+}
+
+article h3 {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+:not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--sg-well);
+  color: var(--bs-body-color);
+  font-size: 0.92em;
+}
+
+/* Tables: no grid, every other row tinted; the first column is the thing being defined. */
+article table {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: transparent;
+  font-size: 14px;
+}
+
+article table th {
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+  background: transparent;
+}
+
+article table tbody tr:nth-child(odd) > * {
+  --bs-table-bg-type: var(--sg-panel);
+  background: var(--sg-panel);
+  box-shadow: none;
+}
+
+article table td:first-child code {
+  padding: 0;
+  background: none;
+  color: var(--sg-accent);
+}
+
+/* Code blocks: a tinted well, with the REPL editor's colours. */
+article pre {
+  border: 0;
+  border-radius: 6px;
+  background: var(--sg-well);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+article pre code.hljs {
+  background: none;
+  padding: 12px 14px;
+  color: var(--bs-body-color);
+}
+
+.hljs-comment,
+.hljs-quote { color: var(--sg-c); }
+.hljs-keyword,
+.hljs-built_in,
+.hljs-type,
+.hljs-literal { color: var(--sg-k); }
+.hljs-number { color: var(--sg-n); }
+.hljs-string { color: var(--sg-s); }
+
+/* The "Open in REPL" link that main.js puts under each example. */
+a.repl-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -0.5rem 0 1.1rem 2px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  border: 0;
+  border-radius: 0;
+}
+
+a.repl-link:hover {
+  text-decoration: underline;
+}
+
+/* The Lucide "play" icon (the outline the REPL's play button draws), coloured by the link text. */
+a.repl-link::before {
+  --sg-play: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='6 3 20 12 6 21 6 3'/%3E%3C/svg%3E");
+  content: "";
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  -webkit-mask: var(--sg-play) center / contain no-repeat;
+  mask: var(--sg-play) center / contain no-repeat;
+}
+
+/* Narrow screens: tabs and search wrap inside the collapsed panel. */
+@media (max-width: 767.98px) {
+  header #navbar {
+    flex-wrap: wrap;
+  }
+
+  header #navbar > form.search {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .repl-open {
+    margin-top: 6px;
+  }
+}

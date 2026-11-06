@@ -172,7 +172,13 @@ public sealed partial class Sound
     /// A mono source balanced to one side ends up silent on the other, as with a balance knob, and a stereo image is kept.
     /// </summary>
     /// <param name="position">-1 is hard left, 0 the center (unchanged), 1 hard right. A number, or a sound or <c>Fn(t => ...)</c> to move it.</param>
-    /// <example><code>pad.Reverb().Balance(-0.3)   // nudge a wide pad left without narrowing it</code></example>
+    /// <example>
+    /// <code>
+    /// // A wide pad nudged left: the right side is turned down, the stereo image is kept.
+    /// var pad = (Saw(110) + Saw(165)).LowPass(1500).Chorus(rate: 0.5, voices: 4) * 0.3;
+    /// pad.Reverb().Balance(-0.3)
+    /// </code>
+    /// </example>
     public Sound Balance(Param position) =>
         new(ctx => new BalanceOperator(Compile(ctx), position.Compile(ctx)), $"{this}.Balance({position})");
 
@@ -282,8 +288,20 @@ public sealed partial class Sound
     /// Narrowing collapses a stereo sound toward mono; widening spreads it out. Mono input stays mono.
     /// </summary>
     /// <param name="width">0 is mono, 1 leaves the sound unchanged, and values above 1 widen it, up to 4. A number, or a sound or <c>Fn(t => ...)</c> to move it.</param>
-    /// <example><code>bass.Spread(0.0)            // keep the low end mono for club systems</code></example>
-    /// <example><code>pad.Chorus().Spread(1.8)    // a wide pad</code></example>
+    /// <example>
+    /// <code>
+    /// // Width 0 collapses a stereo sound to mono: how you keep the low end centered for club systems.
+    /// var bass = Saw(55).LowPass(300).Chorus(rate: 0.4, voices: 3) * 0.5;
+    /// bass.Spread(0.0)
+    /// </code>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// // Width above 1 pushes the chorus voices further apart: listen on headphones.
+    /// var pad = (Saw(110) + Saw(165)).LowPass(1500) * 0.3;
+    /// pad.Chorus().Spread(1.8)
+    /// </code>
+    /// </example>
     public Sound Spread(Param width) =>
         new(ctx => new StereoSpreadOperator(Compile(ctx), width.Compile(ctx)), $"{this}.Spread({width})");
 

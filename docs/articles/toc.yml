@@ -1,0 +1,22 @@
+- name: Getting started
+  href: getting-started.md
+- name: Sources
+  href: sources.md
+- name: Parameters and modulation
+  href: parameters.md
+- name: Shaping sound
+  href: shaping.md
+- name: Effects
+  href: effects.md
+- name: Notes and patterns
+  href: notes-and-patterns.md
+- name: Mini-notation
+  href: mini-notation.md
+- name: Samples
+  href: samples.md
+- name: Rendering and live playback
+  href: rendering-and-live.md
+- name: Custom operators
+  href: custom-operators.md
+- name: Writing doc examples
+  href: writing-examples.md

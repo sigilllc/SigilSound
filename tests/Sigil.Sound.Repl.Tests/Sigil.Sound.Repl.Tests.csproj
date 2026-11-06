@@ -15,6 +15,8 @@
        rather than by referencing the Blazor app: the page depends on the compiler, never the other way round. -->
   <ItemGroup>
     <Compile Include="..\..\apps\Sigil.Sound.Repl\Host\*.cs" LinkBase="Host" />
+    <!-- ReplBench is the page's JS-interop benchmark hook; the tests have no Blazor reference. -->
+    <Compile Remove="..\..\apps\Sigil.Sound.Repl\Host\ReplBench.cs" />
     <!-- The page's built-in samples, embedded the same way the page does it. -->
     <EmbeddedResource Include="..\..\apps\Sigil.Sound.Repl\Host\BuiltIn\*.wav" LogicalName="BuiltIn/%(Filename)%(Extension)" />
   </ItemGroup>

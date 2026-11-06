@@ -66,7 +66,7 @@ public class SnippetCompilerTests
         var result = SnippetCompiler.Compile(example.Code);
 
         Assert.True(result.Success, string.Join("\n", result.Diagnostics));
-        var audio = result.Run().Render(2.0);
+        var audio = HostRender.Render(result.Run(), 2.0);
         AudioAssert.IsFinite(audio);
         Assert.True(SignalAnalysis.Peak(audio.ToMono()) > 0.01f, "the example is silent");
     }
