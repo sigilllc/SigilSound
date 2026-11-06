@@ -27,6 +27,8 @@ public static class PatternPlayback
         if (polyphony is < 1 or > 64) throw new ArgumentOutOfRangeException(nameof(polyphony), polyphony, "Polyphony must be between 1 and 64.");
 
         pattern.Validate();
+        if (bpm is null)
+            HostSequence.ReportFollowsHost();
         return Sound.FromOperator(ctx => new PatternPlayOperator(pattern, voice, bpm, polyphony, ctx), "Play(pattern)");
     }
 

@@ -16,3 +16,5 @@ Sigil.Sound.PlayingNote.Velocity.get -> float
 Sigil.Sound.Voice.Bend.get -> Sigil.Sound.Sound!
 Sigil.Sound.Voice.Pressure.get -> Sigil.Sound.Sound!
 Sigil.Sound.Voice.Slide.get -> Sigil.Sound.Sound!
+Sigil.Sound.HostSequence
+static Sigil.Sound.HostSequence.Observe(System.Action! onFollowsHost) -> System.IDisposable!

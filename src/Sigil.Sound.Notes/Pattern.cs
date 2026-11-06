@@ -192,6 +192,9 @@ public static class Patterns
         if (bpm is { } tempo && !(double.IsFinite(tempo) && tempo > 0)) throw new ArgumentOutOfRangeException(nameof(bpm), bpm, "The tempo must be positive.");
         if (polyphony is < 1 or > 64) throw new ArgumentOutOfRangeException(nameof(polyphony), polyphony, "Polyphony must be between 1 and 64.");
 
+        if (bpm is null)
+            HostSequence.ReportFollowsHost();
+
         return Sound.FromOperator(
             ctx => bpm is null && ctx.TimeClock is not null
                 ? new HostPatternOperator(pattern, voice, polyphony, ctx)
