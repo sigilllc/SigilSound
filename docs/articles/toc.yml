@@ -1,5 +1,7 @@
 - name: Getting started
   href: getting-started.md
+- name: Defaults
+  href: defaults.md
 - name: Sources
   href: sources.md
 - name: Parameters and modulation
@@ -20,3 +22,5 @@
   href: custom-operators.md
 - name: Writing doc examples
   href: writing-examples.md
+- name: Versioning
+  href: versioning.md

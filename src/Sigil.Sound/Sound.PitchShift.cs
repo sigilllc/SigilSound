@@ -21,14 +21,22 @@ public sealed partial class Sound
     /// shift in the time domain instead. A stereo sound is shifted channel by channel.
     /// </para>
     /// </remarks>
-    /// <param name="semitones">How far to move the pitch: 12 is an octave up, -12 an octave down, 0 leaves it alone. Limited to ±24. A number, or a sound, <c>Control</c> or <c>Fn(t => ...)</c> to bend it; it is read once per frame, so a fast sweep steps every 10 ms.</param>
+    /// <param name="semitones">How far to move the pitch: 12 is an octave up, -12 an octave down, 0 leaves it alone. Limited to ±24. A number, or a sound, <c>Control</c> or <c>Fn(t => ...)</c> to bend it; it is read once per frame, so a fast sweep steps every 10 ms. Defaults to 12, an octave up.</param>
     /// <param name="mix">0 is only the original, 1 only the shifted sound. Use a middle value to add a harmony. Defaults to 1.</param>
     /// <example><code>Saw(220).PitchShift(7, mix: 0.5)                 // the sound plus a fifth above it</code></example>
-    /// <example><code>pad.PitchShift(Fn(t => -12 * Math.Min(t / 2, 1)))   // a two-second dive down an octave</code></example>
-    public Sound PitchShift(Param semitones, Param? mix = null)
+    /// <example>
+    /// <code>
+    /// // A two-second dive down an octave.
+    /// var pad = (Saw(220) + Saw(330)).LowPass(2000) * 0.2;
+    ///
+    /// pad.PitchShift(Fn(t => -12 * Math.Min(t / 2, 1)))
+    /// </code>
+    /// </example>
+    public Sound PitchShift(Param? semitones = null, Param? mix = null)
     {
+        var shift = semitones ?? 12f;
         var wet = mix ?? 1f;
-        return new(ctx => new PitchShiftOperator(Compile(ctx), semitones.Compile(ctx), wet.Compile(ctx), ctx),
-            $"{this}.PitchShift({semitones})");
+        return new(ctx => new PitchShiftOperator(Compile(ctx), shift.Compile(ctx), wet.Compile(ctx), ctx),
+            $"{this}.PitchShift({shift})");
     }
 }

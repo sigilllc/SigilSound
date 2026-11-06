@@ -22,28 +22,35 @@ public enum PlaybackMode
 public static class Sounds
 {
     /// <summary>A sine wave. <paramref name="frequency"/> is in Hz.</summary>
-    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> for vibrato and sweeps. Also used as an LFO below 20 Hz.</param>
+    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> for vibrato and sweeps. Also used as an LFO below 20 Hz. Defaults to 440 (A4).</param>
     /// <example><code>Sine(440)</code></example>
-    public static Sound Sine(Param frequency) =>
-        Sound.FromOperator(ctx => new SineOperator(frequency.Compile(ctx), ctx), $"Sine({frequency})");
+    public static Sound Sine(Param? frequency = null)
+    {
+        var pitch = frequency ?? 440f;
+        return Sound.FromOperator(ctx => new SineOperator(pitch.Compile(ctx), ctx), $"Sine({pitch})");
+    }
 
     /// <summary>An anti-aliased (PolyBLEP) sawtooth wave. <paramref name="frequency"/> is in Hz.</summary>
-    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> to modulate it.</param>
+    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> to modulate it. Defaults to 440 (A4).</param>
     /// <example><code>Saw(110).LowPass(800)</code></example>
-    public static Sound Saw(Param frequency) =>
-        Sound.FromOperator(ctx => new SawOperator(frequency.Compile(ctx), ctx), $"Saw({frequency})");
+    public static Sound Saw(Param? frequency = null)
+    {
+        var pitch = frequency ?? 440f;
+        return Sound.FromOperator(ctx => new SawOperator(pitch.Compile(ctx), ctx), $"Saw({pitch})");
+    }
 
     /// <summary>
     /// An anti-aliased (PolyBLEP) pulse wave. <paramref name="width"/> is the duty cycle in (0, 1); 0.5 is a square.
     /// </summary>
-    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> to modulate it.</param>
+    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> to modulate it. Defaults to 440 (A4).</param>
     /// <param name="width">Fraction of each cycle spent high, from 0.01 to 0.99. Modulate it for pulse-width movement. Defaults to 0.5.</param>
     /// <example><code>Square(110, Sine(0.3).Range(0.1, 0.9))</code></example>
-    public static Sound Square(Param frequency, Param? width = null)
+    public static Sound Square(Param? frequency = null, Param? width = null)
     {
+        var pitch = frequency ?? 440f;
         var duty = width ?? 0.5f;
-        return Sound.FromOperator(ctx => new SquareOperator(frequency.Compile(ctx), duty.Compile(ctx), ctx),
-            $"Square({frequency})");
+        return Sound.FromOperator(ctx => new SquareOperator(pitch.Compile(ctx), duty.Compile(ctx), ctx),
+            $"Square({pitch})");
     }
 
     /// <summary>White noise, independent per channel. The same <paramref name="seed"/> renders the same noise.</summary>
@@ -67,12 +74,27 @@ public static class Sounds
     /// <param name="speed">Playback rate: 1 is the original pitch and speed. A number, or a sound or <c>Fn(t => ...)</c> to bend or vibrato it. Defaults to 1.</param>
     /// <param name="mode">How the sample plays: once, looped, or ping-ponged. Defaults to <see cref="PlaybackMode.OneShot"/>.</param>
     /// <param name="loopStart">Where the loop begins, in seconds from the start of the sample. Used only by <see cref="PlaybackMode.Loop"/> and <see cref="PlaybackMode.PingPong"/>. Defaults to 0.</param>
-    /// <param name="loopEnd">Where the loop ends, in seconds from the start of the sample. Null means the end of the sample. Must be after <paramref name="loopStart"/>.</param>
+    /// <param name="loopEnd">Where the loop ends, in seconds from the start of the sample. Defaults to null, the end of the sample. Must be after <paramref name="loopStart"/>.</param>
     /// <exception cref="ArgumentException">The buffer has no frames.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The loop markers are outside the sample, or in the wrong order.</exception>
-    /// <example><code>Sample(kick)                                             // one hit at the recorded pitch</code></example>
-    /// <example><code>Sample(pad, speed: 0.5, mode: PlaybackMode.Loop)         // a loop an octave down</code></example>
-    /// <example><code>Sample(pad, mode: PlaybackMode.PingPong, loopStart: 0.5, loopEnd: 2.0)</code></example>
+    /// <example>
+    /// <code>
+    /// // One hit at the recorded pitch.
+    /// Sample(Samples.Load("pluck.wav"))
+    /// </code>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// // A loop an octave down.
+    /// Sample(Samples.Load("pluck.wav"), speed: 0.5, mode: PlaybackMode.Loop) * 0.5
+    /// </code>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// // Ping-pong between two points of the sample: forward from 0.05 s to 0.4 s, then backward, and so on.
+    /// Sample(Samples.Load("pluck.wav"), mode: PlaybackMode.PingPong, loopStart: 0.05, loopEnd: 0.4) * 0.5
+    /// </code>
+    /// </example>
     public static Sound Sample(AudioBuffer buffer, Param? speed = null, PlaybackMode mode = PlaybackMode.OneShot,
         double loopStart = 0, double? loopEnd = null)
     {
@@ -108,9 +130,15 @@ public static class Sounds
     /// <param name="rootFrequency">The pitch the sample was recorded at, in Hz; for example 261.63 for a sample recorded at middle C.</param>
     /// <param name="mode">How the sample plays: once, looped, or ping-ponged. Defaults to <see cref="PlaybackMode.OneShot"/>.</param>
     /// <param name="loopStart">Where the loop begins, in seconds from the start of the sample. Defaults to 0.</param>
-    /// <param name="loopEnd">Where the loop ends, in seconds from the start of the sample. Null means the end of the sample.</param>
+    /// <param name="loopEnd">Where the loop ends, in seconds from the start of the sample. Defaults to null, the end of the sample.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="rootFrequency"/> is not positive, or the loop markers are invalid.</exception>
-    /// <example><code>Sample(pluck, v.Frequency, 261.63)   // plays the pluck at the pitch of each note</code></example>
+    /// <example>
+    /// <code>
+    /// // Plays the pluck at the pitch of each note; the pluck was recorded at 261.63 Hz (C4).
+    /// Notes.Parse("C4 E4 G4 C5").Every(Beats.Quarter).Loop()
+    ///     .Play(v => Sample(Samples.Load("pluck.wav"), v.Frequency, 261.63), bpm: 120) * 0.5
+    /// </code>
+    /// </example>
     public static Sound Sample(AudioBuffer buffer, Param frequency, double rootFrequency, PlaybackMode mode = PlaybackMode.OneShot,
         double loopStart = 0, double? loopEnd = null)
     {
@@ -129,19 +157,20 @@ public static class Sounds
     /// fall. Skew 0 and 1 are limited to 0.01 and 0.99. A true saw needs a jump, and a triangle has none, so the extreme
     /// skews are a very steep ramp rather than a saw.
     /// </remarks>
-    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> to modulate it.</param>
+    /// <param name="frequency">Pitch in Hz: a number, or a sound or <c>Fn(t => ...)</c> to modulate it. Defaults to 440 (A4).</param>
     /// <param name="skew">Where the peak falls in the cycle, from 0 to 1. 0.5 is symmetric. Defaults to 0.5.</param>
     /// <exception cref="ArgumentOutOfRangeException">The constant skew is outside 0 to 1.</exception>
     /// <example><code>Triangle(220, skew: 0.5) * 0.3</code></example>
     /// <example><code>Sine(440) * Triangle(4, skew: 0.8).Range(0.9, 1.0)   // a tremolo that ramps up and snaps back</code></example>
-    public static Sound Triangle(Param frequency, Param? skew = null)
+    public static Sound Triangle(Param? frequency = null, Param? skew = null)
     {
+        var pitch = frequency ?? 440f;
         var curve = skew ?? 0.5f;
         if (curve.IsConstant && curve.ConstantValue is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(skew), curve.ConstantValue, "The skew must be between 0 and 1.");
 
-        return Sound.FromOperator(ctx => new TriangleOperator(frequency.Compile(ctx), curve.Compile(ctx), ctx),
-            $"Triangle({frequency}, {curve})");
+        return Sound.FromOperator(ctx => new TriangleOperator(pitch.Compile(ctx), curve.Compile(ctx), ctx),
+            $"Triangle({pitch}, {curve})");
     }
 
     /// <summary>
@@ -168,7 +197,12 @@ public static class Sounds
     /// </summary>
     /// <param name="function">Maps time in seconds to a value; see <see cref="Fn(Func{double, double})"/>.</param>
     /// <param name="rate">How often the function runs.</param>
-    /// <example><code>LowPass(Fn(t => 200 + 4000 * Math.Abs(Math.Sin(t)), FunctionRate.PerMillisecond))</code></example>
+    /// <example>
+    /// <code>
+    /// // A cutoff that is recomputed once per millisecond instead of once per sample: cheaper, and smooth enough for a sweep.
+    /// Saw(110).LowPass(Fn(t => 200 + 4000 * Math.Abs(Math.Sin(t)), FunctionRate.PerMillisecond)) * 0.3
+    /// </code>
+    /// </example>
     public static Sound Fn(Func<double, double> function, FunctionRate rate)
     {
         ArgumentNullException.ThrowIfNull(function);

@@ -22,6 +22,10 @@ public static class WavWriter
     private const short FormatPcm = 1;
     private const short FormatIeeeFloat = 3;
 
+    /// <summary>Writes <paramref name="audio"/> to <paramref name="stream"/> as a stereo WAV file.</summary>
+    /// <param name="stream">Where to write; it is left open.</param>
+    /// <param name="audio">The audio to write.</param>
+    /// <param name="format">The sample format. Defaults to 16-bit PCM.</param>
     public static void Write(Stream stream, AudioBuffer audio, WavFormat format = WavFormat.Pcm16)
     {
         ArgumentNullException.ThrowIfNull(stream);

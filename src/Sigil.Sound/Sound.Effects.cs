@@ -23,18 +23,19 @@ public sealed partial class Sound
     /// <summary>
     /// An echo: repeats the sound after <paramref name="time"/> seconds, and repeats the repeats.
     /// </summary>
-    /// <param name="time">Seconds between repeats, up to <paramref name="maxTime"/>. A number, or a sound or <c>Fn(t => ...)</c> to bend the pitch of the echoes.</param>
+    /// <param name="time">Seconds between repeats, up to <paramref name="maxTime"/>. A number, or a sound or <c>Fn(t => ...)</c> to bend the pitch of the echoes. Defaults to 0.375, a dotted eighth at 120 bpm.</param>
     /// <param name="feedback">How much of each echo feeds the next, from 0 (one echo) to 0.99 (nearly endless). Defaults to 0.4.</param>
     /// <param name="mix">0 is only the original, 1 only the echoes. Defaults to 0.5.</param>
     /// <param name="maxTime">The longest delay time in seconds; it sizes the buffer. Defaults to 2.</param>
     /// <example><code>Saw(220).Adsr(0.01, 0.1, 0, 0.1).Delay(0.375, feedback: 0.5)</code></example>
-    public Sound Delay(Param time, Param? feedback = null, Param? mix = null, double maxTime = 2)
+    public Sound Delay(Param? time = null, Param? feedback = null, Param? mix = null, double maxTime = 2)
     {
+        var gap = time ?? 0.375f;
         if (maxTime <= 0) throw new ArgumentOutOfRangeException(nameof(maxTime), maxTime, "The maximum delay must be positive.");
         var fb = feedback ?? 0.4f;
         var wet = mix ?? 0.5f;
-        return new(ctx => new DelayOperator(Compile(ctx), time.Compile(ctx), fb.Compile(ctx), wet.Compile(ctx), maxTime, ctx),
-            $"{this}.Delay({time})");
+        return new(ctx => new DelayOperator(Compile(ctx), gap.Compile(ctx), fb.Compile(ctx), wet.Compile(ctx), maxTime, ctx),
+            $"{this}.Delay({gap})");
     }
 
     /// <summary>
@@ -60,16 +61,17 @@ public sealed partial class Sound
     /// A comb filter tuned to a pitch: it resonates at <paramref name="frequency"/> and its multiples.
     /// Fed a short burst it rings like a plucked string (Karplus-Strong); fed a steady sound it adds a metallic ring.
     /// </summary>
-    /// <param name="frequency">The pitch it resonates at, in Hz (20 and up). A number, or a sound or <c>Fn(t => ...)</c> to sweep it.</param>
+    /// <param name="frequency">The pitch it resonates at, in Hz (20 and up). A number, or a sound or <c>Fn(t => ...)</c> to sweep it. Defaults to 440 (A4).</param>
     /// <param name="feedback">How long it rings, from 0 (not at all) to 0.999 (very long). Defaults to 0.95.</param>
     /// <param name="damping">How quickly the highs fade while it rings, from 0 (bright) to 0.99 (dull). Defaults to 0.2.</param>
     /// <example><code>Noise().Adsr(0, 0.01, 0, 0.001).Comb(220, feedback: 0.995)   // a plucked string</code></example>
-    public Sound Comb(Param frequency, Param? feedback = null, Param? damping = null)
+    public Sound Comb(Param? frequency = null, Param? feedback = null, Param? damping = null)
     {
+        var pitch = frequency ?? 440f;
         var fb = feedback ?? 0.95f;
         var damp = damping ?? 0.2f;
-        return new(ctx => new CombOperator(Compile(ctx), frequency.Compile(ctx), fb.Compile(ctx), damp.Compile(ctx), ctx),
-            $"{this}.Comb({frequency})");
+        return new(ctx => new CombOperator(Compile(ctx), pitch.Compile(ctx), fb.Compile(ctx), damp.Compile(ctx), ctx),
+            $"{this}.Comb({pitch})");
     }
 
     /// <summary>
@@ -92,7 +94,7 @@ public sealed partial class Sound
     /// A lo-fi crusher: reduces the bit depth, and optionally the sample rate, for a gritty, aliased sound.
     /// </summary>
     /// <param name="bits">Bits of resolution: 16 is clean, 8 is classic lo-fi, 2 or 3 is brutal. Fractions work. Defaults to 8.</param>
-    /// <param name="rate">The reduced sample rate in Hz. 8000 sounds like an old sampler; omit it to keep the full rate.</param>
+    /// <param name="rate">The reduced sample rate in Hz. 8000 sounds like an old sampler; omit it to keep the full rate, which is the default.</param>
     /// <example><code>Saw(110).BitCrush(bits: 5, rate: 6000)</code></example>
     public Sound BitCrush(Param? bits = null, Param? rate = null)
     {
@@ -198,11 +200,29 @@ public sealed partial class Sound
     /// <param name="release">Seconds for the gain to recover after the level falls. Shorter pumps more audibly. Defaults to 0.1.</param>
     /// <param name="kneeDb">Width of the soft transition around the threshold, in dB. 0 is a hard knee. Defaults to 6.</param>
     /// <param name="makeupGainDb">Gain added after compression, in dB, to restore the level. Defaults to 0.</param>
-    /// <param name="sidechain">A sound whose level drives the compressor instead of this one: a kick keyed into a pad ducks the pad. Null uses this sound.</param>
+    /// <param name="sidechain">A sound whose level drives the compressor instead of this one: a kick keyed into a pad ducks the pad. By default (null) it uses this sound.</param>
     /// <param name="lookahead">Seconds the detector runs ahead of the audio, so the gain is already falling when a transient arrives: 0 to 0.02. It adds that much latency. Defaults to 0.003 (3 ms); use 0 for none.</param>
     /// <exception cref="ArgumentOutOfRangeException">A parameter is outside its range, such as a ratio below 1 or a lookahead above 0.02 seconds.</exception>
-    /// <example><code>drums.Compress(thresholdDb: -16, ratio: 4, attack: 0.005, release: 0.1, kneeDb: 6, makeupGainDb: 3)</code></example>
-    /// <example><code>pad.Compress(thresholdDb: -20, ratio: 8, attack: 0.002, release: 0.25, sidechain: kick)   // pumping pad</code></example>
+    /// <example>
+    /// <code>
+    /// // A drum bus: a kick and a hat glued together, pushed down 4:1 above -16 dB, then made up.
+    /// var kick = Sine(Fn(t => 50 + 90 * Math.Exp(-(t % 0.5) * 30)))   // the pitch drops every half second
+    ///     * Fn(t => Math.Exp(-(t % 0.5) * 7));                         // and the kick fades out
+    /// var hat = Noise().HighPass(6000) * Fn(t => Math.Exp(-(t % 0.25) * 40)) * 0.3;
+    ///
+    /// (kick + hat).Compress(thresholdDb: -16, ratio: 4, attack: 0.005, release: 0.1, kneeDb: 6, makeupGainDb: 3)
+    /// </code>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// // Ducking: while the kick sounds the pad is turned down, then it swells back (a pumping pad).
+    /// var kick = Sine(Fn(t => 50 + 90 * Math.Exp(-(t % 0.5) * 30)))   // the pitch drops every half second
+    ///     * Fn(t => Math.Exp(-(t % 0.5) * 7));                         // and the kick fades out
+    /// var pad = (Saw(110) + Saw(165)).LowPass(900);
+    ///
+    /// (pad.Compress(thresholdDb: -20, ratio: 8, attack: 0.002, release: 0.25, sidechain: kick) * 0.3 + kick * 0.6).Limit()
+    /// </code>
+    /// </example>
     public Sound Compress(Param? thresholdDb = null, Param? ratio = null, Param? attack = null, Param? release = null,
         Param? kneeDb = null, Param? makeupGainDb = null, Sound? sidechain = null, double lookahead = 0.003)
     {
@@ -233,7 +253,7 @@ public sealed partial class Sound
     /// A tape echo: repeats the sound, and each repeat is darkened and saturated as it feeds back, like a tape delay.
     /// Changing the delay time glides the pitch of the repeats, as a tape head does, instead of clicking.
     /// </summary>
-    /// <param name="time">Seconds between repeats, up to <paramref name="maxTime"/>. A sound or <c>Fn(t => ...)</c> makes the time wander for warble and dub-style sweeps.</param>
+    /// <param name="time">Seconds between repeats, up to <paramref name="maxTime"/>. A sound or <c>Fn(t => ...)</c> makes the time wander for warble and dub-style sweeps. Defaults to 0.375, a dotted eighth at 120 bpm.</param>
     /// <param name="feedback">How much of each repeat feeds the next, from 0 (one echo) to 0.95 (a long, slowly dying trail). Defaults to 0.5.</param>
     /// <param name="damping">The cutoff in Hz of the low-pass in the feedback loop. Lower values make each repeat darker. Defaults to 3000.</param>
     /// <param name="drive">How hard each repeat is pushed into the tape saturation: 1 or more. 1 is gentle; 3 or more is heavy. Defaults to 1.</param>
@@ -241,11 +261,26 @@ public sealed partial class Sound
     /// <param name="maxTime">The longest delay time in seconds; it sizes the buffer. Defaults to 2.</param>
     /// <param name="pingPong">When true, the repeats bounce between the left and right channels, so each echo lands on the opposite side. Defaults to false.</param>
     /// <exception cref="ArgumentOutOfRangeException">The maximum time is not positive, or a constant drive is below 1.</exception>
-    /// <example><code>synth.TapeDelay(time: Sine(0.2).Range(0.2, 0.4), feedback: 0.65, damping: 2800, drive: 1.4, mix: 0.35)</code></example>
-    /// <example><code>pluck.TapeDelay(time: 0.375, feedback: 0.5, pingPong: true)   // echoes that bounce across the stereo field</code></example>
-    public Sound TapeDelay(Param time, Param? feedback = null, Param? damping = null, Param? drive = null, Param? mix = null,
+    /// <example>
+    /// <code>
+    /// // Each repeat is darker and more saturated, and the wobbling delay time bends their pitch like a tape head.
+    /// var synth = Saw(220).LowPass(1500) * Fn(t => Math.Exp(-(t % 0.5) * 9));
+    ///
+    /// synth.TapeDelay(time: Sine(0.2).Range(0.2, 0.4), feedback: 0.65, damping: 2800, drive: 1.4, mix: 0.35) * 0.4
+    /// </code>
+    /// </example>
+    /// <example>
+    /// <code>
+    /// // Echoes that bounce across the stereo field.
+    /// var pluck = Saw(330).LowPass(2500).Adsr(0.002, 0.15, 0, 0.1) * Fn(t => Math.Exp(-(t % 1) * 2));
+    ///
+    /// pluck.TapeDelay(time: 0.375, feedback: 0.5, pingPong: true) * 0.5
+    /// </code>
+    /// </example>
+    public Sound TapeDelay(Param? time = null, Param? feedback = null, Param? damping = null, Param? drive = null, Param? mix = null,
         double maxTime = 2, bool pingPong = false)
     {
+        var gap = time ?? 0.375f;
         if (maxTime <= 0) throw new ArgumentOutOfRangeException(nameof(maxTime), maxTime, "The maximum delay must be positive.");
         var fb = feedback ?? 0.5f;
         var cutoff = damping ?? 3000f;
@@ -253,9 +288,9 @@ public sealed partial class Sound
         if (push.IsConstant && push.ConstantValue < 1)
             throw new ArgumentOutOfRangeException(nameof(drive), push.ConstantValue, "The drive must be at least 1.");
         var wet = mix ?? 0.35f;
-        return new(ctx => new TapeDelayOperator(Compile(ctx), time.Compile(ctx), fb.Compile(ctx), cutoff.Compile(ctx),
+        return new(ctx => new TapeDelayOperator(Compile(ctx), gap.Compile(ctx), fb.Compile(ctx), cutoff.Compile(ctx),
                 push.Compile(ctx), wet.Compile(ctx), maxTime, pingPong, ctx),
-            $"{this}.TapeDelay({time})");
+            $"{this}.TapeDelay({gap})");
     }
 
     /// <summary>
@@ -269,7 +304,14 @@ public sealed partial class Sound
     /// <param name="sheen">How much of an octave-up copy of the tail is mixed in, from 0 (none) to 0.7 (very ethereal). The decay time stays the same. A number, or a sound to move it. Defaults to 0.</param>
     /// <param name="mix">0 is only the dry sound, 1 only the reverb. Defaults to 0.3.</param>
     /// <exception cref="ArgumentOutOfRangeException">A parameter is outside its range.</exception>
-    /// <example><code>pad.FdnReverb(decay: 5.0, size: 1.5, damping: 0.35, predelay: 0.03, sheen: 0.4, mix: 0.4)   // a shimmering hall</code></example>
+    /// <example>
+    /// <code>
+    /// // A shimmering hall around a pad.
+    /// var pad = (Saw(110) + Saw(165) + Saw(220)).LowPass(1200) * 0.2;
+    ///
+    /// pad.FdnReverb(decay: 5.0, size: 1.5, damping: 0.35, predelay: 0.03, sheen: 0.4, mix: 0.4)
+    /// </code>
+    /// </example>
     public Sound FdnReverb(double decay = 3, double size = 1, double damping = 0.35, double predelay = 0.01,
         Param? sheen = null, Param? mix = null)
     {
@@ -287,7 +329,7 @@ public sealed partial class Sound
     /// Stereo width: scales the difference between the left and right channels while keeping their total level.
     /// Narrowing collapses a stereo sound toward mono; widening spreads it out. Mono input stays mono.
     /// </summary>
-    /// <param name="width">0 is mono, 1 leaves the sound unchanged, and values above 1 widen it, up to 4. A number, or a sound or <c>Fn(t => ...)</c> to move it.</param>
+    /// <param name="width">0 is mono, 1 leaves the sound unchanged, and values above 1 widen it, up to 4. A number, or a sound or <c>Fn(t => ...)</c> to move it. Defaults to 1.5, a clearly wider image.</param>
     /// <example>
     /// <code>
     /// // Width 0 collapses a stereo sound to mono: how you keep the low end centered for club systems.
@@ -302,8 +344,11 @@ public sealed partial class Sound
     /// pad.Chorus().Spread(1.8)
     /// </code>
     /// </example>
-    public Sound Spread(Param width) =>
-        new(ctx => new StereoSpreadOperator(Compile(ctx), width.Compile(ctx)), $"{this}.Spread({width})");
+    public Sound Spread(Param? width = null)
+    {
+        var amount = width ?? 1.5f;
+        return new(ctx => new StereoSpreadOperator(Compile(ctx), amount.Compile(ctx)), $"{this}.Spread({amount})");
+    }
 
     /// <summary>
     /// A West Coast wavefolder: drives the sound past ±1 and folds it back, adding harmonics that sound bright, bell-like and
@@ -326,14 +371,15 @@ public sealed partial class Sound
     /// A vowel filter: four formant resonators that make a sound speak. The position morphs through A, E, I, O and U.
     /// It is good for talkbox leads, choir-like sweeps and humanizing a synth.
     /// </summary>
-    /// <param name="vowel">The position from 0 (A) through 0.25 (E), 0.5 (I), 0.75 (O) to 1 (U), with the vowels blended in between. A number, or a sound or <c>Fn(t => ...)</c> to talk. Values outside 0 to 1 are clamped.</param>
+    /// <param name="vowel">The position from 0 (A) through 0.25 (E), 0.5 (I), 0.75 (O) to 1 (U), with the vowels blended in between. A number, or a sound or <c>Fn(t => ...)</c> to talk. Values outside 0 to 1 are clamped. Defaults to 0 (A).</param>
     /// <param name="resonance">How sharp the formants are, from 0 (soft and broad) to 1 (sharp and ringing). Defaults to 0.5.</param>
     /// <example><code>Saw(110).Vowel(vowel: Sine(0.5).Range(0.0, 1.0), resonance: 0.8).Distort(drive: 1.5)</code></example>
-    public Sound Vowel(Param vowel, Param? resonance = null)
+    public Sound Vowel(Param? vowel = null, Param? resonance = null)
     {
+        var position = vowel ?? 0f;
         var sharpness = resonance ?? 0.5f;
-        return new(ctx => new VowelFilterOperator(Compile(ctx), vowel.Compile(ctx), sharpness.Compile(ctx), ctx),
-            $"{this}.Vowel({vowel})");
+        return new(ctx => new VowelFilterOperator(Compile(ctx), position.Compile(ctx), sharpness.Compile(ctx), ctx),
+            $"{this}.Vowel({position})");
     }
 
     /// <summary>
@@ -342,8 +388,15 @@ public sealed partial class Sound
     /// </summary>
     /// <param name="attack">Seconds for the output to rise when the sound gets louder. Defaults to 0.01.</param>
     /// <param name="release">Seconds for the output to fall when the sound gets quieter. Defaults to 0.1.</param>
-    /// <example><code>var level = guitar.FollowEnvelope(attack: 0.005, release: 0.08);
-    /// var autoWah = guitar.LowPass(level.Range(350, 3200), q: 4.0);</code></example>
+    /// <example>
+    /// <code>
+    /// // An auto-wah: the loudness of the plucks opens the filter. Each pluck is brighter at its start.
+    /// var guitar = Saw(110) * Fn(t => Math.Exp(-(t % 0.6) * 5));
+    /// var level = guitar.FollowEnvelope(attack: 0.005, release: 0.08);
+    ///
+    /// guitar.LowPass(level.Range(350, 3200), q: 4.0) * 0.5
+    /// </code>
+    /// </example>
     public Sound FollowEnvelope(Param? attack = null, Param? release = null)
     {
         var rise = attack ?? 0.01f;

@@ -63,7 +63,7 @@ public class EditorServicesTests
         Assert.StartsWith("Adsr(", signature.Label);
         Assert.Equal(1, help.ActiveParameter);
         var decay = signature.Parameters[1];
-        Assert.Equal("double decay", signature.Label[decay.Start..decay.End]);
+        Assert.Equal("double decay = 0.1", signature.Label[decay.Start..decay.End]);   // the signature shows the default
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class EditorServicesTests
         var markdown = EditorServices.Describe(code, code.IndexOf("LowPass", StringComparison.Ordinal) + 2);
 
         Assert.NotNull(markdown);
-        Assert.Contains("Sound LowPass(Param cutoff", markdown);
+        Assert.Contains("Sound LowPass(Param? cutoff = null", markdown);
         Assert.Contains("A resonant two-pole low-pass filter.", markdown);
         Assert.Contains("- `cutoff`:", markdown);
     }

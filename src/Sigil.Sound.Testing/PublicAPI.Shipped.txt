@@ -1,0 +1,17 @@
+#nullable enable
+Sigil.Sound.Testing.AudioAssert
+Sigil.Sound.Testing.AudioAssertionException
+Sigil.Sound.Testing.AudioAssertionException.AudioAssertionException(string! message) -> void
+Sigil.Sound.Testing.SignalAnalysis
+static Sigil.Sound.Testing.AudioAssert.FrequencyNear(Sigil.Sound.AudioBuffer! audio, double expectedHz, double toleranceHz) -> void
+static Sigil.Sound.Testing.AudioAssert.IsFinite(Sigil.Sound.AudioBuffer! audio) -> void
+static Sigil.Sound.Testing.AudioAssert.IsSilent(System.ReadOnlySpan<float> samples, float threshold = 0.0001) -> void
+static Sigil.Sound.Testing.AudioAssert.PeakFrequencyNear(Sigil.Sound.AudioBuffer! audio, double expectedHz, double toleranceHz) -> void
+static Sigil.Sound.Testing.AudioAssert.PeakNear(Sigil.Sound.AudioBuffer! audio, float expected, float tolerance) -> void
+static Sigil.Sound.Testing.AudioAssert.RmsNear(Sigil.Sound.AudioBuffer! audio, double expected, double tolerance) -> void
+static Sigil.Sound.Testing.SignalAnalysis.EstimateFrequency(System.ReadOnlySpan<float> samples, int sampleRate) -> double
+static Sigil.Sound.Testing.SignalAnalysis.HasNonFinite(System.ReadOnlySpan<float> samples) -> bool
+static Sigil.Sound.Testing.SignalAnalysis.MagnitudeSpectrum(System.ReadOnlySpan<float> samples, int fftSize = 0) -> float[]!
+static Sigil.Sound.Testing.SignalAnalysis.Peak(System.ReadOnlySpan<float> samples) -> float
+static Sigil.Sound.Testing.SignalAnalysis.PeakFrequency(System.ReadOnlySpan<float> samples, int sampleRate) -> double
+static Sigil.Sound.Testing.SignalAnalysis.Rms(System.ReadOnlySpan<float> samples) -> double

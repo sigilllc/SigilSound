@@ -24,9 +24,11 @@ public enum ControlCurve
 /// </remarks>
 /// <example>
 /// <code>
+/// // A control is a value the game changes while the sound plays. Here an engine note follows an RPM control.
 /// var rpm = new Control(800, min: 600, max: 7000, slewSeconds: 0.03);
 /// var engine = Saw(rpm / 30).LowPass(rpm.Map(200, 4000, ControlCurve.Exponential));
-/// rpm.Value = car.Rpm;   // from the game loop
+/// rpm.Value = 3500;   // set from the game loop, every frame
+/// engine * 0.3
 /// </code>
 /// </example>
 public sealed class Control
@@ -117,9 +119,11 @@ public sealed class Control
         return Param.FromControl(this, ControlMap.Create((float)inMin, (float)inMax, (float)outMin, (float)outMax, curve));
     }
 
+    /// <summary>Uses the control as a parameter; the value is read live, once per block.</summary>
     public static implicit operator Param(Control control) =>
         Param.FromControl(control ?? throw new ArgumentNullException(nameof(control)), null);
 
+    /// <summary>Uses the control as a sound, so it can be added to, scaled and fed to other sounds.</summary>
     public static implicit operator Sound(Control control) => Sounds.FromParam(control);
 
     // Scaling and offsetting fold into the control's own map, so "rpm / 30" is still one parameter that reads the control
@@ -147,6 +151,7 @@ public sealed class Control
         return Affine(control, 1.0 / divisor, 0);
     }
 
+    /// <summary>A short description of the control, such as its current value.</summary>
     public override string ToString() =>
         string.Create(CultureInfo.InvariantCulture, $"Control({Name ?? "unnamed"}={Value:0.###})");
 }

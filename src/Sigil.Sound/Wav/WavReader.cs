@@ -21,7 +21,14 @@ public static class WavReader
     /// <param name="stream">A readable stream positioned at the first byte of the WAV file.</param>
     /// <returns>The decoded audio at the file's own sample rate.</returns>
     /// <exception cref="InvalidDataException">The data is not a supported WAV file.</exception>
-    /// <example><code>var pad = AudioBuffer.FromWav(stream);</code></example>
+    /// <example>
+    /// <code>
+    /// using Sigil.Sound;
+    ///
+    /// using var stream = File.OpenRead("pad.wav");
+    /// var pad = AudioBuffer.FromWav(stream);
+    /// </code>
+    /// </example>
     public static AudioBuffer Read(Stream stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
@@ -36,7 +43,13 @@ public static class WavReader
     /// <param name="bytes">The complete contents of a .wav file.</param>
     /// <returns>The decoded audio at the file's own sample rate. Samples that are not finite numbers become silence.</returns>
     /// <exception cref="InvalidDataException">The data is not a supported WAV file: only mono or stereo, and 8, 16, 24 or 32-bit PCM or 32-bit float.</exception>
-    /// <example><code>var kick = AudioBuffer.FromWav(File.ReadAllBytes("kick.wav"));</code></example>
+    /// <example>
+    /// <code>
+    /// using Sigil.Sound;
+    ///
+    /// var kick = AudioBuffer.FromWav(File.ReadAllBytes("kick.wav"));
+    /// </code>
+    /// </example>
     public static AudioBuffer Read(ReadOnlySpan<byte> bytes)
     {
         var (info, dataStart, dataLength) = ParseHeader(bytes);
@@ -64,7 +77,16 @@ public static class WavReader
     /// <param name="bytes">The complete contents of a .wav file.</param>
     /// <returns>The file's format and length.</returns>
     /// <exception cref="InvalidDataException">The data is not a supported WAV file: only mono or stereo, and 8, 16, 24 or 32-bit PCM or 32-bit float.</exception>
-    /// <example><code>var info = WavReader.ReadInfo(bytes); // info.Duration is the length in seconds</code></example>
+    /// <example>
+    /// <code>
+    /// using Sigil.Sound;
+    /// using Sigil.Sound.Wav;
+    ///
+    /// // Check the file before paying for the full decode.
+    /// var info = WavReader.ReadInfo(File.ReadAllBytes("kick.wav"));
+    /// Console.WriteLine(info.Duration);   // the length in seconds
+    /// </code>
+    /// </example>
     public static WavInfo ReadInfo(ReadOnlySpan<byte> bytes) => ParseHeader(bytes).Info;
 
     // Finds the fmt and data chunks and checks the format is one this reader decodes. Returns where the sample data lies in `bytes`.

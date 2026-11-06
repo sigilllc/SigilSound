@@ -16,15 +16,20 @@
   <!-- Library code is held to a stricter bar than tests. Multi-targets net8.0 (LTS/Godot) and net10.0 -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+
+    <!-- The version of every package. A release candidate adds a suffix at pack time: dotnet pack /p:VersionSuffix=rc.1 -->
+    <VersionPrefix>0.1.0</VersionPrefix>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- RS0026: four method groups (Adsr, Sample, RenderToWav, Control.Map) have several overloads with optional parameters. Kept visible, to be settled before 1.0. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);RS0026</WarningsNotAsErrors>
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
-    <!-- Docs ship with the packages and show up in the REPL's completion. CS1591 is ignored for now during rapid pre-alpha development. -->
+    <!-- Docs ship with the packages and show up in the REPL's completion. Every public member must carry an XML comment (CS1591 is an error). -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <!-- NuGet package metadata, symbols and source link, so debugging into the package works. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/sigilllc/SigilSound</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>audio;synthesizer;dsp;sound;music;wasm</PackageTags>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -36,6 +41,8 @@
   </PropertyGroup>
 
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
+    <!-- Tracks the public API in PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt: an accidental change is a build error. Build-time only; consumers get no dependency. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>

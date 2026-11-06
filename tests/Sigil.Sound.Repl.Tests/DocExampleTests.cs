@@ -6,7 +6,8 @@ using Sigil.Sound.Testing;
 namespace Sigil.Sound.Repl.Tests;
 
 /// <summary>
-/// Every <c>&lt;example&gt;&lt;code&gt;</c> in the library's XML docs is a complete REPL snippet (docs/articles/writing-examples.md).
+/// Every <c>&lt;example&gt;&lt;code&gt;</c> in the library's XML docs is a complete REPL snippet (docs/articles/writing-examples.md),
+/// except project code, which starts with <c>using</c>.
 /// The guides' REPL snippets are checked the same way. This compiles each one under the REPL page's own profile and
 /// renders a second, so a doc example that does not sound fails here instead of in a reader's browser.
 /// </summary>
@@ -34,7 +35,13 @@ public class DocExampleTests
             {
                 var codes = member.Elements("example").SelectMany(e => e.Elements("code")).ToList();
                 for (int i = 0; i < codes.Count; i++)
-                    yield return new DocExample($"{member.Attribute("name")!.Value}#{i + 1}", Dedent(codes[i].Value));
+                {
+                    // Project code (a file on disk, an audio callback) starts with `using`: shown, but neither compiled nor linked.
+                    var code = Dedent(codes[i].Value);
+                    if (code.TrimStart().StartsWith("using ", StringComparison.Ordinal))
+                        continue;
+                    yield return new DocExample($"{member.Attribute("name")!.Value}#{i + 1}", code);
+                }
             }
         }
     }

@@ -28,6 +28,60 @@ Noise().Adsr(0, 0.01, 0, 0.001).Comb(220, feedback: 0.995)
 Sine(440).Adsr(0.005, 0.2, 0, 0.1).Reverb(size: 0.6, decay: 1.5, damping: 0.6, mix: 0.35)
 ```
 
+## Impulse responses
+
+`Convolve(impulse, mix)` plays a sound through an impulse response: a recording of how a space, a speaker cabinet or any other linear system answers a single click. It is how a guitar cabinet or a real concert hall is put on a sound. The convolver adds no latency, and a response of up to ten seconds, mono or stereo, runs comfortably in real time.
+
+```csharp
+// A guitar cabinet, as it would load from a file: a short response whose resonance colours the sound.
+// This one is built in code, a 1.2 kHz ring that fades in 12 ms. Listen for the saw going from buzzy to boxy.
+const int rate = 48_000;
+var frames = new StereoFrame[rate * 12 / 1000];
+for (int i = 0; i < frames.Length; i++)
+    frames[i] = StereoFrame.Mono((float)(Sin(2 * PI * 1200 * i / rate) * Exp(-i / 90.0)));
+var cabinet = new AudioBuffer(frames, rate);
+
+Saw(110).Distort(drive: 4).Convolve(cabinet) * 0.4
+```
+
+A response is an `AudioBuffer`, so it can come from a file or be built in code. A response whose tail dies away over seconds is a reverb, and `mix` sets how much of it to blend in:
+
+```csharp
+// A room from noise: a response that starts loud and dies away over 1.5 s is what a reverb tail is.
+// Left and right get different noise, so the room is wide. Plucks go in, the room comes back with them.
+const int rate = 48_000;
+var random = new Random(7);
+var frames = new StereoFrame[rate * 3 / 2];
+for (int i = 0; i < frames.Length; i++)
+{
+    double fade = Exp(-4.6 * i / frames.Length);
+    frames[i] = new StereoFrame((float)((random.NextDouble() * 2 - 1) * fade), (float)((random.NextDouble() * 2 - 1) * fade));
+}
+var room = new AudioBuffer(frames, rate);
+
+var pluck = Saw(220).LowPass(2000).Adsr(0.002, 0.2, 0, 0.1) * Fn(t => t % 1 < 0.5 ? 1 : 0);
+pluck.Convolve(room, mix: 0.4) * 0.5
+```
+
+What to know:
+
+- **Level.** `normalize` scales the response so its energy is one by default (`IrNormalize.Energy`), so files recorded at different levels sit at about the same loudness. `Peak` makes the largest tap one, and `Off` uses the file as it is.
+- **Sample rate.** A response recorded at another rate is converted to the rate of the render, so a 44.1 kHz file works in a 48 kHz sound.
+- **Stereo.** A stereo response convolves the left channel with its left side and the right with its right, which keeps the image of a stereo room. A mono file, or two identical channels, costs half as much.
+- **Length and memory.** Longer than ten seconds is cut there, with a short fade-out. A response takes about 32 bytes per tap when it is stereo (16 when mono), and every running instance, such as each voice of a `Play`, needs the same again for its own state. A ten second stereo response is about 16 MB plus 16 MB per instance, so keep responses short when many voices run at once.
+- **Everything else is composition.** There is no pre-delay, filter or width parameter, because the library already has them: `Delay` before, `HighPass` and `LowPass` after, `Spread` for the width.
+
+In a project, load the file yourself. In the REPL, drop the `.wav` on the page and name it with `Samples.Load`.
+
+```csharp
+using static Sigil.Sound.Sounds;
+using Sigil.Sound;
+
+// A cabinet from disk, under a distorted saw, with a low cut after it.
+var cabinet = AudioBuffer.FromWav("cab.wav");
+Saw(110).Distort(drive: 4).Convolve(cabinet).HighPass(80) * 0.4
+```
+
 ## Modulation
 
 ```csharp

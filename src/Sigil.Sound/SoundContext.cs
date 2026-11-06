@@ -11,6 +11,9 @@ namespace Sigil.Sound;
 /// </remarks>
 /// <example>
 /// <code>
+/// using Sigil.Sound;
+/// using static Sigil.Sound.Sounds;
+///
 /// var output = new SoundContext(sampleRate: 48_000);
 /// output.Play(Saw(110).LowPass(Sine(0.25).Range(200, 2000)));
 /// // In the audio callback:

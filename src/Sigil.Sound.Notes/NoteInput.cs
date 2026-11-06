@@ -19,6 +19,9 @@ namespace Sigil.Sound;
 /// </remarks>
 /// <example>
 /// <code>
+/// using Sigil.Sound;
+/// using static Sigil.Sound.Sounds;
+///
 /// var keys = new NoteInput();
 /// var synth = keys.Play(v => Saw(v.Frequency).LowPass(2000).Adsr(0.01, 0.2, 0.6, 0.4), polyphony: 6);
 /// keys.NoteOn(60);   // middle C sounds until...
@@ -95,7 +98,15 @@ public sealed class NoteInput
     /// is down and releases at the note off; <c>v.Gate</c> is 1 until then and 0 after. The voices are built up front and
     /// reused, so playing allocates nothing. The same input can feed several sounds at once.
     /// </remarks>
-    /// <example><code>keys.Play(v => Square(v.Frequency).Adsr(0.005, 0.1, 0.7, 0.3), polyphony: 4)</code></example>
+    /// <example>
+    /// <code>
+    /// using Sigil.Sound;
+    /// using static Sigil.Sound.Sounds;
+    ///
+    /// var keys = new NoteInput();
+    /// var synth = keys.Play(v => Square(v.Frequency).Adsr(0.005, 0.1, 0.7, 0.3), polyphony: 4);
+    /// </code>
+    /// </example>
     public Sound Play(Func<Voice, Sound> voice, int polyphony = 8)
     {
         ArgumentNullException.ThrowIfNull(voice);

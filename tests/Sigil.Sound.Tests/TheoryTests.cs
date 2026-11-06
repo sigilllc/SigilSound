@@ -15,7 +15,7 @@ public class PitchTests
         Assert.Equal(Cs4, Db4);
         Assert.Equal(12, C0);
         Assert.Equal(119, B8);
-        Assert.Equal(Notes.ParsePitch("F#3"), Fs3);
+        Assert.Equal(Fs3, Notes.ParsePitch("F#3"));
     }
 
     [Fact]

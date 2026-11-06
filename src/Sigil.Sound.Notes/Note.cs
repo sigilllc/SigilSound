@@ -14,6 +14,7 @@ public readonly record struct Note(int Pitch, float Velocity = 0.8f, double Beat
     /// <summary>Scientific pitch notation, for example <c>C#4</c>.</summary>
     public string Name => Notes.NameOf(Pitch);
 
+    /// <summary>The note as text, such as <c>C#4 (v=0.8, 1 beats)</c>.</summary>
     public override string ToString() =>
         string.Create(CultureInfo.InvariantCulture, $"{Name} (v={Velocity:0.##}, {Beats} beats)");
 }

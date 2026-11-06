@@ -15,10 +15,11 @@ namespace Sigil.Sound;
 /// </remarks>
 /// <example>
 /// <code>
+/// // A slot is a place in a graph whose sound can be replaced while it plays, without a click.
 /// var slot = new Slot(Sine(220));
 /// var chain = slot.Sound.LowPass(800) * 0.5;
-/// // ... while chain is rendering:
-/// slot.Swap(Saw(220));
+/// slot.Swap(Saw(220));   // from any thread, at any time: the new sound crossfades in
+/// chain
 /// </code>
 /// </example>
 public sealed class Slot
@@ -33,6 +34,10 @@ public sealed class Slot
     // One timer per slot, re-armed by each swap, instead of a task and closure per swap per running render.
     private Timer? _cleanup;
 
+    /// <summary>Creates a slot that plays <paramref name="initial"/> until it is swapped.</summary>
+    /// <param name="initial">The sound to play first.</param>
+    /// <param name="fadeSeconds">How long a swap crossfades from the old sound to the new one.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="fadeSeconds"/> is negative or not a number.</exception>
     public Slot(Sound initial, double fadeSeconds = DefaultFadeSeconds)
     {
         ArgumentNullException.ThrowIfNull(initial);
@@ -85,10 +90,13 @@ public sealed class Slot
         }
     }
 
+    /// <summary>Uses the slot as a sound, to place it in a graph.</summary>
     public static implicit operator Sound(Slot slot) => slot.Sound;
 
+    /// <summary>Uses the slot as a parameter, so a swappable sound can modulate another.</summary>
     public static implicit operator Param(Slot slot) => slot.Sound;
 
+    /// <summary>A short description of the slot and the sound it holds now.</summary>
     public override string ToString() => $"Slot({Current})";
 
     private SlotOperator Attach(RenderContext context)

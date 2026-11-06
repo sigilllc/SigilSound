@@ -26,13 +26,17 @@ public readonly struct Param
 
     internal static Param FromControl(Control control, ControlMap? map) => new(0, null, null, control, map);
 
+    /// <summary>A constant parameter.</summary>
     public static implicit operator Param(float value) => new(value, null, null);
 
+    /// <summary>A constant parameter.</summary>
     public static implicit operator Param(double value) => new((float)value, null, null);
 
+    /// <summary>A parameter whose value is a sound, rendered at the audio rate and averaged to mono: audio-rate modulation.</summary>
     public static implicit operator Param(Sound sound) =>
         (sound ?? throw new ArgumentNullException(nameof(sound))).BackingParam ?? new(0, sound, null);
 
+    /// <summary>A parameter that is a function of time in seconds, such as <c>t =&gt; (float)(440 + 20 * Math.Sin(t))</c>.</summary>
     public static implicit operator Param(Func<double, float> function) =>
         new(0, null, function ?? throw new ArgumentNullException(nameof(function)));
 
@@ -54,6 +58,7 @@ public readonly struct Param
         return new ConstantParamSource(_constant, context);
     }
 
+    /// <summary>A short description of the parameter, used in the description of the sound it is part of.</summary>
     public override string ToString() =>
         _sound is not null ? _sound.ToString()
         : _function is not null ? "f(t)"

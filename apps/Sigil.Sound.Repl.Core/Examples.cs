@@ -17,6 +17,95 @@ public static class Examples
                 .LowPass(cutoff: sweep, q: 4)
                 * 0.4
             """),
+        new("Church organ",
+            """
+            // A church organ of 64 sine partials that never calls Sin per sample. Each partial is a phasor, a point (c, s) on
+            // the unit circle: turning it by one sample's worth of phase is a fixed rotation (4 multiplies, 2 adds), and s is
+            // the sine. 64 sines cost 64 trig calls per sample; this costs 128 per block, and only when the pitch changes.
+            // The bank is the harmonics of the 16' pipe, an octave under the note. Each stop (rank) sits on one of them and
+            // brings its own overtones, so the ranks stack up into a full plenum.
+            Sound Organ(Param frequency) => Sound.FromOperator(context =>
+            {
+                const int partials = 64;
+                var pitch = frequency.Compile(context);   // a number, a sound, or v.Frequency: the pitch can move
+                var re = new double[partials];            // the phasors: re = cos(phase), im = sin(phase)
+                var im = new double[partials];
+                var turnRe = new double[partials];        // each partial's rotation per sample
+                var turnIm = new double[partials];
+                var gain = new double[partials];
+                var rankAt = new[] { 1, 2, 4, 6, 8, 10, 12, 16 };                   // 16', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'
+                var rankLevel = new[] { 0.6, 1.0, 0.8, 0.5, 0.6, 0.3, 0.4, 0.3 };   // how far each stop is drawn
+                var mix = new double[context.BlockSize];
+                var lastHz = 0f;
+                long elapsed = 0;                         // samples rendered, for the slow brightness sweep
+
+                Action restart = () =>                    // every phasor back to phase 0, as a reused voice needs
+                {
+                    Array.Fill(re, 1.0);
+                    Array.Clear(im);
+                    lastHz = 0;
+                    elapsed = 0;
+                };
+                restart();
+
+                return Operator.From(block =>
+                {
+                    var hz = Max(pitch.Next(block.Length)[0], 1f) / 2;   // the 16' pipe: the 8' rank is the note itself
+                    var count = Min(partials, (int)(context.Nyquist / hz));   // partials past Nyquist would alias: drop them
+
+                    if (hz != lastHz)                     // the only trig: when the pitch moves, re-aim the rotations
+                    {
+                        lastHz = hz;
+                        for (int k = 0; k < partials; k++)
+                        {
+                            var angle = 2 * PI * hz * (k + 1) / context.SampleRate;
+                            turnRe[k] = Cos(angle);
+                            turnIm[k] = Sin(angle);
+                        }
+                    }
+
+                    // The spectrum: every rank is a pipe with overtones m = 1, 2, 3... that fade as m^-tilt, placed on its
+                    // harmonic of the 16'. Tilt sweeps slowly, like a swell box opening and closing.
+                    var tilt = 1.6 + 0.9 * Sin(2 * PI * 0.08 * elapsed / context.SampleRate);
+                    elapsed += block.Length;
+                    Array.Clear(gain);
+                    for (int r = 0; r != rankAt.Length; r++)
+                        for (int m = 1; rankAt[r] * m <= count; m++)
+                            gain[rankAt[r] * m - 1] += rankLevel[r] * Pow(m, -tilt);
+
+                    double total = 0;
+                    for (int k = 0; k < partials; k++)
+                        total += gain[k];
+
+                    mix.AsSpan(0, block.Length).Clear();
+                    for (int k = 0; k < count; k++)
+                    {
+                        double c = re[k], s = im[k], dc = turnRe[k], ds = turnIm[k], g = gain[k] / total;
+                        for (int i = 0; i != block.Length; i++)
+                        {
+                            mix[i] += s * g;
+                            (c, s) = (c * dc - s * ds, c * ds + s * dc);   // rotate by one sample
+                        }
+
+                        var fix = 1 / Sqrt(c * c + s * s);   // rounding makes the point drift off the circle: pull it back
+                        re[k] = c * fix;
+                        im[k] = s * fix;
+                    }
+
+                    for (int i = 0; i != block.Length; i++)
+                        block[i] = StereoFrame.Mono((float)mix[i]);
+                }, restart);
+            }, description: $"Organ({frequency})");
+
+            var line = Notes.Parse("C3 E3 G3 C4 B2 D3 G3 B3")
+                .Every(Beats.Half, gate: 3)
+                .Loop();
+
+            line.Play(v => Organ(v.Frequency).Adsr(attack: 0.06, decay: 0.1, sustain: 0.9, release: 0.5), bpm: 72, polyphony: 6)
+                .Reverb(size: 1.8, decay: 5, mix: 0.35)     // a stone nave
+                .Limit()                                    // the overlapping chords add up: keep them under full scale
+                * 0.9
+            """),
         new("Arpeggiator",
             """
             // Sequences: Notes.Parse turns note names into notes, Every places them in time,
@@ -196,94 +285,34 @@ public static class Examples
             .LowPass(2500, q: 1.5)
             * 0.4
             """),
-        new("Phasor organ",
+        new("Cabinet (IR)",
             """
-            // A church organ of 64 sine partials that never calls Sin per sample. Each partial is a phasor, a point (c, s) on
-            // the unit circle: turning it by one sample's worth of phase is a fixed rotation (4 multiplies, 2 adds), and s is
-            // the sine. 64 sines cost 64 trig calls per sample; this costs 128 per block, and only when the pitch changes.
-            // The bank is the harmonics of the 16' pipe, an octave under the note. Each stop (rank) sits on one of them and
-            // brings its own overtones, so the ranks stack up into a full plenum.
-            Sound Organ(Param frequency) => Sound.FromOperator(context =>
+            // A guitar cabinet, as it would load from a file: a short response whose resonance colours the sound.
+            // This one is built in code, a 1.2 kHz ring that fades in 12 ms. Listen for the saw going from buzzy to boxy.
+            const int rate = 48_000;
+            var frames = new StereoFrame[rate * 12 / 1000];
+            for (int i = 0; i < frames.Length; i++)
+                frames[i] = StereoFrame.Mono((float)(Sin(2 * PI * 1200 * i / rate) * Exp(-i / 90.0)));
+            var cabinet = new AudioBuffer(frames, rate);
+
+            Saw(110).Distort(drive: 4).Convolve(cabinet) * 0.4
+            """),
+        new("Room from an IR",
+            """
+            // A room from noise: a response that starts loud and dies away over 1.5 s is what a reverb tail is.
+            // Left and right get different noise, so the room is wide. Plucks go in, the room comes back with them.
+            const int rate = 48_000;
+            var random = new Random(7);
+            var frames = new StereoFrame[rate * 3 / 2];
+            for (int i = 0; i < frames.Length; i++)
             {
-                const int partials = 64;
-                var pitch = frequency.Compile(context);   // a number, a sound, or v.Frequency: the pitch can move
-                var re = new double[partials];            // the phasors: re = cos(phase), im = sin(phase)
-                var im = new double[partials];
-                var turnRe = new double[partials];        // each partial's rotation per sample
-                var turnIm = new double[partials];
-                var gain = new double[partials];
-                var rankAt = new[] { 1, 2, 4, 6, 8, 10, 12, 16 };                   // 16', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'
-                var rankLevel = new[] { 0.6, 1.0, 0.8, 0.5, 0.6, 0.3, 0.4, 0.3 };   // how far each stop is drawn
-                var mix = new double[context.BlockSize];
-                var lastHz = 0f;
-                long elapsed = 0;                         // samples rendered, for the slow brightness sweep
+                double fade = Exp(-4.6 * i / frames.Length);
+                frames[i] = new StereoFrame((float)((random.NextDouble() * 2 - 1) * fade), (float)((random.NextDouble() * 2 - 1) * fade));
+            }
+            var room = new AudioBuffer(frames, rate);
 
-                Action restart = () =>                    // every phasor back to phase 0, as a reused voice needs
-                {
-                    Array.Fill(re, 1.0);
-                    Array.Clear(im);
-                    lastHz = 0;
-                    elapsed = 0;
-                };
-                restart();
-
-                return Operator.From(block =>
-                {
-                    var hz = Max(pitch.Next(block.Length)[0], 1f) / 2;   // the 16' pipe: the 8' rank is the note itself
-                    var count = Min(partials, (int)(context.Nyquist / hz));   // partials past Nyquist would alias: drop them
-
-                    if (hz != lastHz)                     // the only trig: when the pitch moves, re-aim the rotations
-                    {
-                        lastHz = hz;
-                        for (int k = 0; k < partials; k++)
-                        {
-                            var angle = 2 * PI * hz * (k + 1) / context.SampleRate;
-                            turnRe[k] = Cos(angle);
-                            turnIm[k] = Sin(angle);
-                        }
-                    }
-
-                    // The spectrum: every rank is a pipe with overtones m = 1, 2, 3... that fade as m^-tilt, placed on its
-                    // harmonic of the 16'. Tilt sweeps slowly, like a swell box opening and closing.
-                    var tilt = 1.6 + 0.9 * Sin(2 * PI * 0.08 * elapsed / context.SampleRate);
-                    elapsed += block.Length;
-                    Array.Clear(gain);
-                    for (int r = 0; r != rankAt.Length; r++)
-                        for (int m = 1; rankAt[r] * m <= count; m++)
-                            gain[rankAt[r] * m - 1] += rankLevel[r] * Pow(m, -tilt);
-
-                    double total = 0;
-                    for (int k = 0; k < partials; k++)
-                        total += gain[k];
-
-                    mix.AsSpan(0, block.Length).Clear();
-                    for (int k = 0; k < count; k++)
-                    {
-                        double c = re[k], s = im[k], dc = turnRe[k], ds = turnIm[k], g = gain[k] / total;
-                        for (int i = 0; i != block.Length; i++)
-                        {
-                            mix[i] += s * g;
-                            (c, s) = (c * dc - s * ds, c * ds + s * dc);   // rotate by one sample
-                        }
-
-                        var fix = 1 / Sqrt(c * c + s * s);   // rounding makes the point drift off the circle: pull it back
-                        re[k] = c * fix;
-                        im[k] = s * fix;
-                    }
-
-                    for (int i = 0; i != block.Length; i++)
-                        block[i] = StereoFrame.Mono((float)mix[i]);
-                }, restart);
-            }, description: $"Organ({frequency})");
-
-            var line = Notes.Parse("C3 E3 G3 C4 B2 D3 G3 B3")
-                .Every(Beats.Half, gate: 3)
-                .Loop();
-
-            line.Play(v => Organ(v.Frequency).Adsr(attack: 0.06, decay: 0.1, sustain: 0.9, release: 0.5), bpm: 72, polyphony: 6)
-                .Reverb(size: 1.8, decay: 5, mix: 0.35)     // a stone nave
-                .Limit()                                    // the overlapping chords add up: keep them under full scale
-                * 0.9
+            var pluck = Saw(220).LowPass(2000).Adsr(0.002, 0.2, 0, 0.1) * Fn(t => t % 1 < 0.5 ? 1 : 0);
+            pluck.Convolve(room, mix: 0.4) * 0.5
             """),
         new("Drone",
             """

@@ -33,7 +33,14 @@ public sealed class AudioBuffer
     /// <returns>The decoded audio at the file's own sample rate.</returns>
     /// <exception cref="FileNotFoundException">No file exists at <paramref name="path"/>.</exception>
     /// <exception cref="InvalidDataException">The file is not a supported WAV file.</exception>
-    /// <example><code>var kick = AudioBuffer.FromWav("samples/kick.wav");</code></example>
+    /// <example>
+    /// <code>
+    /// using Sigil.Sound;
+    ///
+    /// // Read a file from disk, then play it.
+    /// var kick = AudioBuffer.FromWav("samples/kick.wav");
+    /// </code>
+    /// </example>
     public static AudioBuffer FromWav(string path)
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
@@ -48,7 +55,14 @@ public sealed class AudioBuffer
     /// <param name="stream">A readable stream holding a complete WAV file. It is read to its end.</param>
     /// <returns>The decoded audio at the file's own sample rate.</returns>
     /// <exception cref="InvalidDataException">The data is not a supported WAV file.</exception>
-    /// <example><code>var pad = AudioBuffer.FromWav(stream);</code></example>
+    /// <example>
+    /// <code>
+    /// using Sigil.Sound;
+    ///
+    /// using var stream = File.OpenRead("pad.wav");
+    /// var pad = AudioBuffer.FromWav(stream);
+    /// </code>
+    /// </example>
     public static AudioBuffer FromWav(Stream stream) => WavReader.Read(stream);
 
     /// <summary>
@@ -57,7 +71,15 @@ public sealed class AudioBuffer
     /// <param name="bytes">The complete contents of a .wav file, such as an embedded resource.</param>
     /// <returns>The decoded audio at the file's own sample rate.</returns>
     /// <exception cref="InvalidDataException">The data is not a supported WAV file.</exception>
-    /// <example><code>var kick = AudioBuffer.FromWav(bytes);</code></example>
+    /// <example>
+    /// <code>
+    /// using Sigil.Sound;
+    ///
+    /// // The bytes of a .wav file that came from a resource or the network.
+    /// byte[] bytes = File.ReadAllBytes("kick.wav");
+    /// var kick = AudioBuffer.FromWav(bytes);
+    /// </code>
+    /// </example>
     public static AudioBuffer FromWav(ReadOnlySpan<byte> bytes) => WavReader.Read(bytes);
 
     /// <summary>The sample rate of the frames, in Hz.</summary>

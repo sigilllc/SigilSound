@@ -322,7 +322,13 @@ public static class PatternExtensions
     }
 
     /// <summary>Applies <paramref name="transform"/> to the pattern on every <paramref name="cycles"/>th cycle (0, n, 2n, ...) and leaves the rest alone.</summary>
-    /// <example><code>Mini.Notes("c3 e3 g3").Every(4, p =&gt; p.Fast(2).Rev())</code></example>
+    /// <example>
+    /// <code>
+    /// // Every fourth cycle the pattern runs twice as fast and backwards.
+    /// Mini.Notes("c3 e3 g3 b3").Every(4, p =&gt; p.Fast(2).Rev())
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(2000).Adsr(0.005, 0.1, 0.4, 0.2), bpm: 120) * 0.3
+    /// </code>
+    /// </example>
     public static Pattern<T> Every<T>(this Pattern<T> pattern, int cycles, Func<Pattern<T>, Pattern<T>> transform)
     {
         ArgumentNullException.ThrowIfNull(pattern);

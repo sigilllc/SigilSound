@@ -71,8 +71,9 @@ public sealed class SampleLibrary
     /// <exception cref="KeyNotFoundException">There is no sample with that name. The message lists names that are available.</exception>
     /// <example>
     /// <code>
-    /// var kick = Samples.Load("kick.wav");
-    /// Sample(kick, speed: 1)
+    /// // The REPL ships with pluck.wav; drop your own .wav files on the page to add more.
+    /// var pluck = Samples.Load("pluck.wav");
+    /// Sample(pluck, speed: 1)
     /// </code>
     /// </example>
     public AudioBuffer Load([SampleName] string name)

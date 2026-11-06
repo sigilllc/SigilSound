@@ -93,11 +93,17 @@ public static class Patterns
     /// Places the notes one after another, <paramref name="step"/> beats apart.
     /// </summary>
     /// <param name="notes">The notes, in order; any LINQ filtering or transposing you did on them carries over.</param>
-    /// <param name="step">Beats from the start of one note to the start of the next; see <see cref="Beats"/>.</param>
+    /// <param name="step">Beats from the start of one note to the start of the next; see <see cref="Beats"/>. Defaults to <see cref="Beats.Quarter"/>, one beat.</param>
     /// <param name="gate">How long each note is held, as a multiple of <paramref name="step"/>. 1 (the default) ends it as the next begins;
     /// above 1 the notes overlap, which is what makes an arpeggio polyphonic.</param>
-    /// <example><code>Notes.Parse("C4 E4 G4").Every(Beats.Eighth, gate: 2)</code></example>
-    public static Pattern Every(this IEnumerable<Note> notes, double step, double gate = 1)
+    /// <example>
+    /// <code>
+    /// // Every places the notes in time: one per eighth, each held for 2 steps. Loop repeats them.
+    /// Notes.Parse("C4 E4 G4").Every(Beats.Eighth, gate: 2).Loop()
+    ///     .Play(v => Saw(v.Frequency).LowPass(2400).Adsr(0.005, 0.1, 0.4, 0.2), bpm: 120) * 0.3
+    /// </code>
+    /// </example>
+    public static Pattern Every(this IEnumerable<Note> notes, double step = Beats.Quarter, double gate = 1)
     {
         ArgumentNullException.ThrowIfNull(notes);
         if (step <= 0) throw new ArgumentOutOfRangeException(nameof(step), step, "The step must be positive.");

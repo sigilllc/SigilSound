@@ -7,6 +7,7 @@ Every example in this site is a complete snippet. Press **Open in REPL** under a
 ## Start here
 
 - [Getting started](articles/getting-started.md): a first sound and how to render it.
+- [Defaults](articles/defaults.md): every method works with no arguments; what each default is.
 - [Sources](articles/sources.md): oscillators, noise, functions of time and samples.
 - [Parameters and modulation](articles/parameters.md): numbers, sounds and functions as parameters, including FM.
 
@@ -30,3 +31,4 @@ Every example in this site is a complete snippet. Press **Open in REPL** under a
 
 - [API reference](api/Sigil.Sound.yml): every public type and member, from the XML docs.
 - [Writing doc examples](articles/writing-examples.md): the format each example follows.
+- [Versioning](articles/versioning.md): what 0.x and 1.0 mean, what a patch may change, and how to depend on the packages.

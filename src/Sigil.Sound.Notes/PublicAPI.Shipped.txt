@@ -1,0 +1,369 @@
+#nullable enable
+Sigil.Sound.Arc
+Sigil.Sound.Arc.Arc() -> void
+Sigil.Sound.Arc.Arc(Sigil.Sound.Fraction Begin, Sigil.Sound.Fraction End) -> void
+Sigil.Sound.Arc.Begin.get -> Sigil.Sound.Fraction
+Sigil.Sound.Arc.Begin.init -> void
+Sigil.Sound.Arc.End.get -> Sigil.Sound.Fraction
+Sigil.Sound.Arc.End.init -> void
+Sigil.Sound.Arc.Length.get -> Sigil.Sound.Fraction
+Sigil.Sound.Arc.SplitCycles() -> Sigil.Sound.CycleSplitter
+Sigil.Sound.Arc.TryIntersect(Sigil.Sound.Arc other, out Sigil.Sound.Arc result) -> bool
+Sigil.Sound.ArpMode
+Sigil.Sound.ArpMode.Converge = 4 -> Sigil.Sound.ArpMode
+Sigil.Sound.ArpMode.Down = 1 -> Sigil.Sound.ArpMode
+Sigil.Sound.ArpMode.DownUp = 3 -> Sigil.Sound.ArpMode
+Sigil.Sound.ArpMode.Up = 0 -> Sigil.Sound.ArpMode
+Sigil.Sound.ArpMode.UpDown = 2 -> Sigil.Sound.ArpMode
+Sigil.Sound.Beats
+Sigil.Sound.Chord
+Sigil.Sound.Chord.Arp(Sigil.Sound.ArpMode mode = Sigil.Sound.ArpMode.Up, int octaves = 1) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+Sigil.Sound.Chord.Chord(System.Collections.Generic.IEnumerable<int>! pitches, string! name = "custom") -> void
+Sigil.Sound.Chord.Inversion(int count) -> Sigil.Sound.Chord!
+Sigil.Sound.Chord.Name.get -> string!
+Sigil.Sound.Chord.Notes.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
+Sigil.Sound.Chord.Pitches.get -> System.Collections.Generic.IReadOnlyList<int>!
+Sigil.Sound.Chord.ToPattern() -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+Sigil.Sound.Chord.Transpose(int semitones) -> Sigil.Sound.Chord!
+Sigil.Sound.ChordPatterns
+Sigil.Sound.CycleSplitter
+Sigil.Sound.CycleSplitter.Current.get -> Sigil.Sound.Arc
+Sigil.Sound.CycleSplitter.CycleSplitter() -> void
+Sigil.Sound.CycleSplitter.GetEnumerator() -> Sigil.Sound.CycleSplitter
+Sigil.Sound.CycleSplitter.MoveNext() -> bool
+Sigil.Sound.Fraction
+Sigil.Sound.Fraction.CompareTo(Sigil.Sound.Fraction other) -> int
+Sigil.Sound.Fraction.Denominator.get -> long
+Sigil.Sound.Fraction.Equals(Sigil.Sound.Fraction other) -> bool
+Sigil.Sound.Fraction.Floor() -> long
+Sigil.Sound.Fraction.Fraction() -> void
+Sigil.Sound.Fraction.Fraction(long numerator, long denominator = 1) -> void
+Sigil.Sound.Fraction.Numerator.get -> long
+Sigil.Sound.Fraction.Reciprocal() -> Sigil.Sound.Fraction
+Sigil.Sound.Fraction.ToDouble() -> double
+Sigil.Sound.Mini
+Sigil.Sound.MiniNotationException
+Sigil.Sound.MiniNotationException.MiniNotationException(string! message, int position, string! text) -> void
+Sigil.Sound.MiniNotationException.Position.get -> int
+Sigil.Sound.Note
+Sigil.Sound.Note.Beats.get -> double
+Sigil.Sound.Note.Beats.init -> void
+Sigil.Sound.Note.Frequency.get -> double
+Sigil.Sound.Note.Name.get -> string!
+Sigil.Sound.Note.Note() -> void
+Sigil.Sound.Note.Note(int Pitch, float Velocity = 0.8, double Beats = 1) -> void
+Sigil.Sound.Note.Pitch.get -> int
+Sigil.Sound.Note.Pitch.init -> void
+Sigil.Sound.Note.Transpose(int semitones) -> Sigil.Sound.Note
+Sigil.Sound.Note.Velocity.get -> float
+Sigil.Sound.Note.Velocity.init -> void
+Sigil.Sound.NoteInput
+Sigil.Sound.NoteInput.AllNotesOff() -> void
+Sigil.Sound.NoteInput.IsHeld(int pitch) -> bool
+Sigil.Sound.NoteInput.NoteInput() -> void
+Sigil.Sound.NoteInput.NoteOff(int pitch) -> void
+Sigil.Sound.NoteInput.NoteOn(int pitch, float velocity = 0.8) -> void
+Sigil.Sound.NoteInput.Play(System.Func<Sigil.Sound.Voice!, Sigil.Sound.Sound!>! voice, int polyphony = 8) -> Sigil.Sound.Sound!
+Sigil.Sound.NotePatterns
+Sigil.Sound.Notes
+Sigil.Sound.Pat
+Sigil.Sound.Pattern
+Sigil.Sound.Pattern.Events.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.TimedNote>!
+Sigil.Sound.Pattern.IsLooping.get -> bool
+Sigil.Sound.Pattern.Length.get -> double
+Sigil.Sound.Pattern.Loop() -> Sigil.Sound.Pattern!
+Sigil.Sound.Pattern.Transpose(int semitones) -> Sigil.Sound.Pattern!
+Sigil.Sound.Pattern<T>
+Sigil.Sound.Pattern<T>.Cycle(long cycle) -> System.Collections.Generic.List<Sigil.Sound.PatternEvent<T>>!
+Sigil.Sound.Pattern<T>.Query(Sigil.Sound.Arc arc, System.Collections.Generic.List<Sigil.Sound.PatternEvent<T>>! output) -> void
+Sigil.Sound.Pattern<T>.Validate(int cycles = 64) -> void
+Sigil.Sound.PatternEvent<T>
+Sigil.Sound.PatternEvent<T>.HasOnset.get -> bool
+Sigil.Sound.PatternEvent<T>.Part.get -> Sigil.Sound.Arc
+Sigil.Sound.PatternEvent<T>.Part.init -> void
+Sigil.Sound.PatternEvent<T>.PatternEvent() -> void
+Sigil.Sound.PatternEvent<T>.PatternEvent(Sigil.Sound.Arc Whole, Sigil.Sound.Arc Part, T Value) -> void
+Sigil.Sound.PatternEvent<T>.Value.get -> T
+Sigil.Sound.PatternEvent<T>.Value.init -> void
+Sigil.Sound.PatternEvent<T>.Whole.get -> Sigil.Sound.Arc
+Sigil.Sound.PatternEvent<T>.Whole.init -> void
+Sigil.Sound.PatternExtensions
+Sigil.Sound.PatternPlayback
+Sigil.Sound.PatternSignals
+Sigil.Sound.Patterns
+Sigil.Sound.Pitch
+Sigil.Sound.Scale
+Sigil.Sound.Scale.Count.get -> int
+Sigil.Sound.Scale.Degrees(params int[]! degrees) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
+Sigil.Sound.Scale.Name.get -> string!
+Sigil.Sound.Scale.Note(int degree, float velocity = 0.8) -> Sigil.Sound.Note
+Sigil.Sound.Scale.Notes(Sigil.Sound.Pattern<int>! degrees) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+Sigil.Sound.Scale.Root.get -> int
+Sigil.Sound.Scale.Scale(int root, System.Collections.Generic.IEnumerable<int>! steps, string! name = "custom") -> void
+Sigil.Sound.Scale.WithRoot(int root) -> Sigil.Sound.Scale!
+Sigil.Sound.Scale.this[int degree].get -> int
+Sigil.Sound.TimedNote
+Sigil.Sound.TimedNote.Note.get -> Sigil.Sound.Note
+Sigil.Sound.TimedNote.Note.init -> void
+Sigil.Sound.TimedNote.Start.get -> double
+Sigil.Sound.TimedNote.Start.init -> void
+Sigil.Sound.TimedNote.TimedNote() -> void
+Sigil.Sound.TimedNote.TimedNote(double Start, Sigil.Sound.Note Note) -> void
+Sigil.Sound.Voice
+Sigil.Sound.Voice.Frequency.get -> Sigil.Sound.Sound!
+Sigil.Sound.Voice.Gate.get -> Sigil.Sound.Sound!
+Sigil.Sound.Voice.Pitch.get -> Sigil.Sound.Sound!
+Sigil.Sound.Voice.Velocity.get -> Sigil.Sound.Sound!
+const Sigil.Sound.Beats.Eighth = 0.5 -> double
+const Sigil.Sound.Beats.Half = 2 -> double
+const Sigil.Sound.Beats.Quarter = 1 -> double
+const Sigil.Sound.Beats.Sixteenth = 0.25 -> double
+const Sigil.Sound.Beats.Whole = 4 -> double
+const Sigil.Sound.Pat.BeatsPerCycle = 4 -> double
+const Sigil.Sound.Pat.MaxEvents = 100000 -> int
+const Sigil.Sound.Pitch.A0 = 21 -> int
+const Sigil.Sound.Pitch.A1 = 33 -> int
+const Sigil.Sound.Pitch.A2 = 45 -> int
+const Sigil.Sound.Pitch.A3 = 57 -> int
+const Sigil.Sound.Pitch.A4 = 69 -> int
+const Sigil.Sound.Pitch.A5 = 81 -> int
+const Sigil.Sound.Pitch.A6 = 93 -> int
+const Sigil.Sound.Pitch.A7 = 105 -> int
+const Sigil.Sound.Pitch.A8 = 117 -> int
+const Sigil.Sound.Pitch.Ab0 = 20 -> int
+const Sigil.Sound.Pitch.Ab1 = 32 -> int
+const Sigil.Sound.Pitch.Ab2 = 44 -> int
+const Sigil.Sound.Pitch.Ab3 = 56 -> int
+const Sigil.Sound.Pitch.Ab4 = 68 -> int
+const Sigil.Sound.Pitch.Ab5 = 80 -> int
+const Sigil.Sound.Pitch.Ab6 = 92 -> int
+const Sigil.Sound.Pitch.Ab7 = 104 -> int
+const Sigil.Sound.Pitch.Ab8 = 116 -> int
+const Sigil.Sound.Pitch.As0 = 22 -> int
+const Sigil.Sound.Pitch.As1 = 34 -> int
+const Sigil.Sound.Pitch.As2 = 46 -> int
+const Sigil.Sound.Pitch.As3 = 58 -> int
+const Sigil.Sound.Pitch.As4 = 70 -> int
+const Sigil.Sound.Pitch.As5 = 82 -> int
+const Sigil.Sound.Pitch.As6 = 94 -> int
+const Sigil.Sound.Pitch.As7 = 106 -> int
+const Sigil.Sound.Pitch.As8 = 118 -> int
+const Sigil.Sound.Pitch.B0 = 23 -> int
+const Sigil.Sound.Pitch.B1 = 35 -> int
+const Sigil.Sound.Pitch.B2 = 47 -> int
+const Sigil.Sound.Pitch.B3 = 59 -> int
+const Sigil.Sound.Pitch.B4 = 71 -> int
+const Sigil.Sound.Pitch.B5 = 83 -> int
+const Sigil.Sound.Pitch.B6 = 95 -> int
+const Sigil.Sound.Pitch.B7 = 107 -> int
+const Sigil.Sound.Pitch.B8 = 119 -> int
+const Sigil.Sound.Pitch.Bb0 = 22 -> int
+const Sigil.Sound.Pitch.Bb1 = 34 -> int
+const Sigil.Sound.Pitch.Bb2 = 46 -> int
+const Sigil.Sound.Pitch.Bb3 = 58 -> int
+const Sigil.Sound.Pitch.Bb4 = 70 -> int
+const Sigil.Sound.Pitch.Bb5 = 82 -> int
+const Sigil.Sound.Pitch.Bb6 = 94 -> int
+const Sigil.Sound.Pitch.Bb7 = 106 -> int
+const Sigil.Sound.Pitch.Bb8 = 118 -> int
+const Sigil.Sound.Pitch.C0 = 12 -> int
+const Sigil.Sound.Pitch.C1 = 24 -> int
+const Sigil.Sound.Pitch.C2 = 36 -> int
+const Sigil.Sound.Pitch.C3 = 48 -> int
+const Sigil.Sound.Pitch.C4 = 60 -> int
+const Sigil.Sound.Pitch.C5 = 72 -> int
+const Sigil.Sound.Pitch.C6 = 84 -> int
+const Sigil.Sound.Pitch.C7 = 96 -> int
+const Sigil.Sound.Pitch.C8 = 108 -> int
+const Sigil.Sound.Pitch.Cs0 = 13 -> int
+const Sigil.Sound.Pitch.Cs1 = 25 -> int
+const Sigil.Sound.Pitch.Cs2 = 37 -> int
+const Sigil.Sound.Pitch.Cs3 = 49 -> int
+const Sigil.Sound.Pitch.Cs4 = 61 -> int
+const Sigil.Sound.Pitch.Cs5 = 73 -> int
+const Sigil.Sound.Pitch.Cs6 = 85 -> int
+const Sigil.Sound.Pitch.Cs7 = 97 -> int
+const Sigil.Sound.Pitch.Cs8 = 109 -> int
+const Sigil.Sound.Pitch.D0 = 14 -> int
+const Sigil.Sound.Pitch.D1 = 26 -> int
+const Sigil.Sound.Pitch.D2 = 38 -> int
+const Sigil.Sound.Pitch.D3 = 50 -> int
+const Sigil.Sound.Pitch.D4 = 62 -> int
+const Sigil.Sound.Pitch.D5 = 74 -> int
+const Sigil.Sound.Pitch.D6 = 86 -> int
+const Sigil.Sound.Pitch.D7 = 98 -> int
+const Sigil.Sound.Pitch.D8 = 110 -> int
+const Sigil.Sound.Pitch.Db0 = 13 -> int
+const Sigil.Sound.Pitch.Db1 = 25 -> int
+const Sigil.Sound.Pitch.Db2 = 37 -> int
+const Sigil.Sound.Pitch.Db3 = 49 -> int
+const Sigil.Sound.Pitch.Db4 = 61 -> int
+const Sigil.Sound.Pitch.Db5 = 73 -> int
+const Sigil.Sound.Pitch.Db6 = 85 -> int
+const Sigil.Sound.Pitch.Db7 = 97 -> int
+const Sigil.Sound.Pitch.Db8 = 109 -> int
+const Sigil.Sound.Pitch.Ds0 = 15 -> int
+const Sigil.Sound.Pitch.Ds1 = 27 -> int
+const Sigil.Sound.Pitch.Ds2 = 39 -> int
+const Sigil.Sound.Pitch.Ds3 = 51 -> int
+const Sigil.Sound.Pitch.Ds4 = 63 -> int
+const Sigil.Sound.Pitch.Ds5 = 75 -> int
+const Sigil.Sound.Pitch.Ds6 = 87 -> int
+const Sigil.Sound.Pitch.Ds7 = 99 -> int
+const Sigil.Sound.Pitch.Ds8 = 111 -> int
+const Sigil.Sound.Pitch.E0 = 16 -> int
+const Sigil.Sound.Pitch.E1 = 28 -> int
+const Sigil.Sound.Pitch.E2 = 40 -> int
+const Sigil.Sound.Pitch.E3 = 52 -> int
+const Sigil.Sound.Pitch.E4 = 64 -> int
+const Sigil.Sound.Pitch.E5 = 76 -> int
+const Sigil.Sound.Pitch.E6 = 88 -> int
+const Sigil.Sound.Pitch.E7 = 100 -> int
+const Sigil.Sound.Pitch.E8 = 112 -> int
+const Sigil.Sound.Pitch.Eb0 = 15 -> int
+const Sigil.Sound.Pitch.Eb1 = 27 -> int
+const Sigil.Sound.Pitch.Eb2 = 39 -> int
+const Sigil.Sound.Pitch.Eb3 = 51 -> int
+const Sigil.Sound.Pitch.Eb4 = 63 -> int
+const Sigil.Sound.Pitch.Eb5 = 75 -> int
+const Sigil.Sound.Pitch.Eb6 = 87 -> int
+const Sigil.Sound.Pitch.Eb7 = 99 -> int
+const Sigil.Sound.Pitch.Eb8 = 111 -> int
+const Sigil.Sound.Pitch.F0 = 17 -> int
+const Sigil.Sound.Pitch.F1 = 29 -> int
+const Sigil.Sound.Pitch.F2 = 41 -> int
+const Sigil.Sound.Pitch.F3 = 53 -> int
+const Sigil.Sound.Pitch.F4 = 65 -> int
+const Sigil.Sound.Pitch.F5 = 77 -> int
+const Sigil.Sound.Pitch.F6 = 89 -> int
+const Sigil.Sound.Pitch.F7 = 101 -> int
+const Sigil.Sound.Pitch.F8 = 113 -> int
+const Sigil.Sound.Pitch.Fs0 = 18 -> int
+const Sigil.Sound.Pitch.Fs1 = 30 -> int
+const Sigil.Sound.Pitch.Fs2 = 42 -> int
+const Sigil.Sound.Pitch.Fs3 = 54 -> int
+const Sigil.Sound.Pitch.Fs4 = 66 -> int
+const Sigil.Sound.Pitch.Fs5 = 78 -> int
+const Sigil.Sound.Pitch.Fs6 = 90 -> int
+const Sigil.Sound.Pitch.Fs7 = 102 -> int
+const Sigil.Sound.Pitch.Fs8 = 114 -> int
+const Sigil.Sound.Pitch.G0 = 19 -> int
+const Sigil.Sound.Pitch.G1 = 31 -> int
+const Sigil.Sound.Pitch.G2 = 43 -> int
+const Sigil.Sound.Pitch.G3 = 55 -> int
+const Sigil.Sound.Pitch.G4 = 67 -> int
+const Sigil.Sound.Pitch.G5 = 79 -> int
+const Sigil.Sound.Pitch.G6 = 91 -> int
+const Sigil.Sound.Pitch.G7 = 103 -> int
+const Sigil.Sound.Pitch.G8 = 115 -> int
+const Sigil.Sound.Pitch.Gb0 = 18 -> int
+const Sigil.Sound.Pitch.Gb1 = 30 -> int
+const Sigil.Sound.Pitch.Gb2 = 42 -> int
+const Sigil.Sound.Pitch.Gb3 = 54 -> int
+const Sigil.Sound.Pitch.Gb4 = 66 -> int
+const Sigil.Sound.Pitch.Gb5 = 78 -> int
+const Sigil.Sound.Pitch.Gb6 = 90 -> int
+const Sigil.Sound.Pitch.Gb7 = 102 -> int
+const Sigil.Sound.Pitch.Gb8 = 114 -> int
+const Sigil.Sound.Pitch.Gs0 = 20 -> int
+const Sigil.Sound.Pitch.Gs1 = 32 -> int
+const Sigil.Sound.Pitch.Gs2 = 44 -> int
+const Sigil.Sound.Pitch.Gs3 = 56 -> int
+const Sigil.Sound.Pitch.Gs4 = 68 -> int
+const Sigil.Sound.Pitch.Gs5 = 80 -> int
+const Sigil.Sound.Pitch.Gs6 = 92 -> int
+const Sigil.Sound.Pitch.Gs7 = 104 -> int
+const Sigil.Sound.Pitch.Gs8 = 116 -> int
+override Sigil.Sound.Arc.ToString() -> string!
+override Sigil.Sound.Chord.ToString() -> string!
+override Sigil.Sound.Fraction.Equals(object? obj) -> bool
+override Sigil.Sound.Fraction.GetHashCode() -> int
+override Sigil.Sound.Fraction.ToString() -> string!
+override Sigil.Sound.Note.ToString() -> string!
+override Sigil.Sound.Scale.ToString() -> string!
+static Sigil.Sound.Chord.Augmented(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Diminished(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Dominant7(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Major(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Major7(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Minor(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Minor7(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Of(int root, string! quality) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Parse(string! text) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Sus2(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.Chord.Sus4(int root) -> Sigil.Sound.Chord!
+static Sigil.Sound.ChordPatterns.Arp(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords, Sigil.Sound.ArpMode mode = Sigil.Sound.ArpMode.Up, int octaves = 1) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.ChordPatterns.Notes(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.Fraction.FromDouble(double value) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.Max(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.Min(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.One.get -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.Zero.get -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.explicit operator Sigil.Sound.Fraction(double value) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.explicit operator double(Sigil.Sound.Fraction value) -> double
+static Sigil.Sound.Fraction.implicit operator Sigil.Sound.Fraction(int value) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.implicit operator Sigil.Sound.Fraction(long value) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.operator !=(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
+static Sigil.Sound.Fraction.operator *(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.operator +(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.operator -(Sigil.Sound.Fraction a) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.operator -(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.operator /(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
+static Sigil.Sound.Fraction.operator <(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
+static Sigil.Sound.Fraction.operator <=(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
+static Sigil.Sound.Fraction.operator ==(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
+static Sigil.Sound.Fraction.operator >(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
+static Sigil.Sound.Fraction.operator >=(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
+static Sigil.Sound.Mini.Chords(string! text) -> Sigil.Sound.Pattern<Sigil.Sound.Chord!>!
+static Sigil.Sound.Mini.Integers(string! text) -> Sigil.Sound.Pattern<int>!
+static Sigil.Sound.Mini.Notes(string! text) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.Mini.Numbers(string! text) -> Sigil.Sound.Pattern<double>!
+static Sigil.Sound.Mini.Parse<T>(string! text, System.Func<string!, T>! atom) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.NotePatterns.ToPattern(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, int cycles = 1) -> Sigil.Sound.Pattern!
+static Sigil.Sound.NotePatterns.Transpose(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, int semitones) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.NotePatterns.Velocity(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, double velocity) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.Notes.NameOf(int pitch) -> string!
+static Sigil.Sound.Notes.Parse(string! text) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
+static Sigil.Sound.Notes.ParsePitch(string! name) -> int
+static Sigil.Sound.Notes.Transpose(this System.Collections.Generic.IEnumerable<Sigil.Sound.Note>! notes, int semitones) -> System.Collections.Generic.IEnumerable<Sigil.Sound.Note>!
+static Sigil.Sound.Pat.Cat<T>(params Sigil.Sound.Pattern<T>![]! patterns) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.Pat.Pure<T>(T value) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.Pat.Seq<T>(params Sigil.Sound.Pattern<T>![]! patterns) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.Pat.Silence<T>() -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.Pat.Stack<T>(params Sigil.Sound.Pattern<T>![]! patterns) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Degrade<T>(this Sigil.Sound.Pattern<T>! pattern, double amount = 0.5, int seed = 0) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Euclid<T>(this Sigil.Sound.Pattern<T>! pattern, int pulses, int steps, int rotation = 0) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Every<T>(this Sigil.Sound.Pattern<T>! pattern, int cycles, System.Func<Sigil.Sound.Pattern<T>!, Sigil.Sound.Pattern<T>!>! transform) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Fast<T>(this Sigil.Sound.Pattern<T>! pattern, Sigil.Sound.Fraction factor) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Fast<T>(this Sigil.Sound.Pattern<T>! pattern, double factor) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Fast<T>(this Sigil.Sound.Pattern<T>! pattern, int factor) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Rev<T>(this Sigil.Sound.Pattern<T>! pattern) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Select<T, TResult>(this Sigil.Sound.Pattern<T>! pattern, System.Func<T, TResult>! map) -> Sigil.Sound.Pattern<TResult>!
+static Sigil.Sound.PatternExtensions.SelectMany<T, TResult>(this Sigil.Sound.Pattern<T>! pattern, System.Func<T, System.Collections.Generic.IReadOnlyList<TResult>!>! expand) -> Sigil.Sound.Pattern<TResult>!
+static Sigil.Sound.PatternExtensions.Shift<T>(this Sigil.Sound.Pattern<T>! pattern, Sigil.Sound.Fraction cycles) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Shift<T>(this Sigil.Sound.Pattern<T>! pattern, double cycles) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Slow<T>(this Sigil.Sound.Pattern<T>! pattern, Sigil.Sound.Fraction factor) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Slow<T>(this Sigil.Sound.Pattern<T>! pattern, double factor) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Slow<T>(this Sigil.Sound.Pattern<T>! pattern, int factor) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Sometimes<T>(this Sigil.Sound.Pattern<T>! pattern, double amount, System.Func<Sigil.Sound.Pattern<T>!, Sigil.Sound.Pattern<T>!>! transform, int seed = 0) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternExtensions.Where<T>(this Sigil.Sound.Pattern<T>! pattern, System.Func<T, bool>! keep) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.PatternPlayback.Jux(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, System.Func<Sigil.Sound.Pattern<Sigil.Sound.Note>!, Sigil.Sound.Pattern<Sigil.Sound.Note>!>! transform, System.Func<Sigil.Sound.Voice!, Sigil.Sound.Sound!>! voice, double? bpm = null, int polyphony = 8, double width = 1) -> Sigil.Sound.Sound!
+static Sigil.Sound.PatternPlayback.Play(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, System.Func<Sigil.Sound.Voice!, Sigil.Sound.Sound!>! voice, double? bpm = null, int polyphony = 8) -> Sigil.Sound.Sound!
+static Sigil.Sound.PatternSignals.ToSignal(this Sigil.Sound.Pattern<double>! pattern, double? bpm = null, double smoothSeconds = 0, double initial = 0) -> Sigil.Sound.Sound!
+static Sigil.Sound.Patterns.Every(this System.Collections.Generic.IEnumerable<Sigil.Sound.Note>! notes, double step = 1, double gate = 1) -> Sigil.Sound.Pattern!
+static Sigil.Sound.Patterns.Play(this Sigil.Sound.Pattern! pattern, System.Func<Sigil.Sound.Voice!, Sigil.Sound.Sound!>! voice, double? bpm = null, int polyphony = 8) -> Sigil.Sound.Sound!
+static Sigil.Sound.Scale.Blues(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Chromatic(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Dorian(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.HarmonicMinor(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Locrian(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Lydian(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Major(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.MajorPentatonic(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.MelodicMinor(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Minor(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.MinorPentatonic(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Mixolydian(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Parse(string! text) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.Phrygian(int root) -> Sigil.Sound.Scale!
+static Sigil.Sound.Scale.WholeTone(int root) -> Sigil.Sound.Scale!

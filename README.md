@@ -2,7 +2,7 @@
 
 Composable sound synthesis for .NET: describe a sound as an immutable value, compose it like LINQ, and render it when you need it.
 
-> **Status: pre-alpha.** Active development. Licensed under the [MIT License](LICENSE).
+> **Status: 0.1.0, the first public release.** The public API is tracked and every example is tested, but it may still change before 1.0; see the [changelog](CHANGELOG.md). Licensed under the [MIT License](LICENSE).
 
 ## Quick Start
 
@@ -33,6 +33,7 @@ mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 - **Operators:** `Gain` / `*`, mix / `+`, offset / `+ 12`, ring modulation (`sound * sound`), `Range`, `Adsr`, `LowPass`, `HighPass`, `BandPass`, `Notch` (topology-preserving state-variable filter), `Pan`, `Limit`.
 - **Tone:** `Peak` (bell), `LowShelf`, `HighShelf` (RBJ biquads), `Equalize` (three-band tone control), `Vowel` (four formants, morphs A to U), `Fold` (West Coast wavefolder).
 - **Dynamics:** `Compress` (soft knee, sidechain, lookahead), `FollowEnvelope` (loudness as a control signal), `Spread` (mid/side stereo width).
+- **Impulse responses:** `Convolve` runs a sound through an `AudioBuffer`, such as a guitar cabinet or a concert hall recorded as a WAV file. Zero latency, mono or stereo, up to 10 seconds, any sample rate.
 - **Effects:** `Delay`, `TapeDelay` (slewed read head, saturating and damped feedback), `Reverb` (Schroeder stereo decorrelated), `FdnReverb` (eight-line feedback network, optional shimmer), `Comb` (tuned resonator; Karplus-Strong string), `Distort` (soft, hard, fold, fuzz), `BitCrush`, `Chorus`, `Phaser`. Each takes `mix` where applicable, and continuous parameters accept numbers, sounds, or `Fn(t => ...)`.
 - **Parameters:** Every `Param` accepts a number, another `Sound` (audio-rate modulation), or a `Func<double, float>` of time. Constant parameters are evaluated with zero per-block overhead.
 - **Sequences & Notes:** `Notes.Parse("C4 Eb4 G4")`, LINQ transformations (`Where`, `Select`, `Transpose`), timing (`Every`, `Beats`), and zero-allocation polyphonic playback (`Play`).
@@ -51,9 +52,9 @@ mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 
 | Package | Contents | Status |
 | --- | --- | --- |
-| `Sigil.Sound` | `Sound`, `Param`, `RenderContext`, `IOperator`, oscillators, envelopes, TP-SVF filters, effects, samples, offline render, WAV reading and writing. Zero dependencies, browser-wasm clean. | Scaffold |
-| `Sigil.Sound.Notes` | Notes, pitch parsing, note sequences, timing patterns, polyphonic voice engine. | Scaffold |
-| `Sigil.Sound.Testing` | `SignalAnalysis` and `AudioAssert` for tolerance-based audio assertions | Scaffold |
+| `Sigil.Sound` | `Sound`, `Param`, `RenderContext`, `IOperator`, oscillators, envelopes, TP-SVF filters, effects, samples, offline render, WAV reading and writing. Zero dependencies, browser-wasm clean. | 0.1.0 |
+| `Sigil.Sound.Notes` | Notes, pitch parsing, note sequences, timing patterns, polyphonic voice engine. | 0.1.0 |
+| `Sigil.Sound.Testing` | `SignalAnalysis` and `AudioAssert` for tolerance-based audio assertions | 0.1.0 |
 | `Sigil.Sound.SoundFont` | SoundFont playback | Planned |
 | `Sigil.Sound.Playback` | Real-time audio driver integrations | Planned |
 
@@ -66,6 +67,20 @@ dotnet run --project apps/Sigil.Sound.Repl
 ```
 
 For production builds: `dotnet publish apps/Sigil.Sound.Repl -c Release -o artifacts/repl`.
+
+Start with **Church organ** in the examples menu: sixty-four sine partials in eight ranks, kept in tune by rotating phasors instead of 64 calls to `Sin` per sample, written as a single custom operator. It shows what the library lets you build; [Custom operators](docs/articles/custom-operators.md) explains how it works.
+
+## Versioning
+
+Versions are `MAJOR.MINOR.PATCH`. What to expect:
+
+| Part | Means | Example |
+| --- | --- | --- |
+| **MAJOR** | `0` is beta: the API may change between minor versions. `1`+ promises the API and the sound will not break within that major version. | `0.x` is beta |
+| **MINOR** | New operators and features. Before 1.0 it may also break the API or retune a default, always listed in the [changelog](CHANGELOG.md). | `0.2.0` |
+| **PATCH** | Fixes only. No API change and no intentional change to the sound. Always safe to take. | `0.1.1` |
+
+**0.1.0 is the first public release**: complete enough to build real instruments and effects, and the start of the feedback phase. Until 1.0, pin to a minor version (`Version="[0.1.0,0.2.0)"`) to take fixes and move on purpose. All packages share one version. The full policy, including what counts as "the sound", is in [Versioning](docs/articles/versioning.md).
 
 ## Build & Test
 

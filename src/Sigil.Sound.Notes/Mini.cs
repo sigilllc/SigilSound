@@ -5,6 +5,10 @@ namespace Sigil.Sound;
 /// <summary>The text given to <see cref="Mini"/> is not valid mini-notation. <see cref="Position"/> is the zero-based column of the problem.</summary>
 public sealed class MiniNotationException : FormatException
 {
+    /// <summary>Creates the exception for a problem at <paramref name="position"/> in <paramref name="text"/>.</summary>
+    /// <param name="message">What is wrong.</param>
+    /// <param name="position">Zero-based index into <paramref name="text"/> where the problem is.</param>
+    /// <param name="text">The mini-notation that was being parsed.</param>
     public MiniNotationException(string message, int position, string text)
         : base($"{message} (column {position + 1} in \"{text}\")")
     {

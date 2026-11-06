@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Sigil.Sound</RootNamespace>
-    <Description>Note sequences, pitch parsing and (later) MIDI file reading for Sigil.Sound.</Description>
+    <Description>Notes, scales, chords, patterns, mini-notation and polyphonic playback for Sigil.Sound.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sigil.Sound\Sigil.Sound.csproj" />

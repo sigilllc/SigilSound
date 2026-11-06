@@ -39,8 +39,10 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     /// <summary>The denominator, in lowest terms; always positive.</summary>
     public long Denominator => _denominator == 0 ? 1 : _denominator;
 
+    /// <summary>Zero.</summary>
     public static Fraction Zero => default;
 
+    /// <summary>One.</summary>
     public static Fraction One => new(1, 1, false);
 
     /// <summary>The nearest simple fraction to <paramref name="value"/> (denominator up to 100000), by continued fractions.</summary>
@@ -67,14 +69,19 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
         return k1 == 0 ? new Fraction(whole) : new Fraction(whole * k1 + h1, k1);
     }
 
+    /// <summary>A whole number as a fraction.</summary>
     public static implicit operator Fraction(int value) => new(value);
 
+    /// <summary>A whole number as a fraction.</summary>
     public static implicit operator Fraction(long value) => new(value);
 
+    /// <summary>The nearest simple fraction; see <see cref="FromDouble"/>.</summary>
     public static explicit operator Fraction(double value) => FromDouble(value);
 
+    /// <summary>The fraction as a floating-point number.</summary>
     public static explicit operator double(Fraction value) => value.ToDouble();
 
+    /// <summary>The fraction as a floating-point number.</summary>
     public double ToDouble() => (double)_numerator / Denominator;
 
     /// <summary>The largest whole number not above this fraction.</summary>
@@ -85,50 +92,75 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
         return _numerator % d < 0 ? q - 1 : q;
     }
 
+    /// <summary>One divided by this fraction.</summary>
+    /// <exception cref="DivideByZeroException">The fraction is zero.</exception>
     public Fraction Reciprocal() => _numerator == 0
         ? throw new DivideByZeroException("Zero has no reciprocal.")
         : new Fraction(Denominator, _numerator);
 
+    /// <summary>The exact sum.</summary>
+    /// <exception cref="OverflowException">The result does not fit.</exception>
     public static Fraction operator +(Fraction a, Fraction b) =>
         new(checked(a._numerator * b.Denominator + b._numerator * a.Denominator), checked(a.Denominator * b.Denominator));
 
+    /// <summary>The exact difference.</summary>
+    /// <exception cref="OverflowException">The result does not fit.</exception>
     public static Fraction operator -(Fraction a, Fraction b) =>
         new(checked(a._numerator * b.Denominator - b._numerator * a.Denominator), checked(a.Denominator * b.Denominator));
 
+    /// <summary>The negated fraction.</summary>
     public static Fraction operator -(Fraction a) => new(-a._numerator, a.Denominator, false);
 
+    /// <summary>The exact product.</summary>
+    /// <exception cref="OverflowException">The result does not fit.</exception>
     public static Fraction operator *(Fraction a, Fraction b) =>
         new(checked(a._numerator * b._numerator), checked(a.Denominator * b.Denominator));
 
+    /// <summary>The exact quotient.</summary>
+    /// <exception cref="DivideByZeroException">The divisor is zero.</exception>
+    /// <exception cref="OverflowException">The result does not fit.</exception>
     public static Fraction operator /(Fraction a, Fraction b) =>
         b._numerator == 0 ? throw new DivideByZeroException() : new(checked(a._numerator * b.Denominator), checked(a.Denominator * b._numerator));
 
+    /// <summary>True when both are the same value, in any form (2/4 equals 1/2).</summary>
     public static bool operator ==(Fraction a, Fraction b) => a._numerator == b._numerator && a.Denominator == b.Denominator;
 
+    /// <summary>True when the values differ.</summary>
     public static bool operator !=(Fraction a, Fraction b) => !(a == b);
 
+    /// <summary>True when <paramref name="a"/> is less than <paramref name="b"/>.</summary>
     public static bool operator <(Fraction a, Fraction b) => a.CompareTo(b) < 0;
 
+    /// <summary>True when <paramref name="a"/> is greater than <paramref name="b"/>.</summary>
     public static bool operator >(Fraction a, Fraction b) => a.CompareTo(b) > 0;
 
+    /// <summary>True when <paramref name="a"/> is less than or equal to <paramref name="b"/>.</summary>
     public static bool operator <=(Fraction a, Fraction b) => a.CompareTo(b) <= 0;
 
+    /// <summary>True when <paramref name="a"/> is greater than or equal to <paramref name="b"/>.</summary>
     public static bool operator >=(Fraction a, Fraction b) => a.CompareTo(b) >= 0;
 
+    /// <summary>The smaller of two fractions.</summary>
     public static Fraction Min(Fraction a, Fraction b) => a <= b ? a : b;
 
+    /// <summary>The larger of two fractions.</summary>
     public static Fraction Max(Fraction a, Fraction b) => a >= b ? a : b;
 
     // Cross-multiplied in 128 bits so comparing two fractions can never overflow.
+    /// <inheritdoc />
     public int CompareTo(Fraction other) =>
         ((Int128)_numerator * other.Denominator).CompareTo((Int128)other._numerator * Denominator);
 
+    /// <inheritdoc />
     public bool Equals(Fraction other) => this == other;
 
+    /// <inheritdoc />
     public override bool Equals(object? obj) => obj is Fraction other && this == other;
 
+    /// <inheritdoc />
     public override int GetHashCode() => HashCode.Combine(_numerator, Denominator);
 
+    /// <summary>The fraction in lowest terms: <c>3</c> for a whole number, <c>3/4</c> otherwise.</summary>
     public override string ToString() =>
         Denominator == 1
             ? _numerator.ToString(CultureInfo.InvariantCulture)
@@ -167,6 +199,7 @@ public readonly record struct Arc(Fraction Begin, Fraction End)
     /// <summary>Splits the arc at every cycle boundary; a point arc comes back as itself.</summary>
     public CycleSplitter SplitCycles() => new(this);
 
+    /// <summary>The arc as <c>[begin, end)</c>.</summary>
     public override string ToString() => $"[{Begin}, {End})";
 }
 
@@ -190,8 +223,11 @@ public struct CycleSplitter
     /// <summary>The piece found by the last <see cref="MoveNext"/>.</summary>
     public Arc Current { get; private set; }
 
+    /// <summary>Returns itself, so the splitter can be used in a <c>foreach</c>.</summary>
     public readonly CycleSplitter GetEnumerator() => this;
 
+    /// <summary>Moves to the next piece, if there is one.</summary>
+    /// <returns>True while <see cref="Current"/> holds a piece.</returns>
     public bool MoveNext()
     {
         if (_done) return false;

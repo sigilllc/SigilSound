@@ -6,9 +6,10 @@ namespace Sigil.Sound;
 /// </summary>
 /// <example>
 /// <code>
-/// var scale = Scale.Minor(C3);                                   // using static Sigil.Sound.Pitch;
-/// scale[0]; scale[2]; scale[7];                                  // 48, 51, 60
-/// scale.Notes(Mini.Integers("0 2 &lt;4 7&gt; ~")).Play(v =&gt; ...) // a melody by degree
+/// // A melody by scale degree. 48 is C3; degree 0 is 48, degree 2 is 51 and degree 7 is the octave, 60.
+/// var scale = Scale.Minor(48);
+/// scale.Notes(Mini.Integers("0 2 &lt;4 7&gt; ~"))
+///     .Play(v =&gt; Saw(v.Frequency).LowPass(2000).Adsr(0.005, 0.1, 0.5, 0.2), bpm: 110) * 0.3
 /// </code>
 /// </example>
 public sealed class Scale
@@ -164,6 +165,7 @@ public sealed class Scale
         return (Mini.ParsePitchName(parts[0]), parts[1]);
     }
 
+    /// <summary>The scale as text, such as <c>C major</c>.</summary>
     public override string ToString() => $"{Sigil.Sound.Notes.NameOf(Root)} {Name}";
 }
 
@@ -243,22 +245,31 @@ public sealed class Chord
         return new Chord(steps.Select(s => root + s), quality.Trim());
     }
 
+    /// <summary>A major triad on <paramref name="root"/> (a MIDI pitch).</summary>
     public static Chord Major(int root) => Of(root, "major");
 
+    /// <summary>A minor triad on <paramref name="root"/>.</summary>
     public static Chord Minor(int root) => Of(root, "minor");
 
+    /// <summary>A diminished triad on <paramref name="root"/>.</summary>
     public static Chord Diminished(int root) => Of(root, "dim");
 
+    /// <summary>An augmented triad on <paramref name="root"/>.</summary>
     public static Chord Augmented(int root) => Of(root, "aug");
 
+    /// <summary>A suspended second chord on <paramref name="root"/>.</summary>
     public static Chord Sus2(int root) => Of(root, "sus2");
 
+    /// <summary>A suspended fourth chord on <paramref name="root"/>.</summary>
     public static Chord Sus4(int root) => Of(root, "sus4");
 
+    /// <summary>A dominant seventh chord on <paramref name="root"/>.</summary>
     public static Chord Dominant7(int root) => Of(root, "7");
 
+    /// <summary>A major seventh chord on <paramref name="root"/>.</summary>
     public static Chord Major7(int root) => Of(root, "maj7");
 
+    /// <summary>A minor seventh chord on <paramref name="root"/>.</summary>
     public static Chord Minor7(int root) => Of(root, "min7");
 
     /// <summary>
@@ -308,6 +319,7 @@ public sealed class Chord
     /// <summary>All the notes at once, filling the cycle.</summary>
     public Pattern<Note> ToPattern() => Pat.Pure(this).Notes();
 
+    /// <summary>The chord as text: its pitches and its quality.</summary>
     public override string ToString() => $"{string.Join(" ", Pitches.Select(Sigil.Sound.Notes.NameOf))} ({Name})";
 
     // The position of step s of an arpeggio over `count` ascending pitches and `octaves` octaves, as an index counted from the
