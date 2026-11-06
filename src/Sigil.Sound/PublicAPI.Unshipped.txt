@@ -1,1 +1,23 @@
 #nullable enable
+static Sigil.Sound.Control.Choice(string! name, System.Collections.Generic.IReadOnlyList<string!>! options, int selected = 0) -> Sigil.Sound.Control!
+Sigil.Sound.Control.Options.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Sigil.Sound.Control.Polarity.get -> Sigil.Sound.ControlPolarity
+Sigil.Sound.Control.Polarity.init -> void
+Sigil.Sound.Control.SetFromSignal(double signal) -> void
+Sigil.Sound.Control.Style.get -> Sigil.Sound.ControlStyle
+Sigil.Sound.Control.Style.init -> void
+Sigil.Sound.Control.Taper.get -> Sigil.Sound.ControlTaper
+Sigil.Sound.Control.Taper.init -> void
+Sigil.Sound.Control.Travel.get -> double
+Sigil.Sound.Control.Travel.set -> void
+Sigil.Sound.ControlPolarity
+Sigil.Sound.ControlPolarity.Bipolar = 1 -> Sigil.Sound.ControlPolarity
+Sigil.Sound.ControlPolarity.Unipolar = 0 -> Sigil.Sound.ControlPolarity
+Sigil.Sound.ControlStyle
+Sigil.Sound.ControlStyle.Knob = 0 -> Sigil.Sound.ControlStyle
+Sigil.Sound.ControlStyle.Selector = 2 -> Sigil.Sound.ControlStyle
+Sigil.Sound.ControlStyle.Slider = 1 -> Sigil.Sound.ControlStyle
+Sigil.Sound.ControlTaper
+Sigil.Sound.ControlTaper.Exp = 2 -> Sigil.Sound.ControlTaper
+Sigil.Sound.ControlTaper.Linear = 0 -> Sigil.Sound.ControlTaper
+Sigil.Sound.ControlTaper.Log = 1 -> Sigil.Sound.ControlTaper

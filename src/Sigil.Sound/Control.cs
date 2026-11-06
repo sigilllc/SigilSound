@@ -34,6 +34,9 @@ public enum ControlCurve
 public sealed class Control
 {
     private float _target;
+    private ControlTaper _taper;
+    private ControlPolarity _polarity;
+    private ControlStyle _style;
 
     /// <param name="value">The starting value.</param>
     /// <param name="min">The lowest value; <see cref="Value"/> is clamped to it.</param>
@@ -83,11 +86,154 @@ public sealed class Control
         {
             if (!double.IsFinite(value))
                 throw new ArgumentOutOfRangeException(nameof(value), value, "The value must be a number.");
-            Volatile.Write(ref _target, Math.Clamp((float)value, Min, Max));
+            Volatile.Write(ref _target, Snap(Math.Clamp((float)value, Min, Max)));
         }
     }
 
     internal float Target => Volatile.Read(ref _target);
+
+    // A selector holds whole numbers only, so a UI that sends 1.4 still lands on an option.
+    private float Snap(float value) => Options is null ? value : MathF.Round(value);
+
+    /// <summary>
+    /// How a UI's travel maps onto the value; <see cref="Travel"/> applies it. A hint for a host UI: the sound does not care.
+    /// Set it when creating the control: <c>new Control(1200, 40, 18000) { Taper = ControlTaper.Log }</c>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ControlTaper.Log"/> with a minimum that is not above zero, or an unknown taper.</exception>
+    public ControlTaper Taper
+    {
+        get => _taper;
+        init
+        {
+            if (!Enum.IsDefined(value))
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown taper.");
+            if (value == ControlTaper.Log && Min <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "A log taper needs a minimum above zero.");
+            _taper = value;
+        }
+    }
+
+    /// <summary>What a signal sent to <see cref="SetFromSignal"/> spans. Defaults to <see cref="ControlPolarity.Unipolar"/>.</summary>
+    public ControlPolarity Polarity
+    {
+        get => _polarity;
+        init
+        {
+            if (!Enum.IsDefined(value))
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown polarity.");
+            _polarity = value;
+        }
+    }
+
+    /// <summary>The widget a host UI is advised to show. Defaults to <see cref="ControlStyle.Knob"/>.</summary>
+    public ControlStyle Style
+    {
+        get => _style;
+        init
+        {
+            if (!Enum.IsDefined(value))
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown style.");
+            _style = value;
+        }
+    }
+
+    /// <summary>
+    /// The names of the choices when the control is a selector (see <see cref="Choice"/>); null otherwise. The value is the index
+    /// of the chosen option and only takes whole numbers.
+    /// </summary>
+    public IReadOnlyList<string>? Options { get; private init; }
+
+    /// <summary>
+    /// Creates a selector: a control that picks one of a few named options. The value is the index of the chosen option, it
+    /// changes at once with no glide, and its style is <see cref="ControlStyle.Selector"/>.
+    /// </summary>
+    /// <param name="name">A label for the UI.</param>
+    /// <param name="options">The names of the choices, at least two.</param>
+    /// <param name="selected">The index of the starting choice.</param>
+    /// <example>
+    /// <code>
+    /// // A selector holds the index of the picked option. Here option 1 ("Saw") opens the filter further than option 0.
+    /// var wave = Control.Choice("Wave", ["Sine", "Saw", "Square"], selected: 1);
+    /// Saw(110).LowPass(wave * 600 + 400) * 0.4
+    /// </code>
+    /// </example>
+    public static Control Choice(string name, IReadOnlyList<string> options, int selected = 0)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (options.Count < 2)
+            throw new ArgumentOutOfRangeException(nameof(options), options.Count, "A selector needs at least two options.");
+        if (options.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Every option needs a name.", nameof(options));
+        if (selected < 0 || selected >= options.Count)
+            throw new ArgumentOutOfRangeException(nameof(selected), selected, "The starting choice must be one of the options.");
+
+        return new Control(selected, 0, options.Count - 1, slewSeconds: 0, name)
+        {
+            Style = ControlStyle.Selector,
+            Options = [.. options],
+        };
+    }
+
+    /// <summary>
+    /// The value as a position from 0 (the minimum) to 1 (the maximum), through <see cref="Taper"/>. A UI reads it to place a
+    /// knob and sets it as the knob turns, so the UI never needs to know the taper. Setting it is thread-safe like <see cref="Value"/>,
+    /// and the sound still glides over <see cref="SlewSeconds"/>. A selector's travel is the choice's place along its options.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Set to NaN or infinity.</exception>
+    /// <example>
+    /// <code>
+    /// // A knob reports its position from 0 to 1 and the control applies the taper: half way is the geometric middle, 1000 Hz.
+    /// var cutoff = new Control(100, min: 100, max: 10000) { Taper = ControlTaper.Log };
+    /// cutoff.Travel = 0.5;
+    /// Saw(110).LowPass(cutoff) * 0.4
+    /// </code>
+    /// </example>
+    public double Travel
+    {
+        get => TravelFromValue(Value);
+        set
+        {
+            if (!double.IsFinite(value))
+                throw new ArgumentOutOfRangeException(nameof(value), value, "The travel must be a number.");
+            Value = ValueFromTravel(Math.Clamp(value, 0.0, 1.0));
+        }
+    }
+
+    /// <summary>
+    /// Sets the control from a signal that arrives from outside, such as a modulator the host wired in. The signal is read
+    /// through <see cref="Polarity"/> (0 to 1, or -1 to 1) and then <see cref="Taper"/>; a signal beyond the span stops at the ends.
+    /// </summary>
+    /// <param name="signal">The incoming value.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The signal is NaN or infinite.</exception>
+    public void SetFromSignal(double signal)
+    {
+        if (!double.IsFinite(signal))
+            throw new ArgumentOutOfRangeException(nameof(signal), signal, "The signal must be a number.");
+        Travel = Polarity == ControlPolarity.Bipolar ? (signal + 1.0) * 0.5 : signal;
+    }
+
+    private double ValueFromTravel(double t)
+    {
+        double min = Min, max = Max;
+        return Taper switch
+        {
+            ControlTaper.Log => min * Math.Pow(max / min, t),
+            ControlTaper.Exp => min + t * t * (max - min),
+            _ => min + t * (max - min),
+        };
+    }
+
+    private double TravelFromValue(double value)
+    {
+        double min = Min, max = Max;
+        double t = Taper switch
+        {
+            ControlTaper.Log => Math.Log(value / min) / Math.Log(max / min),
+            ControlTaper.Exp => Math.Sqrt((value - min) / (max - min)),
+            _ => (value - min) / (max - min),
+        };
+        return Math.Clamp(t, 0.0, 1.0);
+    }
 
     /// <summary>
     /// The control mapped from its own range onto <paramref name="outMin"/> to <paramref name="outMax"/>. The glide happens

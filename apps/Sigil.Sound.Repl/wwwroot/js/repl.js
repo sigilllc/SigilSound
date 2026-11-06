@@ -460,6 +460,37 @@
         audio,
         samples,
 
+        // The rotary knob of the Sigilgraph controls strip. The page owns the value; the dial only reports a position from 0 to 1,
+        // and the control applies its taper. Dragging up turns it up; Shift (or the wheel) turns it finely.
+        dial: {
+            attach(el, ref) {
+                let active = false;
+                let startY = 0;
+                let startT = 0;
+                el.addEventListener("pointerdown", e => {
+                    if (e.button !== 0) return;
+                    el.setPointerCapture(e.pointerId);
+                    active = true;
+                    startY = e.clientY;
+                    startT = Number(el.dataset.t);
+                    el.focus();
+                    e.preventDefault();
+                });
+                el.addEventListener("pointermove", e => {
+                    if (!active) return;
+                    const travel = startT + (startY - e.clientY) / (e.shiftKey ? 800 : 200);
+                    ref.invokeMethodAsync("Turn", Math.min(1, Math.max(0, travel)));
+                });
+                const end = () => { active = false; };
+                el.addEventListener("pointerup", end);
+                el.addEventListener("pointercancel", end);
+                el.addEventListener("wheel", e => {
+                    e.preventDefault();
+                    ref.invokeMethodAsync("Nudge", e.deltaY < 0 ? 1 : -1, e.shiftKey ? 0.002 : 0.02);
+                }, { passive: false });
+            },
+        },
+
         // Types text at the cursor, replacing the selection. Used to insert Samples.Load("...") from the sample list.
         insertText(text) {
             editor.executeEdits("samples", [{ range: editor.getSelection(), text, forceMoveMarkers: true }]);

@@ -28,15 +28,28 @@
 
         <select class="sel" @onchange="LoadExampleAsync" value="" aria-label="Examples">
             <option value="" disabled>Examples</option>
-            @foreach (var example in ReplExamples.All)
-            {
-                <option value="@example.Name">@example.Name</option>
-            }
+            <optgroup label="Sigil.Sound">
+                @foreach (var example in ReplExamples.All)
+                {
+                    <option value="@example.Name">@example.Name</option>
+                }
+            </optgroup>
+            <optgroup label="Sigilgraph device scripts">
+                @foreach (var example in SigilgraphExamples.All)
+                {
+                    <option value="@example.Name">@example.Name</option>
+                }
+            </optgroup>
         </select>
 
         <label class="switch" title="While a sound plays, apply edits as soon as they compile">
             <input type="checkbox" checked="@_refreshOnChange" @onchange="ToggleRefreshAsync" />
             Refresh on change
+        </label>
+
+        <label class="switch" title="Adds the Sound Script device's API (Knob, Slider, In, Out, Poly), simulated here, so scripts written for the Sigilgraph Audio Workbench run on this page">
+            <input type="checkbox" checked="@_sigilgraph" @onchange="ToggleSigilgraphAsync" />
+            Sigilgraph mode
         </label>
 
         <span class="sp"></span>
@@ -72,7 +85,18 @@
 
     <main class="work">
         <div class="code">
+            @if (_offerSigilgraph)
+            {
+                <div class="offer" role="status">
+                    <span>This snippet uses the Sigilgraph device API (Knob, Slider, In, Out, Poly).</span>
+                    <button class="btn" @onclick="EnterSigilgraphAsync">Switch to Sigilgraph mode</button>
+                </div>
+            }
             <div id="editor" class="editor" @ref="_editorHost"></div>
+            @if (_showControls)
+            {
+                <ControlStrip Build="_build" />
+            }
             @if (_usesKeys)
             {
                 <PianoKeyboard Input="ReplApi.Keys" Active="_playing" />
@@ -153,7 +177,7 @@
                     <li><span class="k">Parameters</span><span class="val">number, sound, Fn(t =&gt; ...)</span></li>
                     <li><span class="k">Notes</span><span class="val">Notes.Parse("C4 E4"), LINQ</span></li>
                     <li><span class="k">Sequence</span><span class="val">.Every(Beats.Eighth).Loop().Play(v =&gt; ...)</span></li>
-                    <li><span class="k">Keyboard</span><span class="val">Keys.Play(v =&gt; ...)</span></li>
+                    <li><span class="k">Keyboard</span><span class="val">Keys.Play(v =&gt; ...)  &middot;  Sigilgraph: Poly(8, v =&gt; ...)</span></li>
                     <li><span class="k">Samples</span><span class="val">Sample(Samples.Load("kick.wav"))</span></li>
                 </ul>
                 <p class="plain dim">The last expression is the sound.</p>
@@ -184,13 +208,26 @@
     private bool _refreshOnChange = true;
     private bool _showDisclaimer = true;
     private bool _usesKeys;
+    private bool _sigilgraph;
+    private bool _offerSigilgraph;
+    private bool _showControls;
+    private int _build;
+    private bool _sigilgraphWarm;
     private bool _samplesKept;
     private IReadOnlyList<SampleEntry> _samples = [];
     private string _status = "Loading compiler";
     private string _statusKind = "dim";
     private IReadOnlyList<SnippetDiagnostic> _diagnostics = [];
 
-    protected override void OnInitialized() => Engine.RenderFailed += OnRenderFailed;
+    // Which snippet policy the page compiles with: the plain one, or the plain one plus the Sigilgraph device API.
+    private SnippetProfile Profile => _sigilgraph ? SigilgraphProfile.Instance : ReplProfile.Instance;
+
+    protected override void OnInitialized()
+    {
+        Engine.RenderFailed += OnRenderFailed;
+        // Poly plays the keyboard under the editor, the same one Keys plays.
+        SigilgraphSession.Instance.Keys = ReplApi.Keys;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -200,7 +237,7 @@
         _self = DotNetObjectReference.Create(this);
         _engineRef = DotNetObjectReference.Create(Engine);
         await JS.InvokeVoidAsync("sigilRepl.init", _self, _editorHost, ReplExamples.All[0].Code);
-        UpdateKeyboard(await JS.InvokeAsync<string>("sigilRepl.getCode"));
+        UpdatePanels(await JS.InvokeAsync<string>("sigilRepl.getCode"));
         _refreshOnChange = await JS.InvokeAsync<bool>("sigilRepl.prefs.get", "refreshOnChange", true);
         // Samples from earlier visits go back into the virtual folder before any snippet can ask for them.
         _samplesKept = await JS.InvokeAsync<bool>("sigilRepl.samples.restore");
@@ -249,7 +286,7 @@
         // Start audio first: this has to happen close to the click or key press that allowed it.
         await Engine.StartAsync(_engineRef!);
         var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
-        UpdateKeyboard(code);
+        UpdatePanels(code);
         await PlayAsync(code);
     }
 
@@ -260,7 +297,7 @@
     [JSInvokable]
     public async Task<IReadOnlyList<SnippetDiagnostic>> CodeChangedAsync(string code)
     {
-        UpdateKeyboard(code);
+        UpdatePanels(code);
         if (!_ready)
             return [];
         if (_refreshOnChange && _playing)
@@ -269,7 +306,7 @@
             return _diagnostics;
         }
 
-        _diagnostics = Engine.BeforeBlockingWork("analyze", () => SnippetCompiler.Check(code, ReplProfile.Instance));
+        _diagnostics = Engine.BeforeBlockingWork("analyze", () => SnippetCompiler.Check(code, Profile));
         StateHasChanged();
         return _diagnostics;
     }
@@ -284,15 +321,15 @@
 
     [JSInvokable]
     public IReadOnlyList<CompletionItem> Complete(string code, int offset) =>
-        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Complete(code, offset, ReplProfile.Instance)) : [];
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Complete(code, offset, Profile)) : [];
 
     [JSInvokable]
     public string? Describe(string code, int offset) =>
-        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Describe(code, offset, ReplProfile.Instance)) : null;
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Describe(code, offset, Profile)) : null;
 
     [JSInvokable]
     public SignatureHelp? Signatures(string code, int offset) =>
-        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Signatures(code, offset, ReplProfile.Instance)) : null;
+        _ready ? Engine.BeforeBlockingWork("analyze", () => EditorServices.Signatures(code, offset, Profile)) : null;
 
     /// <summary>
     /// Asked before a dropped file is read into memory, so one that can never be kept (not a .wav, far too big) is refused
@@ -358,7 +395,7 @@
         await Task.Delay(1);
 
         var timer = System.Diagnostics.Stopwatch.StartNew();
-        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code, ReplProfile.Instance));
+        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code, Profile));
         long compileMs = timer.ElapsedMilliseconds;
         ShowDiagnostics(result.Diagnostics);
 
@@ -370,7 +407,11 @@
 
         try
         {
-            Engine.Play(result.Run());
+            // In Sigilgraph mode running the snippet also declares its controls, which the strip below the editor then shows.
+            var sound = _sigilgraph ? SigilgraphSession.Instance.Build(result.Run) : result.Run();
+            if (_sigilgraph)
+                _build++;
+            Engine.Play(sound);
             _playing = true;
             SetStatus($"Playing (compiled in {compileMs} ms)", "ok");
         }
@@ -388,10 +429,17 @@
 
     private async Task LoadExampleAsync(ChangeEventArgs e)
     {
-        var example = ReplExamples.All.FirstOrDefault(x => x.Name == e.Value as string);
+        string? name = e.Value as string;
+        var example = ReplExamples.All.FirstOrDefault(x => x.Name == name);
+        var device = SigilgraphExamples.All.FirstOrDefault(x => x.Name == name);
+        example ??= device;
         if (example is null)
             return;
-        UpdateKeyboard(example.Code);
+
+        // A device script only compiles in Sigilgraph mode, so picking one turns the mode on.
+        if (device is not null && !_sigilgraph)
+            await SetSigilgraphAsync(true);
+        UpdatePanels(example.Code);
         // Refresh on change picks the new code up; without it, a playing sound switches right away.
         await JS.InvokeVoidAsync("sigilRepl.setCode", example.Code);
         if (_playing && !_refreshOnChange)
@@ -407,7 +455,7 @@
     private async Task DownloadAsync()
     {
         var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
-        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code, ReplProfile.Instance));
+        var result = Engine.BeforeBlockingWork("compile", () => SnippetCompiler.Compile(code, Profile));
         ShowDiagnostics(result.Diagnostics);
         if (!result.Success)
         {
@@ -432,14 +480,52 @@
         }
     }
 
-    // The keyboard is for snippets that use Keys; for any other it would do nothing.
-    private void UpdateKeyboard(string code)
+    // The keyboard is for snippets that use Keys (or Poly, in Sigilgraph mode); for any other it would do nothing. The controls strip
+    // shares its place and shows for a snippet that uses the device API. A snippet typed in plain mode that uses the device API is offered the mode.
+    private void UpdatePanels(string code)
     {
-        bool uses = KeyboardUsage.Uses(code);
-        if (uses == _usesKeys)
+        bool keys = KeyboardUsage.Uses(code) || (_sigilgraph && SigilgraphUsage.UsesPoly(code));
+        bool controls = _sigilgraph && SigilgraphUsage.UsesFaceplate(code);
+        bool offer = !_sigilgraph && SigilgraphUsage.Uses(code);
+        if (keys == _usesKeys && controls == _showControls && offer == _offerSigilgraph)
             return;
-        _usesKeys = uses;
+        _usesKeys = keys;
+        _showControls = controls;
+        _offerSigilgraph = offer;
         StateHasChanged();
+    }
+
+    private async Task ToggleSigilgraphAsync(ChangeEventArgs e) => await SetSigilgraphAsync(e.Value is true);
+
+    private async Task EnterSigilgraphAsync() => await SetSigilgraphAsync(true);
+
+    private async Task SetSigilgraphAsync(bool on)
+    {
+        if (on == _sigilgraph)
+            return;
+        _sigilgraph = on;
+        if (!on)
+            SigilgraphSession.Instance.Clear();
+
+        if (on && !_sigilgraphWarm)
+        {
+            // The mode binds its own references; do that once now rather than on the first keystroke.
+            SetStatus("Preparing Sigilgraph mode", "dim");
+            await Task.Delay(1);
+            await Task.Run(() =>
+            {
+                SnippetCompiler.Compile("Knob(\"Warm\", 1, 0, 2)", SigilgraphProfile.Instance);
+                _ = EditorServices.Complete("Knob(", 5, SigilgraphProfile.Instance);
+            });
+            _sigilgraphWarm = true;
+        }
+
+        // The same text means something else under the other policy, so check it again.
+        var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
+        UpdatePanels(code);
+        if (_ready)
+            ShowDiagnostics(Engine.BeforeBlockingWork("analyze", () => SnippetCompiler.Check(code, Profile)));
+        SetStatus(on ? "Sigilgraph mode: Knob, Slider, In, Out and Poly are available" : "Plain mode", "dim");
     }
 
     private void ShowDiagnostics(IReadOnlyList<SnippetDiagnostic> diagnostics)

@@ -1,0 +1,111 @@
+@implements IDisposable
+@inject IJSRuntime JS
+@using System.Globalization
+
+@* One library Control as a widget on the faceplate strip. Everything it needs is on the control: the name for the label, the range for
+   the readout, Style to choose a dial or a fader, and Travel (which applies the Taper) to turn it. *@
+<div class="ctl-item @(Control.Style == ControlStyle.Slider ? "fader-item" : "dial-item")">
+    <span class="ctl-name" title="@Control.Name">@Control.Name</span>
+    @if (Control.Style == ControlStyle.Slider)
+    {
+        <input class="fader" type="range" min="0" max="1" step="0.001" value="@Travel"
+               aria-label="@Control.Name" aria-valuetext="@Text"
+               @oninput="OnSlide" />
+    }
+    else
+    {
+        <div class="dial" @ref="_dial" tabindex="0" role="slider"
+             aria-label="@Control.Name" aria-valuemin="@Control.Min" aria-valuemax="@Control.Max" aria-valuenow="@Control.Value" aria-valuetext="@Text"
+             data-t="@Travel.ToString("0.####", CultureInfo.InvariantCulture)"
+             title="Drag up or down to turn. Shift for fine, or use the wheel and arrow keys."
+             @onkeydown="OnKey">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path class="dial-track" d="@Arc(0, 1)" />
+                <path class="dial-fill" d="@Arc(0, Travel)" />
+                <line class="dial-hand" x1="24" y1="24" x2="@Point(Travel, 14).X" y2="@Point(Travel, 14).Y" />
+            </svg>
+        </div>
+    }
+    <span class="ctl-val">@Text</span>
+</div>
+
+@code {
+    private const double Start = -135;
+    private const double Sweep = 270;
+
+    private ElementReference _dial;
+    private DotNetObjectReference<ControlWidget>? _self;
+    private bool _attached;
+
+    [Parameter, EditorRequired]
+    public Control Control { get; set; } = null!;
+
+    private double Travel => Control.Travel;
+
+    private string Text => Control.Value.ToString("G4", CultureInfo.InvariantCulture);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_attached || Control.Style == ControlStyle.Slider)
+            return;
+        _attached = true;
+        _self = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("sigilRepl.dial.attach", _dial, _self);
+    }
+
+    /// <summary>The dial reports a position from 0 to 1; the control applies its own taper.</summary>
+    [JSInvokable]
+    public void Turn(double travel)
+    {
+        Control.Travel = travel;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void Nudge(int direction, double step)
+    {
+        Control.Travel = Control.Travel + direction * step;
+        StateHasChanged();
+    }
+
+    private void OnSlide(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double t))
+            Control.Travel = t;
+    }
+
+    private void OnKey(KeyboardEventArgs e)
+    {
+        double step = e.ShiftKey ? 0.002 : 0.02;
+        switch (e.Key)
+        {
+            case "ArrowUp" or "ArrowRight": Control.Travel += step; break;
+            case "ArrowDown" or "ArrowLeft": Control.Travel -= step; break;
+            case "PageUp": Control.Travel += 0.1; break;
+            case "PageDown": Control.Travel -= 0.1; break;
+            case "Home": Control.Travel = 0; break;
+            case "End": Control.Travel = 1; break;
+            default: return;
+        }
+    }
+
+    // A point on the dial's circle at a travel from 0 to 1, measured clockwise from straight up.
+    private static (string X, string Y) Point(double travel, double radius)
+    {
+        double angle = (Start + Sweep * travel) * Math.PI / 180.0;
+        return ((24 + radius * Math.Sin(angle)).ToString("0.##", CultureInfo.InvariantCulture),
+                (24 - radius * Math.Cos(angle)).ToString("0.##", CultureInfo.InvariantCulture));
+    }
+
+    private static string Arc(double from, double to)
+    {
+        if (to - from < 0.002)
+            to = from + 0.002;
+        var a = Point(from, 19);
+        var b = Point(to, 19);
+        string large = (to - from) * Sweep > 180 ? "1" : "0";
+        return $"M {a.X} {a.Y} A 19 19 0 {large} 1 {b.X} {b.Y}";
+    }
+
+    public void Dispose() => _self?.Dispose();
+}

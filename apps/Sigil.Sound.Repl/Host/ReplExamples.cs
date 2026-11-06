@@ -26,8 +26,11 @@ internal static class ReplExamples
         tune.Play(v => Sample(pluck, v.Frequency, root) * v.Velocity, polyphony: 8) * 0.5
         """);
 
-    private static readonly Examples.Example Keyboard = new("Keyboard",
+    private static readonly Examples.Example Keyboard = new("Live notes (Keys)",
         """
+        // For a Sigil.Sound project: Keys is a NoteInput, the library's live notes, and it exists on this page only.
+        // To write the same thing for the Sigilgraph Sound Script device, use Poly instead (see the Sigilgraph "Keyboard" example).
+        //
         // Play this with the keyboard under the editor: click the keys, or click the keyboard and use
         // A S D F G H J K (white keys) and W E T Y U (black keys). Z and X change the octave.
         //

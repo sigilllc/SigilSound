@@ -26,11 +26,11 @@ public class KeyboardUsageTests
     public void Snippets_that_do_not_use_Keys_hide_it(string code) => Assert.False(KeyboardUsage.Uses(code));
 
     [Fact]
-    public void Only_the_keyboard_example_uses_Keys()
+    public void Only_the_live_notes_example_uses_Keys()
     {
         var users = ReplExamples.All.Where(e => KeyboardUsage.Uses(e.Code)).Select(e => e.Name).ToArray();
 
-        Assert.Equal(["Keyboard"], users);
+        Assert.Equal(["Live notes (Keys)"], users);
     }
 
     [Fact]

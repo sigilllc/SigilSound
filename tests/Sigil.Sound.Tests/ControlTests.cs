@@ -308,4 +308,170 @@ public class ControlFoldingTests
 
         Assert.Equal(3200f, previous, 0);
     }
+
+    [Theory]
+    [InlineData(ControlTaper.Linear, 0.5, 50.5)]
+    [InlineData(ControlTaper.Log, 0.5, 10.0)]   // geometric middle of 1 and 100
+    [InlineData(ControlTaper.Exp, 0.5, 25.75)]  // 1 + 0.25 * 99
+    public void Travel_maps_onto_the_value_through_the_taper(ControlTaper taper, double travel, double expected)
+    {
+        var control = new Control(1, min: 1, max: 100) { Taper = taper };
+
+        control.Travel = travel;
+
+        Assert.Equal(expected, control.Value, 3);
+    }
+
+    [Theory]
+    [InlineData(ControlTaper.Linear)]
+    [InlineData(ControlTaper.Log)]
+    [InlineData(ControlTaper.Exp)]
+    public void Travel_reads_back_what_was_set_and_hits_both_ends(ControlTaper taper)
+    {
+        var control = new Control(100, min: 20, max: 18000) { Taper = taper };
+
+        foreach (double travel in new[] { 0.0, 0.1, 0.37, 0.8, 1.0 })
+        {
+            control.Travel = travel;
+            Assert.Equal(travel, control.Travel, 3);
+        }
+
+        control.Travel = 0;
+        Assert.Equal(20, control.Value, 3);
+        control.Travel = 1;
+        Assert.Equal(18000, control.Value, 1);
+    }
+
+    [Fact]
+    public void Travel_outside_the_span_stops_at_the_ends_and_rejects_non_numbers()
+    {
+        var control = new Control(0.5);
+
+        control.Travel = 7;
+        Assert.Equal(1, control.Value);
+        control.Travel = -3;
+        Assert.Equal(0, control.Value);
+        Assert.Throws<ArgumentOutOfRangeException>(() => control.Travel = double.NaN);
+    }
+
+    [Fact]
+    public void A_log_taper_needs_a_minimum_above_zero_and_an_unknown_setting_is_refused()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Control(0.5, min: 0, max: 1) { Taper = ControlTaper.Log });
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Control(0.5) { Taper = (ControlTaper)9 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Control(0.5) { Polarity = (ControlPolarity)9 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Control(0.5) { Style = (ControlStyle)9 });
+    }
+
+    [Fact]
+    public void A_taper_does_not_change_the_value_or_what_Map_does()
+    {
+        var plain = new Control(0.25, 0, 1);
+        var tapered = new Control(0.25, 0, 1) { Taper = ControlTaper.Exp };
+
+        Assert.Equal(plain.Value, tapered.Value);
+        Assert.Equal(
+            plain.Map(200, 3200, ControlCurve.Exponential).Compile(RenderContext.Default).Next(256),
+            tapered.Map(200, 3200, ControlCurve.Exponential).Compile(RenderContext.Default).Next(256));
+    }
+
+    [Fact]
+    public void A_signal_is_read_through_its_polarity()
+    {
+        var unipolar = new Control(0, min: 10, max: 20);
+        var bipolar = new Control(0, min: 10, max: 20) { Polarity = ControlPolarity.Bipolar };
+
+        unipolar.SetFromSignal(0.5);
+        bipolar.SetFromSignal(0);
+        Assert.Equal(15, unipolar.Value, 3);
+        Assert.Equal(15, bipolar.Value, 3);
+
+        bipolar.SetFromSignal(-1);
+        Assert.Equal(10, bipolar.Value, 3);
+        bipolar.SetFromSignal(1);
+        Assert.Equal(20, bipolar.Value, 3);
+        bipolar.SetFromSignal(-5);
+        Assert.Equal(10, bipolar.Value, 3);
+
+        unipolar.SetFromSignal(-0.5);
+        Assert.Equal(10, unipolar.Value, 3);
+        Assert.Throws<ArgumentOutOfRangeException>(() => unipolar.SetFromSignal(double.NaN));
+    }
+
+    [Fact]
+    public void A_signal_goes_through_the_taper_after_the_polarity()
+    {
+        var control = new Control(100, min: 100, max: 10000) { Taper = ControlTaper.Log, Polarity = ControlPolarity.Bipolar };
+
+        control.SetFromSignal(0);
+
+        Assert.Equal(1000, control.Value, 1);   // the geometric middle
+    }
+
+    [Fact]
+    public void A_travel_change_still_glides_in_the_sound()
+    {
+        var control = new Control(0, 0, 1, slewSeconds: 0.05);
+        var source = ((Param)control).Compile(RenderContext.Default);
+        Assert.Equal(0f, source.Next(256)[^1], 3);
+
+        control.Travel = 1;
+        var next = source.Next(64);
+
+        Assert.InRange(next[0], 0f, 0.5f);   // it has started moving, not jumped
+        Assert.True(next[^1] > next[0]);
+    }
+
+    [Fact]
+    public void A_selector_holds_whole_numbers_and_changes_at_once()
+    {
+        var wave = Control.Choice("Wave", ["Sine", "Saw", "Square"], selected: 1);
+
+        Assert.Equal(ControlStyle.Selector, wave.Style);
+        Assert.Equal(new[] { "Sine", "Saw", "Square" }, wave.Options);
+        Assert.Equal(1, wave.Value);
+        Assert.Equal(0, wave.SlewSeconds);
+
+        wave.Value = 1.6;
+        Assert.Equal(2, wave.Value);
+        wave.Value = 9;
+        Assert.Equal(2, wave.Value);
+
+        var source = ((Param)wave).Compile(RenderContext.Default);
+        Assert.Equal(2f, source.Next(64)[0]);
+        wave.Value = 0;
+        Assert.Equal(0f, source.Next(64)[0]);   // no glide from 2 to 0
+    }
+
+    [Fact]
+    public void A_selector_travel_is_the_place_along_its_options()
+    {
+        var wave = Control.Choice("Wave", ["Sine", "Saw", "Square"]);
+
+        wave.Travel = 0.5;
+        Assert.Equal(1, wave.Value);
+        Assert.Equal(0.5, wave.Travel, 3);
+        wave.Travel = 1;
+        Assert.Equal(2, wave.Value);
+    }
+
+    [Fact]
+    public void A_selector_needs_two_named_options_and_a_valid_start()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Control.Choice("x", ["only"]));
+        Assert.Throws<ArgumentException>(() => Control.Choice("x", ["a", " "]));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Control.Choice("x", ["a", "b"], selected: 2));
+        Assert.Throws<ArgumentNullException>(() => Control.Choice("x", null!));
+    }
+
+    [Fact]
+    public void A_plain_control_is_a_knob_with_no_options()
+    {
+        var control = new Control(0.5);
+
+        Assert.Equal(ControlStyle.Knob, control.Style);
+        Assert.Equal(ControlTaper.Linear, control.Taper);
+        Assert.Equal(ControlPolarity.Unipolar, control.Polarity);
+        Assert.Null(control.Options);
+    }
 }

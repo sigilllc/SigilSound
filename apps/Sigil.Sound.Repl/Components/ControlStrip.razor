@@ -1,0 +1,66 @@
+@using SigilgraphHost
+
+@* The faceplate of a Sigilgraph snippet, in the keyboard's place under the editor: the knobs and sliders the snippet declared, left to
+   right in the order it declared them, then the control inputs it reads. It shows the last successful run; Build changes on each
+   run so the strip refreshes. *@
+<section class="ctl" aria-label="Controls">
+    <div class="ctl-h">
+        <h2>Controls</h2>
+        @if (!Session.Declared.Any() && !Session.ControlInputsUsed.Any())
+        {
+            <span class="ctl-hint">Press Run to show this snippet's controls</span>
+        }
+        else
+        {
+            <span class="ctl-hint">Move them while it plays. They glide and never rebuild the sound.</span>
+        }
+        <span class="sp"></span>
+        @if (Session.UsesAudioInput)
+        {
+            <label class="ctl-src" title="Stands in for whatever you would wire to the device's audio input">
+                In.Audio
+                <select class="sel" value="@Session.Source" @onchange="OnSource" aria-label="Audio input source">
+                    @foreach (var source in Enum.GetValues<SigilgraphSource>())
+                    {
+                        <option value="@source">@source</option>
+                    }
+                </select>
+            </label>
+        }
+    </div>
+
+    @if (Session.Declared.Count > 0 || Session.ControlInputsUsed.Count > 0 || Session.ControlOutputsUsed.Count > 0)
+    {
+        <div class="ctl-row">
+            @foreach (var control in Session.Declared)
+            {
+                <ControlWidget @key="control" Control="control" />
+            }
+            @foreach (var input in Session.ControlInputsUsed)
+            {
+                <ControlWidget @key="input" Control="input" />
+            }
+            @foreach (int index in Session.ControlOutputsUsed)
+            {
+                <div class="ctl-item out-item" title="Out.Control sends a signal to another device's knob. The web REPL does not draw it.">
+                    <span class="ctl-name">Control Out @index</span>
+                    <span class="ctl-val">connected</span>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private static SigilgraphSession Session => SigilgraphSession.Instance;
+
+    /// <summary>Changes on every successful run, which is what makes the strip draw the new controls.</summary>
+    [Parameter]
+    public int Build { get; set; }
+
+    private void OnSource(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<SigilgraphSource>(e.Value?.ToString(), out var source))
+            Session.Source = source;
+    }
+}

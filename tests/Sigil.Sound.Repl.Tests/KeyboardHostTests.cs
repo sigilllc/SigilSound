@@ -75,7 +75,7 @@ public sealed class KeyboardHostTests : IDisposable
     [Fact]
     public void Every_example_on_the_page_compiles_and_renders_under_its_profile()
     {
-        Assert.Contains(ReplExamples.All, e => e.Name == "Keyboard");
+        Assert.Contains(ReplExamples.All, e => e.Name == "Live notes (Keys)");
 
         foreach (var example in ReplExamples.All)
         {
@@ -88,7 +88,7 @@ public sealed class KeyboardHostTests : IDisposable
     [Fact]
     public void The_keyboard_example_is_silent_until_a_key_is_played_and_then_sounds()
     {
-        var example = ReplExamples.All.Single(e => e.Name == "Keyboard");
+        var example = ReplExamples.All.Single(e => e.Name == "Live notes (Keys)");
         using var output = Play(example.Code);
 
         AudioAssert.IsSilent(Render(output, 0.1));
