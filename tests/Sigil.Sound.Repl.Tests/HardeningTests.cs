@@ -177,12 +177,20 @@ namespace Sigil.Sound.Repl.Tests
         private const string Additive128 =
             "Fn(t => { float s = 0; for (int k = 1; k <= 128; k++) s += (float)Sin(2 * PI * 110 * k * t) / k; return s * 0.1f; })";
 
-        private static void RenderFrames(Sound sound, int frames)
+        private static void RenderFrames(Sound sound, int frames) => RenderPeak(sound, frames);
+
+        private static float RenderPeak(Sound sound, int frames)
         {
             var op = sound.Compile(RenderContext.Default);
             var block = new StereoFrame[RenderContext.DefaultBlockSize];
+            float peak = 0;
             for (int done = 0; done < frames; done += block.Length)
+            {
                 op.RenderBlock(block);
+                foreach (var frame in block)
+                    peak = Math.Max(peak, Math.Abs(frame.Left));
+            }
+            return peak;
         }
 
         [Fact]
@@ -192,7 +200,9 @@ namespace Sigil.Sound.Repl.Tests
 
             // Before the budget grew with frames, this threw after 1,536 frames: 128 steps a frame against 200,000 in total.
             ExecutionGuard.Reset(frames: 2400);
-            RenderFrames(sound, 2400);
+            float peak = RenderPeak(sound, 2400);
+
+            Assert.True(peak > 0.01f, "the voice rendered silence instead of running to the end");
         }
 
         [Fact]

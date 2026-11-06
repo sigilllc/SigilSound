@@ -151,15 +151,13 @@ public sealed class SigilgraphHostTests : IDisposable
     }
 
     [Fact]
-    public void The_device_has_eight_knobs_and_four_sliders()
+    public void The_device_has_no_limit_on_knobs_or_sliders()
     {
-        string knobs = string.Join(" + ", Enumerable.Range(0, 9).Select(i => $"Knob(\"K{i}\", 0, 0, 1)"));
-        var result = SnippetCompiler.Compile(knobs, SigilgraphProfile.Instance);
-        Assert.Contains("The device has 8 knobs", Assert.Throws<SigilgraphException>(() => _session.Build(result.Run)).Message);
+        string source = string.Join(" + ", Enumerable.Range(0, 12).Select(i => $"Knob(\"K{i}\", 0, 0, 1)").Concat(Enumerable.Range(0, 6).Select(i => $"Slider(\"S{i}\", 0, 0, 1)")));
 
-        string sliders = string.Join(" + ", Enumerable.Range(0, 5).Select(i => $"Slider(\"S{i}\", 0, 0, 1)"));
-        result = SnippetCompiler.Compile(sliders, SigilgraphProfile.Instance);
-        Assert.Contains("The device has 4 sliders", Assert.Throws<SigilgraphException>(() => _session.Build(result.Run)).Message);
+        Build(source);
+
+        Assert.Equal(18, _session.Declared.Count);
     }
 
     [Fact]

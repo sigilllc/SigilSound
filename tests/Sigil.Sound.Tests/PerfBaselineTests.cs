@@ -12,12 +12,9 @@ public class PerfBaselineTests(ITestOutputHelper output)
 {
     private const double Seconds = 10;
 
-    [Fact]
+    [EnvironmentFact("SIGIL_PERF")]
     public void Record_baseline()
     {
-        if (Environment.GetEnvironmentVariable("SIGIL_PERF") != "1")
-            return;
-
         var cases = new (string Name, Sound Sound)[]
         {
             ("saw", Saw(110)),

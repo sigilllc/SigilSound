@@ -9,9 +9,6 @@ internal sealed class SigilgraphException(string message) : Exception(message);
 /// <summary>The device's fixed numbers, copied from the Workbench so a snippet that fits here fits there. A test compares them.</summary>
 internal static class SigilgraphLimits
 {
-    public const int Assets = 4;
-    public const int Knobs = 8;
-    public const int Sliders = 4;
     public const int ControlInputs = 4;
     public const int ControlOutputs = 2;
     public const int MaxPolyphony = 32;
@@ -34,8 +31,6 @@ internal sealed class SigilgraphBuild
     private readonly List<string> _assets = [];
     private readonly bool[] _controlInputsUsed = new bool[SigilgraphLimits.ControlInputs];
     private readonly bool[] _controlOutputsUsed = new bool[SigilgraphLimits.ControlOutputs];
-    private int _knobCount;
-    private int _sliderCount;
 
     internal SigilgraphBuild(SigilgraphSession session)
     {
@@ -143,8 +138,6 @@ internal sealed class SigilgraphBuild
             throw new SigilgraphException($"Asset name '{name}' is longer than {SigilgraphLimits.MaxNameLength} characters.");
 
         bool known = _assets.Contains(name, StringComparer.OrdinalIgnoreCase);
-        if (!known && _assets.Count >= SigilgraphLimits.Assets)
-            throw new SigilgraphException($"The device has {SigilgraphLimits.Assets} sample slots; '{name}' would be number {SigilgraphLimits.Assets + 1}.");
 
         var audio = _session.ResolveAsset(name);
         if (!known)
@@ -186,12 +179,6 @@ internal sealed class SigilgraphBuild
             if (first.Min != (float)min || first.Max != (float)max || first.Taper != taper)
                 throw new SigilgraphException($"{kind} '{name}' is declared twice with different values; use the same arguments, or a different name.");
             return existing;
-        }
-
-        if (isSlider ? ++_sliderCount > SigilgraphLimits.Sliders : ++_knobCount > SigilgraphLimits.Knobs)
-        {
-            int limit = isSlider ? SigilgraphLimits.Sliders : SigilgraphLimits.Knobs;
-            throw new SigilgraphException($"The device has {limit} {(isSlider ? "sliders" : "knobs")}; '{name}' would be number {limit + 1}.");
         }
 
         // The control is the page's: it keeps the value you set across edits, like the device's knob does.

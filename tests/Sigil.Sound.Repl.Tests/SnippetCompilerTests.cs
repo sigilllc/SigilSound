@@ -72,8 +72,8 @@ public class SnippetCompilerTests
     }
 
     [Fact]
-    public void Warm_snippet_compiles_and_renders()
+    public void Warming_up_runs_its_snippet_without_error()
     {
-        SnippetCompiler.Warm();
+        Assert.Null(Record.Exception(SnippetCompiler.Warm));
     }
 }

@@ -273,12 +273,10 @@ public class PitchShiftTests
 /// </summary>
 public class PitchShiftDemos
 {
-    [Fact]
+    [EnvironmentFact("SIGIL_DEMO_DIR")]
     public void Write_listening_files()
     {
-        string? folder = Environment.GetEnvironmentVariable("SIGIL_DEMO_DIR");
-        if (string.IsNullOrEmpty(folder))
-            return;
+        string folder = Environment.GetEnvironmentVariable("SIGIL_DEMO_DIR")!;
         Directory.CreateDirectory(folder);
 
         var pad = (Saw(110) * 0.25 + Saw(165.2) * 0.2 + Saw(220.4) * 0.2 + Saw(277) * 0.15).LowPass(2500).Reverb(mix: 0.2);

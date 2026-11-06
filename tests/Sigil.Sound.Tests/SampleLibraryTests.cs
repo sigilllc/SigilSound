@@ -135,14 +135,25 @@ public class SampleLibraryTests
         public AudioBuffer Load(string name) => new(new StereoFrame[1], 44_100);
     }
 
+    // A source whose one sample is a short burst at a known level, so what comes out of Sample can be checked.
+    private sealed class BurstSource : ISampleSource
+    {
+        public IReadOnlyList<string> Names { get; } = ["burst.wav"];
+
+        public AudioBuffer Load(string name) =>
+            new(Enumerable.Repeat(new StereoFrame(0.25f, 0.25f), 480).ToArray(), 48_000);
+    }
+
     [Fact]
     public void A_loaded_sample_plays_through_Sample()
     {
-        var source = new FakeSource("kick.wav");
+        var buffer = new SampleLibrary(new BurstSource()).Load("burst.wav");
 
-        var sound = Sample(new SampleLibrary(source).Load("kick.wav"));
+        var audio = Sample(buffer).Render(0.05, 48_000).ToMono();
 
-        Assert.NotNull(sound);
+        // The burst is 10 ms long: at its level at the start, silent once it has played.
+        Assert.Equal(0.25f, audio[100], 2);
+        Assert.Equal(0f, audio[^1], 3);
     }
 
     [Fact]
