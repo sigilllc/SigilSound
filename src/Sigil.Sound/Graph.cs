@@ -130,12 +130,21 @@ internal sealed class VoiceControl
     public float Velocity;
     public double HoldSeconds = double.PositiveInfinity;
 
+    // What the player is doing to the note while it sounds. Written by the voice pool on the audio thread, once per block,
+    // from the note's own state; a note started without a handle leaves them at zero.
+    public float Bend;      // semitones
+    public float Pressure;  // 0 to 1
+    public float Slide;     // 0 to 1
+
     public void Set(double frequency, int pitch, float velocity, double holdSeconds)
     {
         Frequency = (float)frequency;
         Pitch = pitch;
         Velocity = velocity;
         HoldSeconds = holdSeconds;
+        Bend = 0;
+        Pressure = 0;
+        Slide = 0;
     }
 }
 
@@ -151,13 +160,93 @@ internal static class OperatorExtensions
 /// <summary>The signals a note voice exposes; see the <c>Voice</c> type in Sigil.Sound.Notes.</summary>
 internal static class VoiceSignals
 {
-    public static Sound Frequency { get; } = Sound.FromOperator(ctx => new VoiceValueOperator(ctx.Voice, static v => v.Frequency), "voice.Frequency");
+    // Frequency and Pitch follow the note's bend, so an instrument written with v.Frequency answers to a bending player
+    // without being changed. With no bend they are the note's own value, exactly as before.
+    public static Sound Frequency { get; } = Sound.FromOperator(ctx => new VoiceExpressionOperator(ctx.Voice, VoiceExpression.Frequency, ctx), "voice.Frequency");
 
-    public static Sound Pitch { get; } = Sound.FromOperator(ctx => new VoiceValueOperator(ctx.Voice, static v => v.Pitch), "voice.Pitch");
+    public static Sound Pitch { get; } = Sound.FromOperator(ctx => new VoiceExpressionOperator(ctx.Voice, VoiceExpression.Pitch, ctx), "voice.Pitch");
+
+    public static Sound Bend { get; } = Sound.FromOperator(ctx => new VoiceExpressionOperator(ctx.Voice, VoiceExpression.Bend, ctx), "voice.Bend");
+
+    public static Sound Pressure { get; } = Sound.FromOperator(ctx => new VoiceExpressionOperator(ctx.Voice, VoiceExpression.Pressure, ctx), "voice.Pressure");
+
+    public static Sound Slide { get; } = Sound.FromOperator(ctx => new VoiceExpressionOperator(ctx.Voice, VoiceExpression.Slide, ctx), "voice.Slide");
 
     public static Sound Velocity { get; } = Sound.FromOperator(ctx => new VoiceValueOperator(ctx.Voice, static v => v.Velocity), "voice.Velocity");
 
     public static Sound Gate { get; } = Sound.FromOperator(ctx => new VoiceGateOperator(ctx.Voice, ctx), "voice.Gate");
+}
+
+internal enum VoiceExpression
+{
+    Frequency,
+    Pitch,
+    Bend,
+    Pressure,
+    Slide,
+}
+
+/// <summary>
+/// A note's pitch or expression as a signal. Bend, pressure and slide change while the note sounds, and the pool hands over a
+/// new value once per block, so the signal glides to it (a one-pole smoother, like <see cref="Control"/>) instead of stepping at
+/// block boundaries, which would be heard as a buzz on a bending note.
+/// </summary>
+/// <remarks>
+/// Settled values take a constant fill, and a note that was never bent takes the same path with the note's own frequency, so
+/// plain notes render exactly as they did before expression existed. A voice that is retriggered starts at the new note's
+/// values, with no glide from the note it replaced.
+/// </remarks>
+internal sealed class VoiceExpressionOperator : IOperator, IResettable
+{
+    /// <summary>The glide time. A controller sends updates a few hundred times a second; this hides the steps without lagging the hand.</summary>
+    internal const float GlideSeconds = 0.01f;
+
+    private readonly VoiceControl? _voice;
+    private readonly VoiceExpression _kind;
+    private readonly float _retain;
+    private float _current;
+
+    public VoiceExpressionOperator(VoiceControl? voice, VoiceExpression kind, RenderContext context)
+    {
+        _voice = voice;
+        _kind = kind;
+        _retain = new Operators.SmoothingCoefficient(context.SampleRate).For(GlideSeconds);
+        Reset();
+    }
+
+    // Frequency and Pitch glide the bend and derive from it, so a bend moves the pitch by whole semitones smoothly.
+    private float Target => _voice is null ? 0f : _kind switch
+    {
+        VoiceExpression.Pressure => _voice.Pressure,
+        VoiceExpression.Slide => _voice.Slide,
+        _ => _voice.Bend,
+    };
+
+    public void Reset() => _current = Target;
+
+    public void RenderBlock(Span<StereoFrame> block)
+    {
+        float target = Target;
+        if (_current == target || Math.Abs(target - _current) <= 1e-6f)
+        {
+            _current = target;
+            block.Fill(StereoFrame.Mono(Read(_current)));
+            return;
+        }
+
+        for (int i = 0; i < block.Length; i++)
+        {
+            _current = target + (_current - target) * _retain;
+            block[i] = StereoFrame.Mono(Read(_current));
+        }
+    }
+
+    private float Read(float smoothed) => _kind switch
+    {
+        VoiceExpression.Frequency => _voice is null ? 0f : smoothed == 0f ? _voice.Frequency : _voice.Frequency * MathF.Pow(2f, smoothed / 12f),
+        VoiceExpression.Pitch => _voice is null ? 0f : _voice.Pitch + smoothed,
+        _ => smoothed,
+    };
 }
 
 internal sealed class VoiceValueOperator(VoiceControl? voice, Func<VoiceControl, float> read) : IOperator

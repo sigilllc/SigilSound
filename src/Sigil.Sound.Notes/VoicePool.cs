@@ -70,7 +70,9 @@ internal sealed class VoicePool : IDisposable
     /// Starts a note. <paramref name="holdSeconds"/> is how long the note is held, or infinity for a note that a later
     /// <see cref="Release"/> will end.
     /// </summary>
-    public VoiceSlot Start(double frequency, int pitch, float velocity, double holdSeconds, long position)
+    // A note started with a handle (source) follows that note's bend, pressure and slide for as long as it sounds, and a
+    // release by pitch leaves it alone: only ReleaseNote ends it. A note with no handle is released by its pitch.
+    public VoiceSlot Start(double frequency, int pitch, float velocity, double holdSeconds, long position, PlayingNote? source = null)
     {
         // At the polyphony limit one sounding voice is cut, with a very short fade so it doesn't click.
         VoiceSlot? victim = null;
@@ -89,6 +91,9 @@ internal sealed class VoicePool : IDisposable
 
         var slot = FreeSlot();
         slot.Control.Set(frequency, pitch, velocity, holdSeconds);
+        slot.Source = source;
+        // Before the reset, so the voice starts where the player's hand already is instead of gliding there.
+        CopyExpression(slot);
         slot.Operator.ResetState();
         slot.Velocity = velocity;
         slot.StartedAt = position;
@@ -108,7 +113,17 @@ internal sealed class VoicePool : IDisposable
     {
         foreach (var voice in _voices)
         {
-            if (voice.Active && voice.NoteOffAt == Held && voice.Control.Pitch == pitch)
+            if (voice.Active && voice.NoteOffAt == Held && voice.Source is null && voice.Control.Pitch == pitch)
+                ReleaseSlot(voice, position);
+        }
+    }
+
+    /// <summary>Ends the voice playing <paramref name="note"/>, and only that one, however many notes share its pitch.</summary>
+    public void ReleaseNote(PlayingNote note, long position)
+    {
+        foreach (var voice in _voices)
+        {
+            if (voice.Active && voice.NoteOffAt == Held && ReferenceEquals(voice.Source, note))
                 ReleaseSlot(voice, position);
         }
     }
@@ -132,6 +147,8 @@ internal sealed class VoicePool : IDisposable
             if (!voice.Active)
                 continue;
 
+            // The player's hand, once per block; the voice's signals glide between these values.
+            CopyExpression(voice);
             voice.Operator.RenderBlock(scratch);
 
             float peak = voice.FadeRemaining > 0 ? MixFading(voice, scratch, segment) : MixSteady(voice.Velocity, scratch, segment);
@@ -190,6 +207,15 @@ internal sealed class VoicePool : IDisposable
         return peak;
     }
 
+    private static void CopyExpression(VoiceSlot voice)
+    {
+        if (voice.Source is not { } note)
+            return;
+        voice.Control.Bend = (float)note.Bend;
+        voice.Control.Pressure = (float)note.Pressure;
+        voice.Control.Slide = (float)note.Slide;
+    }
+
     private void ReleaseSlot(VoiceSlot voice, long position)
     {
         long heldFrames = Math.Max(position - voice.StartedAt, _blockSize);
@@ -233,6 +259,9 @@ internal sealed class VoicePool : IDisposable
         public long StartedAt { get; set; }
         public long NoteOffAt { get; set; }
         public long QuietFrames { get; set; }
+
+        /// <summary>The note whose bend, pressure and slide this voice follows; null for a note without a handle.</summary>
+        public PlayingNote? Source { get; set; }
 
         /// <summary>Frames left of the fade-out after the voice was cut; zero while it sounds normally.</summary>
         public int FadeRemaining { get; set; }

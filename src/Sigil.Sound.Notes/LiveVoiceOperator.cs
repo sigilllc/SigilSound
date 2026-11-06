@@ -86,6 +86,12 @@ internal sealed class LiveVoiceOperator : IOperator, IResettable, IDisposable
                 case NoteEventKind.Off:
                     _voices.Release(noteEvent.Pitch, _position);
                     break;
+                case NoteEventKind.OnNote:
+                    _voices.Start(new Note(noteEvent.Pitch).Frequency, noteEvent.Pitch, noteEvent.Velocity, double.PositiveInfinity, _position, noteEvent.Note);
+                    break;
+                case NoteEventKind.OffNote:
+                    _voices.ReleaseNote(noteEvent.Note!, _position);
+                    break;
                 default:
                     _voices.ReleaseAll(_position);
                     break;

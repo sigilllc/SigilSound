@@ -33,6 +33,56 @@ public sealed class NoteInput
     private readonly object _gate = new();
     private readonly List<WeakReference<LiveVoiceOperator>> _listeners = [];
     private readonly Dictionary<int, float> _held = [];
+    private readonly List<PlayingNote> _notes = [];
+
+    /// <summary>
+    /// Starts a note you can keep shaping while it sounds, and returns it. Unlike <see cref="NoteOn"/>, which names a note by
+    /// its pitch, the note is its own object: two started on the same pitch are two notes, and ending or bending one leaves the
+    /// other alone. This is the entry for a player with per-note expression, such as an MPE controller.
+    /// </summary>
+    /// <param name="pitch">The MIDI pitch, 0 to 127; 60 is middle C.</param>
+    /// <param name="velocity">How hard the note is played, above 0 up to 1. Defaults to 0.8.</param>
+    /// <returns>The note. Set its <see cref="PlayingNote.Bend"/>, <see cref="PlayingNote.Pressure"/> and <see cref="PlayingNote.Slide"/>; end it with <see cref="PlayingNote.Release"/>.</returns>
+    /// <remarks>
+    /// <see cref="NoteOff"/> does not end a note started here; call <see cref="PlayingNote.Release"/> (or <see cref="AllNotesOff"/>).
+    /// A sound built later still starts with the notes held now, with their current bend, pressure and slide.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">The pitch is not 0 to 127, or the velocity is not above 0 and at most 1.</exception>
+    /// <example>
+    /// <code>
+    /// // A note bent up a whole tone while it is held, as a finger would on an MPE keyboard.
+    /// var keys = new NoteInput();
+    /// var synth = keys.Play(v => Sine(v.Frequency).Adsr(0.01, 0.1, 0.9, 0.3));
+    /// var note = keys.Start(60);
+    /// note.Bend = 2;
+    /// synth * 0.4
+    /// </code>
+    /// </example>
+    public PlayingNote Start(int pitch, float velocity = 0.8f)
+    {
+        ValidatePitch(pitch);
+        if (!(velocity is > 0f and <= 1f))
+            throw new ArgumentOutOfRangeException(nameof(velocity), velocity, "Velocity must be above 0 and at most 1.");
+
+        var note = new PlayingNote(this, pitch, velocity);
+        lock (_gate)
+        {
+            _notes.Add(note);
+            Post(new NoteEvent(NoteEventKind.OnNote, pitch, velocity, note));
+        }
+
+        return note;
+    }
+
+    // The note's own Release lands here.
+    internal void Release(PlayingNote note)
+    {
+        lock (_gate)
+        {
+            if (_notes.Remove(note) && note.MarkReleased())
+                Post(new NoteEvent(NoteEventKind.OffNote, note.Pitch, 0f, note));
+        }
+    }
 
     /// <summary>Starts a note. A velocity of 0 ends it instead, as in MIDI.</summary>
     /// <param name="pitch">The MIDI pitch, 0 to 127; 60 is middle C.</param>
@@ -67,23 +117,29 @@ public sealed class NoteInput
         }
     }
 
-    /// <summary>Releases every held note.</summary>
+    /// <summary>Releases every held note, including the ones started with <see cref="Start"/>.</summary>
     public void AllNotesOff()
     {
         lock (_gate)
         {
             _held.Clear();
+            foreach (var note in _notes)
+                note.MarkReleased();
+            _notes.Clear();
             Post(new NoteEvent(NoteEventKind.AllOff, 0, 0f));
         }
     }
 
-    /// <summary>True while <paramref name="pitch"/> is held, that is between its <see cref="NoteOn"/> and <see cref="NoteOff"/>.</summary>
+    /// <summary>
+    /// True while <paramref name="pitch"/> is held: between its <see cref="NoteOn"/> and <see cref="NoteOff"/>, or while a note
+    /// started on it with <see cref="Start"/> has not been released.
+    /// </summary>
     /// <param name="pitch">The MIDI pitch, 0 to 127.</param>
     public bool IsHeld(int pitch)
     {
         ValidatePitch(pitch);
         lock (_gate)
-            return _held.ContainsKey(pitch);
+            return _held.ContainsKey(pitch) || _notes.Exists(n => n.Pitch == pitch);
     }
 
     /// <summary>
@@ -124,6 +180,8 @@ public sealed class NoteInput
             _listeners.Add(new WeakReference<LiveVoiceOperator>(listener));
             foreach (var (pitch, velocity) in _held)
                 listener.Post(new NoteEvent(NoteEventKind.On, pitch, velocity));
+            foreach (var note in _notes)
+                listener.Post(new NoteEvent(NoteEventKind.OnNote, note.Pitch, note.Velocity, note));
         }
     }
 
@@ -155,6 +213,12 @@ internal enum NoteEventKind : byte
     On,
     Off,
     AllOff,
+
+    /// <summary>A note started with <see cref="NoteInput.Start"/>; the event carries the note itself, whose state the voice reads.</summary>
+    OnNote,
+
+    /// <summary>That note's release. Matches the voice by the note, not by pitch.</summary>
+    OffNote,
 }
 
-internal readonly record struct NoteEvent(NoteEventKind Kind, int Pitch, float Velocity);
+internal readonly record struct NoteEvent(NoteEventKind Kind, int Pitch, float Velocity, PlayingNote? Note = null);

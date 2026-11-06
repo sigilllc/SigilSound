@@ -50,6 +50,25 @@ internal static class ReplExamples
         (synth * 0.3).Reverb(decay: 2, mix: 0.2)
         """);
 
+    private static readonly Examples.Example FallingNotes = new("Falling notes (Keys)",
+        """
+        // Play this with the keyboard under the editor (click the keys, or click it and use A S D F G H J K).
+        //
+        // Fall is a note modifier: a small function that takes a signal and changes it over the note's own life.
+        // Inside a voice, Fn(t => ...) starts its clock again for every note, so t is the age of that note: each key
+        // you press drops by an octave over the first second, whatever the other keys are doing.
+        Sound Fall(Sound pitch, double octaves, double seconds) =>
+            pitch * Fn(t => Pow(2, -octaves * Min(t / seconds, 1.0)));
+
+        var synth = Keys.Play(v =>
+            (Saw(Fall(v.Frequency, octaves: 1, seconds: 1)) * 0.8)
+                .LowPass(2200, q: 1.5)
+                .Adsr(attack: 0.005, decay: 0.2, sustain: 0.6, release: 0.4),
+            polyphony: 8);
+
+        (synth * 0.3).Reverb(decay: 1.5, mix: 0.15)
+        """);
+
     public static IReadOnlyList<Examples.Example> All { get; } = Build();
 
     private static List<Examples.Example> Build()
@@ -58,6 +77,7 @@ internal static class ReplExamples
         int sampler = all.FindIndex(e => e.Name == "Sampler");
         all.Insert(sampler < 0 ? all.Count : sampler + 1, SamplerFromFile);
         all.Add(Keyboard);
+        all.Add(FallingNotes);
         return all;
     }
 }

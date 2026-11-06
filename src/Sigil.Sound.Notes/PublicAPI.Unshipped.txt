@@ -1,1 +1,18 @@
 #nullable enable
+const Sigil.Sound.PlayingNote.MaxBend = 96 -> double
+override Sigil.Sound.PlayingNote.ToString() -> string!
+Sigil.Sound.NoteInput.Start(int pitch, float velocity = 0.8) -> Sigil.Sound.PlayingNote!
+Sigil.Sound.PlayingNote
+Sigil.Sound.PlayingNote.Bend.get -> double
+Sigil.Sound.PlayingNote.Bend.set -> void
+Sigil.Sound.PlayingNote.IsHeld.get -> bool
+Sigil.Sound.PlayingNote.Pitch.get -> int
+Sigil.Sound.PlayingNote.Pressure.get -> double
+Sigil.Sound.PlayingNote.Pressure.set -> void
+Sigil.Sound.PlayingNote.Release() -> void
+Sigil.Sound.PlayingNote.Slide.get -> double
+Sigil.Sound.PlayingNote.Slide.set -> void
+Sigil.Sound.PlayingNote.Velocity.get -> float
+Sigil.Sound.Voice.Bend.get -> Sigil.Sound.Sound!
+Sigil.Sound.Voice.Pressure.get -> Sigil.Sound.Sound!
+Sigil.Sound.Voice.Slide.get -> Sigil.Sound.Sound!

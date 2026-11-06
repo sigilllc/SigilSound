@@ -35,11 +35,61 @@ public sealed class Voice
     {
     }
 
-    /// <summary>The pitch in Hz, as a signal: <c>Saw(v.Frequency)</c>, or <c>Saw(v.Frequency * 2)</c> an octave up.</summary>
+    /// <summary>
+    /// The pitch in Hz, as a signal: <c>Saw(v.Frequency)</c>, or <c>Saw(v.Frequency * 2)</c> an octave up. It follows the note's
+    /// <see cref="Bend"/>, so a sound written with it answers to a bending player without any change.
+    /// </summary>
     public Sound Frequency => VoiceSignals.Frequency;
 
-    /// <summary>The MIDI pitch, 0 to 127, as a signal.</summary>
+    /// <summary>The MIDI pitch, 0 to 127, as a signal, plus the note's <see cref="Bend"/> in semitones.</summary>
     public Sound Pitch => VoiceSignals.Pitch;
+
+    /// <summary>
+    /// How far the player has moved the note's pitch, in semitones, as a signal (it glides over about 10 ms). 0 for a note
+    /// nobody is shaping, which is every note of a pattern. <see cref="Frequency"/> already includes it; use this to do
+    /// something else with the gesture, such as opening a filter on a bend. See <see cref="PlayingNote"/>.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// // A bent note also gets brighter: the filter opens by 300 Hz for every semitone of bend.
+    /// var keys = new NoteInput();
+    /// var synth = keys.Play(v => Saw(v.Frequency).LowPass(800 + v.Bend * 300).Adsr(0.01, 0.1, 0.9, 0.3));
+    /// keys.Start(55).Bend = 3;
+    /// synth * 0.3
+    /// </code>
+    /// </example>
+    public Sound Bend => VoiceSignals.Bend;
+
+    /// <summary>
+    /// How hard the player presses the note after it started, from 0 to 1, as a signal (it glides over about 10 ms). 0 for a
+    /// note nobody is shaping. See <see cref="PlayingNote"/>.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// // Pressing harder swells the note: its volume follows the pressure, from a quiet floor up.
+    /// var keys = new NoteInput();
+    /// var synth = keys.Play(v => Saw(v.Frequency).LowPass(1500) * (0.2 + v.Pressure * 0.8));
+    /// keys.Start(48).Pressure = 1;
+    /// synth * 0.3
+    /// </code>
+    /// </example>
+    public Sound Pressure => VoiceSignals.Pressure;
+
+    /// <summary>
+    /// The third dimension of a note, from 0 to 1, as a signal (it glides over about 10 ms): on an MPE keyboard, the finger
+    /// moving up and down the key. What it means is up to the sound; brightness is the usual choice. 0 for a note nobody is
+    /// shaping. See <see cref="PlayingNote"/>.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// // Sliding up the key opens the filter from 400 Hz to 4 kHz.
+    /// var keys = new NoteInput();
+    /// var synth = keys.Play(v => Saw(v.Frequency).LowPass(400 + v.Slide * 3600, q: 2).Adsr(0.01, 0.1, 0.9, 0.3));
+    /// keys.Start(52).Slide = 0.7;
+    /// synth * 0.3
+    /// </code>
+    /// </example>
+    public Sound Slide => VoiceSignals.Slide;
 
     /// <summary>
     /// How hard the note is played, from 0 to 1, as a signal. <see cref="Patterns.Play"/> already scales the voice by it;
