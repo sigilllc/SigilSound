@@ -22,6 +22,7 @@ The first public release of `Sigil.Sound`, `Sigil.Sound.Notes` and `Sigil.Sound.
 ### Sigil.Sound.Notes
 
 - **Per-note expression.** `NoteInput.Start(pitch, velocity)` starts a note that is its own object, a `PlayingNote` with `Bend` (semitones), `Pressure` and `Slide` (0 to 1) that can be changed from any thread while it sounds, and `Release()`. Two notes at one pitch are independent, which is how an MPE controller plays. A voice reads the gesture as `v.Bend`, `v.Pressure` and `v.Slide` (each glides over about 10 ms), and `v.Frequency` and `v.Pitch` already include the bend, so existing sounds answer to a bending player unchanged. Notes started with `NoteOn` are unaffected. The library has no MIDI vocabulary: a host maps its own gestures onto the three numbers. See [Live notes and expression](docs/articles/live-notes.md).
+- **Host sequence.** A pattern played without a tempo follows the host's clock, and `HostSequence.Observe` lets a host learn, while a script builds its sound, that it contains such a sequence, so it can offer play, pause, stop and a tempo for it. The observer is per thread and costs nothing when unset. Together with `Control` and `NoteInput` it is the host-integration surface; see [Hosting](docs/articles/hosting.md).
 - Notes and pitch parsing (`Notes.Parse`), scales and chords, exact rational pattern time (`Fraction`), the pattern algebra, mini-notation (`Mini`), sequencing (`Every`, `Loop`, `Beats`), live note input (`NoteInput`), and allocation-free polyphonic playback (`Play`).
 
 ### Sigil.Sound.Testing
