@@ -4,7 +4,7 @@ All notable changes to the Sigil.Sound packages. The format follows [Keep a Chan
 
 ## 0.1.0
 
-The first public release of `Sigil.Sound`, `Sigil.Sound.Notes` and `Sigil.Sound.Testing`. All three target .NET 8.0 and .NET 10.0, are trimmable and AOT-compatible, and `Sigil.Sound` has no dependencies and runs in the browser (WebAssembly).
+The first public release of `Sigil.Sound`, `Sigil.Sound.Notes`, `Sigil.Sound.Testing` and `Sigil.Sound.Repl.Core`. The first three target .NET 8.0 and .NET 10.0, are trimmable and AOT-compatible, and `Sigil.Sound` has no dependencies and runs in the browser (WebAssembly). `Sigil.Sound.Repl.Core` targets .NET 10.0 only.
 
 ### Sigil.Sound
 
@@ -28,6 +28,10 @@ The first public release of `Sigil.Sound`, `Sigil.Sound.Notes` and `Sigil.Sound.
 ### Sigil.Sound.Testing
 
 - `SignalAnalysis` (peak, RMS, frequency, spectrum) and `AudioAssert` for tolerance-based assertions on rendered audio.
+
+### Sigil.Sound.Repl.Core
+
+- The snippet compiler the browser REPL is built on, now a package for apps that let their users run Sigil.Sound scripts. `SnippetCompiler` compiles a C# snippet in memory with Roslyn and returns the `Sound` it describes. A security validator runs first, and a `SnippetProfile` lets the host add its own API and its own rules on top of the built-in ones (no files, network, reflection or processes; no preprocessor directives; loops and recursion are counted). `EditorServices` answers completion, signature and diagnostic questions for a code editor. This is a best-effort filter for code you did not write, not a security boundary: a host that runs code from strangers should still isolate it. Its public API is tracked in `PublicAPI.Shipped.txt` like the other packages, but it is pre-1.0 and may change in a minor release.
 
 ### Documentation and tooling
 

@@ -12,7 +12,7 @@ Sigil.Sound versions look like `MAJOR.MINOR.PATCH`, as in [Semantic Versioning](
 
 A suffix such as `-rc.1` or `-beta.2` marks a candidate for a release. It may still change before the release, and nuget.org hides it from searches unless you ask for pre-releases.
 
-All the packages (`Sigil.Sound`, `Sigil.Sound.Notes`, `Sigil.Sound.Testing`) share one version number and are released together. A package depends on exactly the matching version of `Sigil.Sound`, so they cannot drift apart.
+All the packages (`Sigil.Sound`, `Sigil.Sound.Notes`, `Sigil.Sound.Testing`, `Sigil.Sound.Repl.Core`) share one version number and are released together. Each one requires the matching version of `Sigil.Sound` or newer, so take them all at the same version.
 
 ## What 0.1.0 means
 

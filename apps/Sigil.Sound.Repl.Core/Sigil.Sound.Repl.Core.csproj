@@ -2,8 +2,9 @@
   <!-- Compiles REPL snippets and answers editor questions (completion, signatures, diagnostics) with Roslyn.
        Kept apart from the Blazor app so it runs, and is tested, on the desktop runtime too. -->
   <!-- Also ships as a package, for hosts that run user scripts (the Audio Workbench's Sound Script device is one). It takes the
-       version and package metadata from Directory.Build.props like the src/ packages, targets net10.0 only, and has no
-       public-API file yet: before 1.0 its surface may change, and the description says so. -->
+       version and package metadata from Directory.Build.props like the src/ packages and targets net10.0 only. Its public API is
+       tracked in PublicAPI.Shipped.txt like theirs, but it is not held to their documentation bar (no CS1591), and the description
+       says its surface may still change before 1.0. -->
   <PropertyGroup>
     <RootNamespace>Sigil.Sound.Repl</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -11,6 +12,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <!-- Tracks the public API in PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt, as in the src/ packages: a change to it is deliberate. Build-time only. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Sigil.Sound\Sigil.Sound.csproj" />

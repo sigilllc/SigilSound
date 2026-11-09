@@ -18,12 +18,33 @@ Sigil.Sound.Control.Map(double outMin, double outMax, Sigil.Sound.ControlCurve c
 Sigil.Sound.Control.Max.get -> float
 Sigil.Sound.Control.Min.get -> float
 Sigil.Sound.Control.Name.get -> string?
+Sigil.Sound.Control.Options.get -> System.Collections.Generic.IReadOnlyList<string!>?
+Sigil.Sound.Control.Polarity.get -> Sigil.Sound.ControlPolarity
+Sigil.Sound.Control.Polarity.init -> void
+Sigil.Sound.Control.SetFromSignal(double signal) -> void
 Sigil.Sound.Control.SlewSeconds.get -> float
+Sigil.Sound.Control.Style.get -> Sigil.Sound.ControlStyle
+Sigil.Sound.Control.Style.init -> void
+Sigil.Sound.Control.Taper.get -> Sigil.Sound.ControlTaper
+Sigil.Sound.Control.Taper.init -> void
+Sigil.Sound.Control.Travel.get -> double
+Sigil.Sound.Control.Travel.set -> void
 Sigil.Sound.Control.Value.get -> double
 Sigil.Sound.Control.Value.set -> void
 Sigil.Sound.ControlCurve
 Sigil.Sound.ControlCurve.Exponential = 1 -> Sigil.Sound.ControlCurve
 Sigil.Sound.ControlCurve.Linear = 0 -> Sigil.Sound.ControlCurve
+Sigil.Sound.ControlPolarity
+Sigil.Sound.ControlPolarity.Bipolar = 1 -> Sigil.Sound.ControlPolarity
+Sigil.Sound.ControlPolarity.Unipolar = 0 -> Sigil.Sound.ControlPolarity
+Sigil.Sound.ControlStyle
+Sigil.Sound.ControlStyle.Knob = 0 -> Sigil.Sound.ControlStyle
+Sigil.Sound.ControlStyle.Selector = 2 -> Sigil.Sound.ControlStyle
+Sigil.Sound.ControlStyle.Slider = 1 -> Sigil.Sound.ControlStyle
+Sigil.Sound.ControlTaper
+Sigil.Sound.ControlTaper.Exp = 2 -> Sigil.Sound.ControlTaper
+Sigil.Sound.ControlTaper.Linear = 0 -> Sigil.Sound.ControlTaper
+Sigil.Sound.ControlTaper.Log = 1 -> Sigil.Sound.ControlTaper
 Sigil.Sound.DistortionMode
 Sigil.Sound.DistortionMode.Fold = 2 -> Sigil.Sound.DistortionMode
 Sigil.Sound.DistortionMode.Fuzz = 3 -> Sigil.Sound.DistortionMode
@@ -174,6 +195,7 @@ override Sigil.Sound.Sound.ToString() -> string!
 static Sigil.Sound.AudioBuffer.FromWav(System.IO.Stream! stream) -> Sigil.Sound.AudioBuffer!
 static Sigil.Sound.AudioBuffer.FromWav(System.ReadOnlySpan<byte> bytes) -> Sigil.Sound.AudioBuffer!
 static Sigil.Sound.AudioBuffer.FromWav(string! path) -> Sigil.Sound.AudioBuffer!
+static Sigil.Sound.Control.Choice(string! name, System.Collections.Generic.IReadOnlyList<string!>! options, int selected = 0) -> Sigil.Sound.Control!
 static Sigil.Sound.Control.implicit operator Sigil.Sound.Param(Sigil.Sound.Control! control) -> Sigil.Sound.Param
 static Sigil.Sound.Control.implicit operator Sigil.Sound.Sound!(Sigil.Sound.Control! control) -> Sigil.Sound.Sound!
 static Sigil.Sound.Control.operator *(Sigil.Sound.Control! control, double gain) -> Sigil.Sound.Sound!

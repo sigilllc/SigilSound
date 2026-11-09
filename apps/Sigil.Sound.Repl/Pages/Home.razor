@@ -99,7 +99,7 @@
             }
             @if (_usesKeys)
             {
-                <PianoKeyboard Input="ReplApi.Keys" Active="_playing" />
+                <PianoKeyboard Input="ReplApi.Keys" Active="_playing" OnPressWhileStopped="StartFromKeyAsync" />
             }
         </div>
 
@@ -282,6 +282,26 @@
         var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
         UpdatePanels(code);
         await PlayAsync(code);
+    }
+
+    private bool _startingFromKey;
+
+    /// <summary>A key was pressed on the keyboard with nothing playing: run the editor's code, as if Run had been pressed.</summary>
+    private async Task StartFromKeyAsync()
+    {
+        // Keys pressed while the first compile is still going must not start it again.
+        if (_playing || _startingFromKey)
+            return;
+
+        _startingFromKey = true;
+        try
+        {
+            await RunAsync();
+        }
+        finally
+        {
+            _startingFromKey = false;
+        }
     }
 
     /// <summary>

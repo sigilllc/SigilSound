@@ -6,7 +6,7 @@
         <h2>Keyboard</h2>
         @if (!Active)
         {
-            <span class="keys-hint">Press Run to hear it</span>
+            <span class="keys-hint">Press a key, or Run, to hear it</span>
         }
         else
         {
@@ -77,9 +77,16 @@
     [Parameter, EditorRequired]
     public NoteInput Input { get; set; } = null!;
 
-    /// <summary>True while a sound is playing; only changes the hint text.</summary>
+    /// <summary>True while a sound is playing; changes the hint text and decides whether a key press has to start it first.</summary>
     [Parameter]
     public bool Active { get; set; }
+
+    /// <summary>
+    /// Raised by a key press while nothing is playing. Whoever owns the sound starts it, so pressing a key is enough to hear it: the
+    /// press is already the user's go-ahead (and the gesture Web Audio needs). The note is held meanwhile and sounds as soon as the sound exists.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnPressWhileStopped { get; set; }
 
     private bool _open = true;
     private int _base = 48; // C3, so the computer keys start on middle C
@@ -246,6 +253,8 @@
     {
         _holds[pitch] = _holds.GetValueOrDefault(pitch) + 1;
         Input.NoteOn(pitch, Velocity);
+        if (!Active && OnPressWhileStopped.HasDelegate)
+            _ = OnPressWhileStopped.InvokeAsync();
     }
 
     private void Release(int pitch)

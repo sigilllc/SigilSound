@@ -41,6 +41,7 @@ Sigil.Sound.Fraction.Fraction(long numerator, long denominator = 1) -> void
 Sigil.Sound.Fraction.Numerator.get -> long
 Sigil.Sound.Fraction.Reciprocal() -> Sigil.Sound.Fraction
 Sigil.Sound.Fraction.ToDouble() -> double
+Sigil.Sound.HostSequence
 Sigil.Sound.Mini
 Sigil.Sound.MiniNotationException
 Sigil.Sound.MiniNotationException.MiniNotationException(string! message, int position, string! text) -> void
@@ -64,6 +65,7 @@ Sigil.Sound.NoteInput.NoteInput() -> void
 Sigil.Sound.NoteInput.NoteOff(int pitch) -> void
 Sigil.Sound.NoteInput.NoteOn(int pitch, float velocity = 0.8) -> void
 Sigil.Sound.NoteInput.Play(System.Func<Sigil.Sound.Voice!, Sigil.Sound.Sound!>! voice, int polyphony = 8) -> Sigil.Sound.Sound!
+Sigil.Sound.NoteInput.Start(int pitch, float velocity = 0.8) -> Sigil.Sound.PlayingNote!
 Sigil.Sound.NotePatterns
 Sigil.Sound.Notes
 Sigil.Sound.Pat
@@ -92,6 +94,17 @@ Sigil.Sound.PatternPlayback
 Sigil.Sound.PatternSignals
 Sigil.Sound.Patterns
 Sigil.Sound.Pitch
+Sigil.Sound.PlayingNote
+Sigil.Sound.PlayingNote.Bend.get -> double
+Sigil.Sound.PlayingNote.Bend.set -> void
+Sigil.Sound.PlayingNote.IsHeld.get -> bool
+Sigil.Sound.PlayingNote.Pitch.get -> int
+Sigil.Sound.PlayingNote.Pressure.get -> double
+Sigil.Sound.PlayingNote.Pressure.set -> void
+Sigil.Sound.PlayingNote.Release() -> void
+Sigil.Sound.PlayingNote.Slide.get -> double
+Sigil.Sound.PlayingNote.Slide.set -> void
+Sigil.Sound.PlayingNote.Velocity.get -> float
 Sigil.Sound.Scale
 Sigil.Sound.Scale.Count.get -> int
 Sigil.Sound.Scale.Degrees(params int[]! degrees) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
@@ -110,9 +123,12 @@ Sigil.Sound.TimedNote.Start.init -> void
 Sigil.Sound.TimedNote.TimedNote() -> void
 Sigil.Sound.TimedNote.TimedNote(double Start, Sigil.Sound.Note Note) -> void
 Sigil.Sound.Voice
+Sigil.Sound.Voice.Bend.get -> Sigil.Sound.Sound!
 Sigil.Sound.Voice.Frequency.get -> Sigil.Sound.Sound!
 Sigil.Sound.Voice.Gate.get -> Sigil.Sound.Sound!
 Sigil.Sound.Voice.Pitch.get -> Sigil.Sound.Sound!
+Sigil.Sound.Voice.Pressure.get -> Sigil.Sound.Sound!
+Sigil.Sound.Voice.Slide.get -> Sigil.Sound.Sound!
 Sigil.Sound.Voice.Velocity.get -> Sigil.Sound.Sound!
 const Sigil.Sound.Beats.Eighth = 0.5 -> double
 const Sigil.Sound.Beats.Half = 2 -> double
@@ -274,12 +290,14 @@ const Sigil.Sound.Pitch.Gs5 = 80 -> int
 const Sigil.Sound.Pitch.Gs6 = 92 -> int
 const Sigil.Sound.Pitch.Gs7 = 104 -> int
 const Sigil.Sound.Pitch.Gs8 = 116 -> int
+const Sigil.Sound.PlayingNote.MaxBend = 96 -> double
 override Sigil.Sound.Arc.ToString() -> string!
 override Sigil.Sound.Chord.ToString() -> string!
 override Sigil.Sound.Fraction.Equals(object? obj) -> bool
 override Sigil.Sound.Fraction.GetHashCode() -> int
 override Sigil.Sound.Fraction.ToString() -> string!
 override Sigil.Sound.Note.ToString() -> string!
+override Sigil.Sound.PlayingNote.ToString() -> string!
 override Sigil.Sound.Scale.ToString() -> string!
 static Sigil.Sound.Chord.Augmented(int root) -> Sigil.Sound.Chord!
 static Sigil.Sound.Chord.Diminished(int root) -> Sigil.Sound.Chord!
@@ -314,6 +332,7 @@ static Sigil.Sound.Fraction.operator <=(Sigil.Sound.Fraction a, Sigil.Sound.Frac
 static Sigil.Sound.Fraction.operator ==(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
 static Sigil.Sound.Fraction.operator >(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
 static Sigil.Sound.Fraction.operator >=(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> bool
+static Sigil.Sound.HostSequence.Observe(System.Action! onFollowsHost) -> System.IDisposable!
 static Sigil.Sound.Mini.Chords(string! text) -> Sigil.Sound.Pattern<Sigil.Sound.Chord!>!
 static Sigil.Sound.Mini.Integers(string! text) -> Sigil.Sound.Pattern<int>!
 static Sigil.Sound.Mini.Notes(string! text) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!

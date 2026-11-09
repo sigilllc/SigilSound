@@ -1,0 +1,115 @@
+#nullable enable
+Sigil.Sound.Repl.CompileResult
+Sigil.Sound.Repl.CompileResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>!
+Sigil.Sound.Repl.CompileResult.Run() -> Sigil.Sound.Sound!
+Sigil.Sound.Repl.CompileResult.Success.get -> bool
+Sigil.Sound.Repl.CompletionItem
+Sigil.Sound.Repl.CompletionItem.CompletionItem(string! Label, string! Kind, string! Detail, string? Documentation, string! SortText, string? InsertText = null, string? FilterText = null, int? ReplaceBefore = null, int? ReplaceAfter = null) -> void
+Sigil.Sound.Repl.CompletionItem.Detail.get -> string!
+Sigil.Sound.Repl.CompletionItem.Detail.init -> void
+Sigil.Sound.Repl.CompletionItem.Documentation.get -> string?
+Sigil.Sound.Repl.CompletionItem.Documentation.init -> void
+Sigil.Sound.Repl.CompletionItem.FilterText.get -> string?
+Sigil.Sound.Repl.CompletionItem.FilterText.init -> void
+Sigil.Sound.Repl.CompletionItem.InsertText.get -> string?
+Sigil.Sound.Repl.CompletionItem.InsertText.init -> void
+Sigil.Sound.Repl.CompletionItem.Kind.get -> string!
+Sigil.Sound.Repl.CompletionItem.Kind.init -> void
+Sigil.Sound.Repl.CompletionItem.Label.get -> string!
+Sigil.Sound.Repl.CompletionItem.Label.init -> void
+Sigil.Sound.Repl.CompletionItem.ReplaceAfter.get -> int?
+Sigil.Sound.Repl.CompletionItem.ReplaceAfter.init -> void
+Sigil.Sound.Repl.CompletionItem.ReplaceBefore.get -> int?
+Sigil.Sound.Repl.CompletionItem.ReplaceBefore.init -> void
+Sigil.Sound.Repl.CompletionItem.SortText.get -> string!
+Sigil.Sound.Repl.CompletionItem.SortText.init -> void
+Sigil.Sound.Repl.EditorServices
+Sigil.Sound.Repl.Examples
+Sigil.Sound.Repl.Examples.Example
+Sigil.Sound.Repl.Examples.Example.Code.get -> string!
+Sigil.Sound.Repl.Examples.Example.Code.init -> void
+Sigil.Sound.Repl.Examples.Example.Example(string! Name, string! Code) -> void
+Sigil.Sound.Repl.Examples.Example.Name.get -> string!
+Sigil.Sound.Repl.Examples.Example.Name.init -> void
+Sigil.Sound.Repl.ExecutionGuard
+Sigil.Sound.Repl.ExecutionLimitException
+Sigil.Sound.Repl.ExecutionLimitException.ExecutionLimitException(string! message) -> void
+Sigil.Sound.Repl.FolderSampleSource
+Sigil.Sound.Repl.FolderSampleSource.FolderSampleSource(string! root, long maxFileBytes = 67108864) -> void
+Sigil.Sound.Repl.FolderSampleSource.Load(string! name) -> Sigil.Sound.AudioBuffer!
+Sigil.Sound.Repl.FolderSampleSource.MaxFileBytes.get -> long
+Sigil.Sound.Repl.FolderSampleSource.Names.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Sigil.Sound.Repl.FolderSampleSource.Refresh() -> void
+Sigil.Sound.Repl.FolderSampleSource.RescanInterval.get -> System.TimeSpan
+Sigil.Sound.Repl.FolderSampleSource.RescanInterval.init -> void
+Sigil.Sound.Repl.FolderSampleSource.Root.get -> string!
+Sigil.Sound.Repl.ParameterInfo
+Sigil.Sound.Repl.ParameterInfo.Documentation.get -> string?
+Sigil.Sound.Repl.ParameterInfo.Documentation.init -> void
+Sigil.Sound.Repl.ParameterInfo.End.get -> int
+Sigil.Sound.Repl.ParameterInfo.End.init -> void
+Sigil.Sound.Repl.ParameterInfo.ParameterInfo(int Start, int End, string? Documentation) -> void
+Sigil.Sound.Repl.ParameterInfo.Start.get -> int
+Sigil.Sound.Repl.ParameterInfo.Start.init -> void
+Sigil.Sound.Repl.SignatureHelp
+Sigil.Sound.Repl.SignatureHelp.ActiveParameter.get -> int
+Sigil.Sound.Repl.SignatureHelp.ActiveParameter.init -> void
+Sigil.Sound.Repl.SignatureHelp.ActiveSignature.get -> int
+Sigil.Sound.Repl.SignatureHelp.ActiveSignature.init -> void
+Sigil.Sound.Repl.SignatureHelp.SignatureHelp(System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SignatureInfo!>! Signatures, int ActiveSignature, int ActiveParameter) -> void
+Sigil.Sound.Repl.SignatureHelp.Signatures.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SignatureInfo!>!
+Sigil.Sound.Repl.SignatureHelp.Signatures.init -> void
+Sigil.Sound.Repl.SignatureInfo
+Sigil.Sound.Repl.SignatureInfo.Documentation.get -> string?
+Sigil.Sound.Repl.SignatureInfo.Documentation.init -> void
+Sigil.Sound.Repl.SignatureInfo.Label.get -> string!
+Sigil.Sound.Repl.SignatureInfo.Label.init -> void
+Sigil.Sound.Repl.SignatureInfo.Parameters.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.ParameterInfo!>!
+Sigil.Sound.Repl.SignatureInfo.Parameters.init -> void
+Sigil.Sound.Repl.SignatureInfo.SignatureInfo(string! Label, string? Documentation, System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.ParameterInfo!>! Parameters) -> void
+Sigil.Sound.Repl.SnippetCompiler
+Sigil.Sound.Repl.SnippetDiagnostic
+Sigil.Sound.Repl.SnippetDiagnostic.EndColumn.get -> int
+Sigil.Sound.Repl.SnippetDiagnostic.EndColumn.init -> void
+Sigil.Sound.Repl.SnippetDiagnostic.EndLine.get -> int
+Sigil.Sound.Repl.SnippetDiagnostic.EndLine.init -> void
+Sigil.Sound.Repl.SnippetDiagnostic.Id.get -> string!
+Sigil.Sound.Repl.SnippetDiagnostic.Id.init -> void
+Sigil.Sound.Repl.SnippetDiagnostic.IsError.get -> bool
+Sigil.Sound.Repl.SnippetDiagnostic.IsError.init -> void
+Sigil.Sound.Repl.SnippetDiagnostic.Message.get -> string!
+Sigil.Sound.Repl.SnippetDiagnostic.Message.init -> void
+Sigil.Sound.Repl.SnippetDiagnostic.SnippetDiagnostic(string! Id, bool IsError, string! Message, int StartLine, int StartColumn, int EndLine, int EndColumn) -> void
+Sigil.Sound.Repl.SnippetDiagnostic.StartColumn.get -> int
+Sigil.Sound.Repl.SnippetDiagnostic.StartColumn.init -> void
+Sigil.Sound.Repl.SnippetDiagnostic.StartLine.get -> int
+Sigil.Sound.Repl.SnippetDiagnostic.StartLine.init -> void
+Sigil.Sound.Repl.SnippetProfile
+Sigil.Sound.Repl.SnippetProfile.IsAllowedNamespace(string! ns) -> bool
+Sigil.Sound.Repl.SnippetProfile.IsBlockedNamespace(string! ns) -> bool
+Sigil.Sound.Repl.SnippetProfile.IsForbiddenSystemType(string! name) -> bool
+Sigil.Sound.Repl.SnippetProfile.SampleNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Sigil.Sound.Repl.SnippetProfile.SnippetProfile(System.Collections.Generic.IEnumerable<string!>? extraUsings = null, System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>? extraAssemblies = null, System.Collections.Generic.IEnumerable<string!>? extraAllowedNamespaces = null, System.Collections.Generic.IEnumerable<string!>? extraBlockedNamespaces = null, System.Collections.Generic.IEnumerable<string!>? extraForbiddenSystemTypes = null, System.Action<Sigil.Sound.Repl.SnippetValidationContext!>? extraValidation = null, Sigil.Sound.ISampleSource? samples = null) -> void
+Sigil.Sound.Repl.SnippetProfile.Usings.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Sigil.Sound.Repl.SnippetSecurityValidator
+Sigil.Sound.Repl.SnippetValidationContext
+Sigil.Sound.Repl.SnippetValidationContext.IsUserText(Microsoft.CodeAnalysis.SyntaxNode! node) -> bool
+Sigil.Sound.Repl.SnippetValidationContext.Model.get -> Microsoft.CodeAnalysis.SemanticModel!
+Sigil.Sound.Repl.SnippetValidationContext.Report(string! id, string! message, Microsoft.CodeAnalysis.SyntaxNode! node) -> void
+Sigil.Sound.Repl.SnippetValidationContext.Root.get -> Microsoft.CodeAnalysis.SyntaxNode!
+const Sigil.Sound.Repl.ExecutionGuard.MaxLoopSteps = 200000 -> int
+const Sigil.Sound.Repl.ExecutionGuard.MaxRecursionDepth = 256 -> int
+const Sigil.Sound.Repl.ExecutionGuard.MaxStepsPerFrame = 1024 -> int
+static Sigil.Sound.Repl.EditorServices.Complete(string! code, int offset, Sigil.Sound.Repl.SnippetProfile? profile = null) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.CompletionItem!>!
+static Sigil.Sound.Repl.EditorServices.Describe(string! code, int offset, Sigil.Sound.Repl.SnippetProfile? profile = null) -> string?
+static Sigil.Sound.Repl.EditorServices.Signatures(string! code, int offset, Sigil.Sound.Repl.SnippetProfile? profile = null) -> Sigil.Sound.Repl.SignatureHelp?
+static Sigil.Sound.Repl.EditorServices.Warm() -> void
+static Sigil.Sound.Repl.Examples.All.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.Examples.Example!>!
+static Sigil.Sound.Repl.ExecutionGuard.CountStep() -> void
+static Sigil.Sound.Repl.ExecutionGuard.EnterCall() -> void
+static Sigil.Sound.Repl.ExecutionGuard.ExitCall() -> void
+static Sigil.Sound.Repl.ExecutionGuard.Reset(int frames = 0) -> void
+static Sigil.Sound.Repl.SnippetCompiler.Check(string! code, Sigil.Sound.Repl.SnippetProfile? profile = null) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>!
+static Sigil.Sound.Repl.SnippetCompiler.Compile(string! code, Sigil.Sound.Repl.SnippetProfile? profile = null) -> Sigil.Sound.Repl.CompileResult!
+static Sigil.Sound.Repl.SnippetCompiler.Warm() -> void
+static Sigil.Sound.Repl.SnippetProfile.Default.get -> Sigil.Sound.Repl.SnippetProfile!
