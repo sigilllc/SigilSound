@@ -1,0 +1,212 @@
+name: Release Sigil.Sound
+
+# Checks and packs Sigil.Sound, Sigil.Sound.Notes and Sigil.Sound.Testing, publishes them to nuget.org, deploys the
+# docs to Cloudflare (docs.yml), and, for a tag, creates the GitHub Release. Sigil.Sound.Repl.Core is not packaged
+# (launch plan C4).
+#
+#   workflow_dispatch  you start it by hand: publishes the version you give (empty = VersionPrefix) so AudioWorkbench
+#                      can reference the package. Tick dry_run to check and pack only.
+#   push tag v*        publishes the tag's version, deploys the docs and creates the GitHub Release.
+#
+# Both paths run the same checks (scripts/release-check.sh). A stable version must come from main. Tests are not run
+# here: run them locally before releasing (project convention). The checks run locally too:
+#   bash scripts/release-check.sh 0.1.0 artifacts/nuget
+#
+# Go-live setup (launch plan C3). Do it on the day you first publish, not before:
+#   1. nuget.org > your username > Trusted Publishing > add a policy, owned by the SigilLLC org (or by your user if you
+#      are a member):  repository owner sigilllc, repository SigilSound, workflow file release.yml, environment nuget.
+#      A policy on a private repo stays active only until the first successful publish, which is 7 days. Create it on go day.
+#   2. Repository secret NUGET_USER: your nuget.org profile name (not an email address).
+#   3. Repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID for the docs.
+#   No NuGet API key is stored. NuGet/login exchanges the run's OIDC token for a short-lived key (valid one hour).
+#   Until the policy exists nothing can publish: the publish job fails at login.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, such as 0.1.0 or 0.1.0-rc.1. Empty means VersionPrefix from Directory.Build.props.'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Check and pack only; publish nothing'
+        type: boolean
+        default: false
+      deploy_docs:
+        description: 'Deploy the docs to Cloudflare after publishing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-sigil-sound
+  cancel-in-progress: false
+
+jobs:
+  pack:
+    name: Check and pack
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Work out the version
+        id: version
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" == "push" ]]; then
+            version="${TAG#v}"
+          else
+            version="${INPUT_VERSION#v}"
+          fi
+          if [[ -z "$version" ]]; then
+            version=$(tr -d '\r' < Directory.Build.props | sed -n 's:.*<VersionPrefix>\([^<]*\)</VersionPrefix>.*:\1:p')
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version: $version"
+
+      - name: A stable release must be on main
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Release candidates may come from any branch; 0.1.0 may not.
+          if [[ "$VERSION" == *-* ]]; then
+            echo "Pre-release $VERSION: branch not checked."
+            exit 0
+          fi
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "error: $SHA is not on main. Release stable versions from main."
+            exit 1
+          fi
+
+      - name: Release checks
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/release-check.sh "$VERSION"
+
+      - name: Pack
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for project in \
+            src/Sigil.Sound/Sigil.Sound.csproj \
+            src/Sigil.Sound.Notes/Sigil.Sound.Notes.csproj \
+            src/Sigil.Sound.Testing/Sigil.Sound.Testing.csproj; do
+            dotnet pack "$project" -c Release -p:Version="$VERSION" -o artifacts/nuget
+          done
+
+      - name: Check the packages and a clean consumer
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/release-check.sh "$VERSION" artifacts/nuget
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sigil-sound-${{ steps.version.outputs.version }}
+          path: artifacts/nuget/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish to nuget.org
+    needs: pack
+    if: github.event_name == 'push' || !inputs.dry_run
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write # trusted publishing: GitHub's OIDC token is exchanged for a short-lived NuGet key
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sigil-sound-${{ needs.pack.outputs.version }}
+          path: artifacts/nuget
+
+      - name: NuGet login (short-lived key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to nuget.org
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          # Each .snupkg is uploaded with its .nupkg, so the symbols reach the nuget.org symbol server too.
+          # --skip-duplicate makes a re-run, or a tag after a manual publish of the same version, harmless.
+          dotnet nuget push artifacts/nuget/*.nupkg \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+  docs:
+    name: Deploy docs
+    needs: [pack, publish]
+    if: github.event_name == 'push' || inputs.deploy_docs
+    uses: ./.github/workflows/docs.yml
+    with:
+      version: ${{ needs.pack.outputs.version }}
+    secrets: inherit
+
+  github-release:
+    name: GitHub Release
+    needs: [pack, publish]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sigil-sound-${{ needs.pack.outputs.version }}
+          path: artifacts/nuget
+
+      - name: Create the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.pack.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Notes are the changelog section for this version, up to the next version heading.
+          tr -d '\r' < CHANGELOG.md \
+            | awk -v heading="## $VERSION" '$0 == heading { on = 1; next } /^## / { on = 0 } on' > notes.md
+          flags=()
+          if [[ "$VERSION" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "v$VERSION" artifacts/nuget/* \
+            --verify-tag \
+            --title "Sigil.Sound $VERSION" \
+            --notes-file notes.md \
+            "${flags[@]}"

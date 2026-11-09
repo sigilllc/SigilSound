@@ -1,0 +1,9 @@
+{
+  // The docs site and the browser REPL, built into docs/_site by docs.yml. Static assets only, no Worker code.
+  "name": "sigil-sound-docs",
+  "compatibility_date": "2025-10-08",
+  "assets": {
+    "directory": "./docs/_site",
+    "not_found_handling": "404-page"
+  }
+}

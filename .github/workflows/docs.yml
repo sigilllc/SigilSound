@@ -1,22 +1,43 @@
 name: Docs
 
-# Builds the DocFX API reference and publishes it to GitHub Pages together with the browser REPL (at /repl/), so every
-# example's "Open in REPL" link lands on the same site. Manual for now. The example test runs locally before a deploy:
+# Builds the DocFX API reference and the browser REPL (served at /repl/) and deploys them to Cloudflare as a Workers
+# static-assets site (wrangler.jsonc). Only the latest docs are served, and every page footer names the version they
+# describe. release.yml calls this after a successful NuGet push; it can also be dispatched alone to redeploy the docs.
+#
+# Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (a token allowed to edit Workers).
+# The custom domain is attached to the Worker in the Cloudflare dashboard (launch plan D3).
+#
+# The example test runs locally before a deploy:
 #   dotnet test tests/Sigil.Sound.Repl.Tests --filter DocExampleTests
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version named in the footer. Empty means VersionPrefix from Directory.Build.props.'
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ''
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: docs-cloudflare
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
+    name: Build and deploy to Cloudflare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +48,29 @@ jobs:
             8.0.x
             10.0.x
 
+      - name: Work out the version
+        id: version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="${INPUT_VERSION#v}"
+          if [[ -z "$version" ]]; then
+            version=$(tr -d '\r' < Directory.Build.props | sed -n 's:.*<VersionPrefix>\([^<]*\)</VersionPrefix>.*:\1:p')
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Restore tools
         run: dotnet tool restore
 
       - name: Build API docs
         working-directory: docs
-        run: dotnet docfx docfx.json --warningsAsErrors
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          dotnet docfx docfx.json --warningsAsErrors \
+            --metadata "_appFooter=Sigil.Sound $VERSION. MIT licensed. Examples on these pages open in the browser REPL."
 
       - name: Publish the REPL
         run: dotnet publish apps/Sigil.Sound.Repl -c Release -o artifacts/repl-publish
@@ -44,16 +82,11 @@ jobs:
           sed -i 's|<base href="/" />|<base href="/repl/" />|' docs/_site/repl/index.html
           grep -q '<base href="/repl/" />' docs/_site/repl/index.html
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/_site
+      - name: Install Wrangler
+        run: npm install -g wrangler@4.150.0
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy
