@@ -98,7 +98,7 @@ Sigil.Sound is a clean, modern rewrite of the engine powering Sigilgraph Audio W
 
 ## License & Trademarks
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE). Bundled audio, loaded assets and dependencies, with their sources and terms, are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ### Trademarks
 

@@ -1,9 +1,19 @@
 {
-  // The docs site and the browser REPL, built into docs/_site by docs.yml. Static assets only, no Worker code.
+  // The docs site and the browser REPL, built into docs/_site by scripts/build-site.sh (run by docs.yml).
+  // Static assets only, no Worker code.
   "name": "sigil-sound-docs",
   "compatibility_date": "2025-10-08",
   "assets": {
     "directory": "./docs/_site",
     "not_found_handling": "404-page"
-  }
+  },
+
+  // PRIVATE UNTIL LAUNCH. With these two off and no route below, a deployed Worker has no URL at all: nothing can reach it, so
+  // the pipeline can be run and tested without publishing anything.
+  "workers_dev": false,
+  "preview_urls": false
+
+  // GO LIVE (launch plan D3): attach the domain here, or in the dashboard under the Worker's Domains & Routes. The zone must be on
+  // this Cloudflare account. Add a comma after "preview_urls": false and uncomment:
+  // "routes": [{ "pattern": "sound.sigilaud.io", "custom_domain": true }]
 }

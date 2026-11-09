@@ -61,26 +61,12 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Restore tools
-        run: dotnet tool restore
-
-      - name: Build API docs
-        working-directory: docs
+      # One script builds the whole site (docs, REPL, headers, 404 page) and checks it against the Workers limits, so what is
+      # checked locally with `bash scripts/build-site.sh` is what ships.
+      - name: Build the site
         env:
           VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          dotnet docfx docfx.json --warningsAsErrors \
-            --metadata "_appFooter=Sigil.Sound $VERSION. MIT licensed. Examples on these pages open in the browser REPL."
-
-      - name: Publish the REPL
-        run: dotnet publish apps/Sigil.Sound.Repl -c Release -o artifacts/repl-publish
-
-      - name: Place the REPL under /repl/
-        run: |
-          cp -r artifacts/repl-publish/wwwroot docs/_site/repl
-          # The REPL is served from /repl/, not from the site root.
-          sed -i 's|<base href="/" />|<base href="/repl/" />|' docs/_site/repl/index.html
-          grep -q '<base href="/repl/" />' docs/_site/repl/index.html
+        run: bash scripts/build-site.sh "$VERSION"
 
       - name: Install Wrangler
         run: npm install -g wrangler@4.150.0
