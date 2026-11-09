@@ -46,6 +46,8 @@ public sealed class SnippetProfile
         "Type", "AppDomain", "Environment", "Activator", "GC", "Console", "AppContext", "OperatingSystem",
         "MarshalByRefObject", "TypedReference", "ArgIterator", "RuntimeTypeHandle", "RuntimeFieldHandle",
         "RuntimeMethodHandle", "Guid", "Uri",
+        // A delegate's Method and Target, DynamicInvoke and CreateDelegate are reflection by another name (Func and Action are unaffected).
+        "Delegate", "MulticastDelegate",
     ];
 
     private readonly string[] _blocked;

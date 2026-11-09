@@ -203,49 +203,71 @@ public static class SnippetSecurityValidator
             base.VisitArrayCreationExpression(node);
         }
 
+        /// <summary>
+        /// The rules for the few members that are never allowed, whatever the namespace and type rules say. They are decided on the
+        /// symbol, so they hold wherever the member is named: a call, and also a method group turned into a delegate
+        /// (<c>Func&lt;string, AudioBuffer&gt; load = AudioBuffer.FromWav;</c> or <c>var g = s.GetType;</c>), which never contains the call.
+        /// </summary>
+        private static (string Id, string Message)? Restriction(IMethodSymbol method)
+        {
+            if (method.Name == "GetType" &&
+                (method.ContainingType?.SpecialType == SpecialType.System_Object ||
+                 method.ReturnType?.ToDisplayString() == "System.Type"))
+            {
+                return ("SIGIL_SEC07", "'GetType' is not permitted in the REPL.");
+            }
+
+            if (method.Name == "RenderToWav" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.Sound")
+                return ("SIGIL_SEC09", "'RenderToWav' is not permitted in the REPL.");
+
+            // The path overload reads a file from the host. Overloads taking a stream or bytes stay allowed.
+            if (method.Name == "FromWav" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.AudioBuffer" &&
+                method.Parameters.Length > 0 && method.Parameters[0].Type.SpecialType == SpecialType.System_String)
+            {
+                return ("SIGIL_SEC09", "Loading a WAV file from disk with 'AudioBuffer.FromWav(path)' is not permitted in the REPL.");
+            }
+
+            if (method.Name == "Render" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.Sound")
+                return ("SIGIL_SEC09", "'Sound.Render' inside snippets is not permitted; snippets must return a Sound to play in real time.");
+
+            return null;
+        }
+
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var symbolInfo = model.GetSymbolInfo(node);
             var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault();
-            if (symbol is IMethodSymbol method)
+            if (symbol is IMethodSymbol method && Restriction(method) is { } restriction)
             {
-                if (method.Name == "GetType" &&
-                    (method.ContainingType?.SpecialType == SpecialType.System_Object ||
-                     method.ReturnType?.ToDisplayString() == "System.Type"))
-                {
-                    diagnostics.Add(CreateDiagnostic("SIGIL_SEC07", "Calling 'GetType()' is not permitted in the REPL.", node.GetLocation()));
-                    return;
-                }
-
-                if (method.Name == "RenderToWav" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.Sound")
-                {
-                    diagnostics.Add(CreateDiagnostic("SIGIL_SEC09", "Calling 'RenderToWav' is not permitted in the REPL.", node.GetLocation()));
-                    return;
-                }
-
-                // The path overload reads a file from the host. Overloads taking a stream or bytes stay allowed.
-                if (method.Name == "FromWav" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.AudioBuffer" &&
-                    method.Parameters.Length > 0 && method.Parameters[0].Type.SpecialType == SpecialType.System_String)
-                {
-                    diagnostics.Add(CreateDiagnostic("SIGIL_SEC09", "Loading a WAV file from disk with 'AudioBuffer.FromWav(path)' is not permitted in the REPL.", node.GetLocation()));
-                    return;
-                }
-
-                if (method.Name == "Render" && method.ContainingType?.ToDisplayString() == "Sigil.Sound.Sound")
-                {
-                    diagnostics.Add(CreateDiagnostic(
-                        "SIGIL_SEC09",
-                        "Calling 'Sound.Render' directly inside snippets is not permitted; snippets must return a Sound to play in real time.",
-                        node.GetLocation()));
-                    return;
-                }
+                diagnostics.Add(CreateDiagnostic(restriction.Id, restriction.Message, node.GetLocation()));
+                return;
             }
 
             base.VisitInvocationExpression(node);
         }
 
+        // A restricted method named without being called: it can be turned into a delegate and called later. A call that hit a rule has
+        // already been reported and does not visit its children, so a name is reported once.
+        private void CheckRestrictedMethodGroup(SimpleNameSyntax node)
+        {
+            if (!document.IsUserText(node.Span))
+                return;
+
+            var info = model.GetSymbolInfo(node);
+            var candidates = info.Symbol is { } resolved ? [resolved] : info.CandidateSymbols;
+            foreach (var candidate in candidates)
+            {
+                if (candidate is IMethodSymbol method && Restriction(method) is { } restriction)
+                {
+                    diagnostics.Add(CreateDiagnostic(restriction.Id, restriction.Message, node.GetLocation()));
+                    return;
+                }
+            }
+        }
+
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
+            CheckRestrictedMethodGroup(node);
             CheckSymbol(node);
             base.VisitIdentifierName(node);
         }

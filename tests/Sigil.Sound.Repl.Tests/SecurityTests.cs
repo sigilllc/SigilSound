@@ -43,6 +43,36 @@ public class SecurityTests
     }
 
     [Theory]
+    [InlineData("Func<string, AudioBuffer> load = AudioBuffer.FromWav;\nSine(440)")]
+    [InlineData("var tone = Sine(440);\nAction<string, double> save = tone.RenderToWav;\ntone")]
+    [InlineData("var tone = Sine(440);\nvar render = tone.Render;\ntone")]
+    public void A_restricted_method_named_as_a_delegate_is_rejected_without_being_called(string code)
+    {
+        // The call rules look for an invocation; a method group has none, and a delegate can be called later.
+        var result = SnippetCompiler.Compile(code);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, d => d.IsError && d.Id == "SIGIL_SEC09");
+    }
+
+    [Fact]
+    public void GetType_named_as_a_delegate_is_rejected_without_being_called()
+    {
+        var result = SnippetCompiler.Compile("var s = Sine(440);\nvar g = s.GetType;\ns");
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, d => d.IsError && d.Id == "SIGIL_SEC07");
+    }
+
+    [Fact]
+    public void The_bytes_overload_of_FromWav_stays_allowed_as_a_delegate()
+    {
+        var result = SnippetCompiler.Compile("var load = (Func<byte[], AudioBuffer>)(b => AudioBuffer.FromWav(b));\nSine(440)");
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "SIGIL_SEC09");
+    }
+
+    [Theory]
     [InlineData("AudioBuffer.FromWav(\"secrets.wav\");\nSine(440)")]
     [InlineData("var path = \"secrets.wav\";\nAudioBuffer.FromWav(path);\nSine(440)")]
     public void Loading_a_wav_file_from_disk_is_rejected(string code)
