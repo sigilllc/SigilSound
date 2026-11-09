@@ -13,12 +13,16 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <!-- The projects that ship as NuGet packages: everything under src/, plus Sigil.Sound.Repl.Core, the snippet compiler a host
+       such as the Workbench embeds. Both get the same version and the same package metadata. -->
+  <PropertyGroup>
+    <IsPackagedLibrary Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)')) Or '$(MSBuildProjectName)' == 'Sigil.Sound.Repl.Core'">true</IsPackagedLibrary>
+  </PropertyGroup>
+
   <!-- Library code is held to a stricter bar than tests. Multi-targets net8.0 (LTS/Godot) and net10.0 -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
 
-    <!-- The version of every package. A release candidate adds a suffix at pack time: dotnet pack /p:VersionSuffix=rc.1 -->
-    <VersionPrefix>0.1.0</VersionPrefix>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- RS0026: four method groups (Adsr, Sample, RenderToWav, Control.Map) have several overloads with optional parameters. Kept visible, to be settled before 1.0. -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);RS0026</WarningsNotAsErrors>
@@ -26,6 +30,11 @@
     <IsAotCompatible>true</IsAotCompatible>
     <!-- Docs ship with the packages and show up in the REPL's completion. Every public member must carry an XML comment (CS1591 is an error). -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsPackagedLibrary)' == 'true'">
+    <!-- The version of every package. A release candidate adds a suffix at pack time: dotnet pack /p:VersionSuffix=rc.1 -->
+    <VersionPrefix>0.1.0</VersionPrefix>
 
     <!-- NuGet package metadata, symbols and source link, so debugging into the package works. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -43,6 +52,9 @@
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
     <!-- Tracks the public API in PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt: an accidental change is a build error. Build-time only; consumers get no dependency. -->
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsPackagedLibrary)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>

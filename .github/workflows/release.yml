@@ -1,8 +1,8 @@
 name: Release Sigil.Sound
 
-# Checks and packs Sigil.Sound, Sigil.Sound.Notes and Sigil.Sound.Testing, publishes them to nuget.org, deploys the
-# docs to Cloudflare (docs.yml), and, for a tag, creates the GitHub Release. Sigil.Sound.Repl.Core is not packaged
-# (launch plan C4).
+# Checks and packs Sigil.Sound, Sigil.Sound.Notes, Sigil.Sound.Testing and Sigil.Sound.Repl.Core (the snippet compiler the
+# Audio Workbench embeds, so it must be a package for the Workbench to build in CI), publishes them to nuget.org, deploys
+# the docs to Cloudflare (docs.yml), and, for a tag, creates the GitHub Release.
 #
 #   workflow_dispatch  you start it by hand: publishes the version you give (empty = VersionPrefix) so AudioWorkbench
 #                      can reference the package. Tick dry_run to check and pack only.
@@ -116,7 +116,8 @@ jobs:
           for project in \
             src/Sigil.Sound/Sigil.Sound.csproj \
             src/Sigil.Sound.Notes/Sigil.Sound.Notes.csproj \
-            src/Sigil.Sound.Testing/Sigil.Sound.Testing.csproj; do
+            src/Sigil.Sound.Testing/Sigil.Sound.Testing.csproj \
+            apps/Sigil.Sound.Repl.Core/Sigil.Sound.Repl.Core.csproj; do
             dotnet pack "$project" -c Release -p:Version="$VERSION" -o artifacts/nuget
           done
 

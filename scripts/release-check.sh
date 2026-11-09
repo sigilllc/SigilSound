@@ -39,18 +39,23 @@ changelog=$(tr -d '\r' < CHANGELOG.md)
 grep -qxF "## $version" <<< "$changelog" || fail "CHANGELOG.md has no '## $version' section"
 
 if [[ -n "$packages" ]]; then
-    for id in Sigil.Sound Sigil.Sound.Notes Sigil.Sound.Testing; do
+    # Sigil.Sound.Repl.Core is the snippet compiler for hosts such as the Workbench. It targets net10.0 only and ships no XML docs file.
+    for id in Sigil.Sound Sigil.Sound.Notes Sigil.Sound.Testing Sigil.Sound.Repl.Core; do
         for ext in nupkg snupkg; do
             [[ -f "$packages/$id.$version.$ext" ]] || fail "missing $packages/$id.$version.$ext"
         done
         [[ -f "$packages/$id.$version.nupkg" ]] || continue
         listing=$(unzip -Z1 "$packages/$id.$version.nupkg")
-        for want in README.md LICENSE "lib/net8.0/$id.dll" "lib/net8.0/$id.xml" "lib/net10.0/$id.dll" "lib/net10.0/$id.xml"; do
+        wants=(README.md LICENSE "lib/net10.0/$id.dll")
+        if [[ "$id" != "Sigil.Sound.Repl.Core" ]]; then
+            wants+=("lib/net8.0/$id.dll" "lib/net8.0/$id.xml" "lib/net10.0/$id.xml")
+        fi
+        for want in "${wants[@]}"; do
             grep -qxF "$want" <<< "$listing" || fail "$id.$version.nupkg has no $want"
         done
     done
     count=$(find "$packages" -type f | wc -l | tr -d ' ')
-    [[ "$count" -eq 6 ]] || fail "expected 6 package files in $packages (3 nupkg, 3 snupkg), found $count"
+    [[ "$count" -eq 8 ]] || fail "expected 8 package files in $packages (4 nupkg, 4 snupkg), found $count"
 fi
 
 # A clean consumer outside the repo (so Directory.Build.props does not apply) restores the packages from the
@@ -59,6 +64,9 @@ if [[ -n "$packages" && "$status" -eq 0 ]]; then
     work=$(mktemp -d)
     work_w=$(cd "$work" && pwd -W 2>/dev/null || pwd)
     feed_w=$(cd "$packages" && pwd -W 2>/dev/null || pwd)
+    # The consumer gets its own package cache. Otherwise the candidate lands in the machine's cache, and a later restore of the
+    # same version (the next dry run, or the published one) would silently use those stale bits instead of what was just packed.
+    export NUGET_PACKAGES="$work_w/packages"
     cat > "$work/Consumer.csproj" <<EOF
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -70,6 +78,7 @@ if [[ -n "$packages" && "$status" -eq 0 ]]; then
   <ItemGroup>
     <PackageReference Include="Sigil.Sound.Notes" Version="$version" />
     <PackageReference Include="Sigil.Sound.Testing" Version="$version" />
+    <PackageReference Include="Sigil.Sound.Repl.Core" Version="$version" Condition="'\$(TargetFramework)' == 'net10.0'" />
   </ItemGroup>
 </Project>
 EOF
@@ -84,8 +93,30 @@ var peak = SignalAnalysis.Peak(audio.ToMono());
 if (notes.Count != 3 || peak <= 0f)
     throw new InvalidOperationException($"smoke failed: {notes.Count} notes, peak {peak}");
 Console.WriteLine($"ok: {notes.Count} notes, peak {peak:F3}");
+
+#if NET10_0_OR_GREATER
+// Sigil.Sound.Repl.Core targets net10.0 only: compile a snippet through the real Roslyn pipeline and render it.
+var compiled = Sigil.Sound.Repl.SnippetCompiler.Compile("Sine(440)");
+if (!compiled.Success)
+    throw new InvalidOperationException("snippet failed: " + string.Join("; ", compiled.Diagnostics.Select(d => d.Message)));
+var snippetPeak = SignalAnalysis.Peak(compiled.Run().Render(0.05).ToMono());
+if (snippetPeak <= 0f)
+    throw new InvalidOperationException("the snippet rendered silence");
+Console.WriteLine($"ok: snippet compiled and rendered, peak {snippetPeak:F3}");
+#endif
 EOF
-    dotnet restore "$work_w/Consumer.csproj" --source "$feed_w" --verbosity quiet
+    # The local feed holds the Sigil packages (not published yet at this point); Roslyn, a dependency of Repl.Core, comes from nuget.org.
+    # A config file rather than --source: Git Bash on Windows rewrites a URL given on the command line into a local path.
+    cat > "$work/nuget.config" <<EOF
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="release-candidate" value="$feed_w" />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+</configuration>
+EOF
+    dotnet restore "$work_w/Consumer.csproj" --verbosity quiet
     dotnet build "$work_w/Consumer.csproj" -c Release --no-restore --verbosity quiet
     # Both runtimes by default (CI installs both). SMOKE_TFMS="net10.0" limits the run on a machine without the 8.0 runtime.
     for tfm in ${SMOKE_TFMS:-net8.0 net10.0}; do
