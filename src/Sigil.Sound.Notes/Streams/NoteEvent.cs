@@ -38,10 +38,30 @@ public readonly record struct NoteEvent(NoteEventKind Kind, long Id, int Pitch, 
 
     /// <summary>This note moved by <paramref name="semitones"/>. A note moved out of the MIDI range is dropped by the stream that gets it.</summary>
     /// <param name="semitones">How far to move, up (positive) or down.</param>
+    /// <example>
+    /// <code>
+    /// // A function of your own that moves a note: loud ones up an octave, soft ones down a fifth.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Select(n =&gt; n.Velocity &gt; 0.7f ? n.Transpose(12) : n.Transpose(-5))
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3:0.9 e3:0.4");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteEvent Transpose(int semitones) => this with { Pitch = Pitch + semitones };
 
     /// <summary>This note moved by <paramref name="cents"/> hundredths of a semitone, carrying whole semitones into the pitch.</summary>
     /// <param name="cents">How far to move, up (positive) or down.</param>
+    /// <example>
+    /// <code>
+    /// // Every note 30 cents sharp, so against an untouched copy of the stream the pair beats slowly.
+    /// var keys = new NoteInput();
+    /// var sound = (keys.Stream + keys.Stream.Select(n =&gt; n.Detune(30)))
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 g3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteEvent Detune(double cents)
     {
         double total = Cents + cents;
@@ -51,6 +71,17 @@ public readonly record struct NoteEvent(NoteEventKind Kind, long Id, int Pitch, 
 
     /// <summary>True when the note is a tone of <paramref name="scale"/>, in any octave. <c>Where(n =&gt; n.InScale(scale))</c> keeps those.</summary>
     /// <param name="scale">The scale, such as <c>Scale.Parse("d dorian")</c>.</param>
+    /// <example>
+    /// <code>
+    /// // Only the keys that belong to D dorian get through: the C# and G# are left out.
+    /// var keys = new NoteInput();
+    /// var dorian = Scale.Parse("d dorian");
+    /// var sound = keys.Stream.Where(n =&gt; n.InScale(dorian))
+    ///     .Play(v =&gt; Square(v.Frequency).LowPass(1500).Adsr(0.005, 0.2, 0.4, 0.2));
+    /// keys.NoteOn("d3 c#3 f3 g#3 a3");
+    /// sound * 0.2
+    /// </code>
+    /// </example>
     public bool InScale(Scale scale)
     {
         ArgumentNullException.ThrowIfNull(scale);
@@ -63,6 +94,17 @@ public readonly record struct NoteEvent(NoteEventKind Kind, long Id, int Pitch, 
     /// </summary>
     /// <param name="scale">The tones allowed.</param>
     /// <param name="mode">Which tone a note between two goes to. Defaults to the closest, and the lower one when two are equally close.</param>
+    /// <example>
+    /// <code>
+    /// // Keys outside D dorian are moved to the nearest tone of it, so whatever is played stays in the scale.
+    /// var keys = new NoteInput();
+    /// var dorian = Scale.Parse("d dorian");
+    /// var sound = keys.Stream.Select(n =&gt; n.Snap(dorian))
+    ///     .Play(v =&gt; Triangle(v.Frequency).LowPass(2000).Adsr(0.01, 0.2, 0.6, 0.3));
+    /// keys.NoteOn("d3 f#3 a3 c#4");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteEvent Snap(Scale scale, QuantizeMode mode = QuantizeMode.Nearest)
     {
         ArgumentNullException.ThrowIfNull(scale);
@@ -86,6 +128,16 @@ public readonly record struct NoteEvent(NoteEventKind Kind, long Id, int Pitch, 
     /// </summary>
     /// <param name="probability">The share, 0 to 1.</param>
     /// <param name="seed">Another seed picks other notes.</param>
+    /// <example>
+    /// <code>
+    /// // Seven in ten of the notes get through, the same ones every time.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Where(n =&gt; n.Chance(0.7, seed: 4))
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.2), polyphony: 12);
+    /// keys.NoteOn("c3 d3 e3 f3 g3 a3 b3 c4");
+    /// sound * 0.2
+    /// </code>
+    /// </example>
     public bool Chance(double probability, int seed = 0) => NoteIds.Unit(seed, Id) < probability;
 
     /// <summary>An event that starts a note.</summary>

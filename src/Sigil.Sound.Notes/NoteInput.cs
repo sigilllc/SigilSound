@@ -49,6 +49,16 @@ public sealed class NoteInput
     /// follow its chord with a pattern, and play it or send it out. <c>keys.Play(voice)</c> plays the notes as they are; this is the
     /// way to do something to them first.
     /// </summary>
+    /// <example>
+    /// <code>
+    /// // The notes of an input as a stream to shape: here every key also sounds the note an octave below it.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Harmonize(0, -12)
+    ///     .Play(v =&gt; Square(v.Frequency).LowPass(1500).Adsr(0.01, 0.2, 0.6, 0.3));
+    /// keys.NoteOn("e3 b3");
+    /// sound * 0.25
+    /// </code>
+    /// </example>
     public NoteStream Stream => _stream ??= NoteStream.FromInput(this);
 
     /// <summary>
@@ -108,6 +118,16 @@ public sealed class NoteInput
     /// note through every <see cref="NoteStream"/> operator and sound in <see cref="Play"/>.
     /// </param>
     /// <exception cref="ArgumentOutOfRangeException">The pitch, velocity or cents are out of range.</exception>
+    /// <example>
+    /// <code>
+    /// // A note 50 cents above A4, a quarter tone sharp, beating against the A4 beside it.
+    /// var keys = new NoteInput();
+    /// var synth = keys.Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.01, 0.2, 0.8, 0.3), polyphony: 4);
+    /// keys.NoteOn(69);
+    /// keys.NoteOn(69, 0.8f, 50.0);
+    /// synth * 0.25
+    /// </code>
+    /// </example>
     public void NoteOn(int pitch, float velocity = 0.8f, double cents = 0.0)
     {
         ValidatePitch(pitch);

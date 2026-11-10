@@ -111,6 +111,14 @@
                 <div class="wave"><canvas id="scope"></canvas></div>
             </section>
 
+            @if (_sendsNotes)
+            {
+                <section class="sec">
+                    <div class="sec-h"><h2>Notes out</h2><span class="end dim" title="Out.Notes sends these to the device's Note Out; here one voice plays them">one voice plays them here</span></div>
+                    <div class="wave notes"><canvas id="notes"></canvas></div>
+                </section>
+            }
+
             <section class="sec" aria-live="polite">
                 <div class="sec-h"><h2>Problems</h2><span class="end">@_diagnostics.Count</span></div>
                 @if (_diagnostics.Count == 0)
@@ -205,6 +213,7 @@
     private bool _sigilgraph;
     private bool _offerSigilgraph;
     private bool _showControls;
+    private bool _sendsNotes;
     private int _build;
     private bool _sigilgraphWarm;
     private bool _samplesKept;
@@ -425,6 +434,7 @@
             var sound = _sigilgraph ? SigilgraphSession.Instance.Build(result.Run) : result.Run();
             if (_sigilgraph)
                 _build++;
+            _sendsNotes = _sigilgraph && SigilgraphSession.Instance.SendsNotes;
             Engine.Play(sound);
             _playing = true;
             SetStatus($"Playing (compiled in {compileMs} ms)", "ok");
@@ -498,7 +508,7 @@
     // shares its place and shows for a snippet that uses the device API. A snippet typed in plain mode that uses the device API is offered the mode.
     private void UpdatePanels(string code)
     {
-        bool keys = KeyboardUsage.Uses(code) || (_sigilgraph && SigilgraphUsage.UsesPoly(code));
+        bool keys = KeyboardUsage.Uses(code) || (_sigilgraph && (SigilgraphUsage.UsesPoly(code) || SigilgraphUsage.UsesNotes(code)));
         bool controls = _sigilgraph && SigilgraphUsage.UsesFaceplate(code);
         bool offer = !_sigilgraph && SigilgraphUsage.Uses(code);
         if (keys == _usesKeys && controls == _showControls && offer == _offerSigilgraph)
@@ -519,7 +529,10 @@
             return;
         _sigilgraph = on;
         if (!on)
+        {
             SigilgraphSession.Instance.Clear();
+            _sendsNotes = false;
+        }
 
         if (on && !_sigilgraphWarm)
         {

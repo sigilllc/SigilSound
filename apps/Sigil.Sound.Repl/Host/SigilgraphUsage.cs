@@ -40,6 +40,22 @@ internal static class SigilgraphUsage
         return false;
     }
 
+    /// <summary>Whether it reads the notes at the device's Note In (<c>In.Notes</c>), so the page shows the keys too.</summary>
+    public static bool UsesNotes(string code)
+    {
+        var tokens = SyntaxFactory.ParseTokens(code).ToArray();
+        for (int i = 0; i + 2 < tokens.Length; i++)
+        {
+            if (tokens[i].IsKind(SyntaxKind.IdentifierToken) && tokens[i].ValueText == "In"
+                && !(i > 0 && tokens[i - 1].IsKind(SyntaxKind.DotToken))
+                && tokens[i + 1].IsKind(SyntaxKind.DotToken)
+                && tokens[i + 2].IsKind(SyntaxKind.IdentifierToken) && tokens[i + 2].ValueText == "Notes")
+                return true;
+        }
+
+        return false;
+    }
+
     private static bool Scan(string code, HashSet<string> calls)
     {
         var tokens = SyntaxFactory.ParseTokens(code).Where(t => !t.IsKind(SyntaxKind.EndOfFileToken)).ToArray();

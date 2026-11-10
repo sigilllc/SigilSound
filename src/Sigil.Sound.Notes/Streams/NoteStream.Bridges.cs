@@ -28,6 +28,18 @@ public sealed partial class NoteStream
     /// queried, once per block by whatever plays it, and reads the time from <see cref="NoteInput.Clock"/>.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">The settle time is outside 0 to 1, or an option is not defined.</exception>
+    /// <example>
+    /// <code>
+    /// // Whatever chord is held, a run through its tones: step 0 is the lowest tone, 1 the next, past the top it climbs an octave.
+    /// // Hold a different chord and the run follows it. (settle: 0 takes the chord at once, which a quick demo needs; the default is 35 ms.)
+    /// var keys = new NoteInput();
+    /// var chord = keys.Stream.Chord(settle: 0, switchOn: ChordSwitch.Instant);
+    /// var run = chord.Steps(Mini.Integers("0 1 2 3 4 3 2 1")).Transpose(12)
+    ///     .Play(v =&gt; Triangle(v.Frequency).LowPass(2400).Adsr(0.005, 0.15, 0, 0.2), bpm: 120);
+    /// keys.NoteOn("c3 e3 g3");
+    /// run * 0.4
+    /// </code>
+    /// </example>
     public Pattern<Chord> Chord(double settle = 0.035, ChordLatch latch = ChordLatch.Infinite, ChordSwitch switchOn = ChordSwitch.Beat)
     {
         if (!(settle is >= 0 and <= 1)) throw new ArgumentOutOfRangeException(nameof(settle), settle, "The settle time must be between 0 and 1 second.");
@@ -46,6 +58,16 @@ public sealed partial class NoteStream
     /// <param name="seed">The state before the first event.</param>
     /// <param name="step">Called for every start and end with the state so far; returns the new state. Runs on the thread that queries the pattern.</param>
     /// <remarks>Like <see cref="Chord"/>, a live pattern that cannot be written out. Graph-mode scripts cannot call this.</remarks>
+    /// <example>
+    /// <code>
+    /// // The number of keys held is a control signal: the more keys, the brighter the sound.
+    /// var keys = new NoteInput();
+    /// var held = keys.Stream.Fold(0, (n, e) =&gt; e.IsOn ? n + 1 : n - 1);
+    /// var cutoff = held.Select(n =&gt; 300.0 + n * 700.0).ToSignal(smoothSeconds: 0.05);
+    /// keys.NoteOn("c3 e3 g3");
+    /// Saw(110).LowPass(cutoff, q: 2) * 0.3
+    /// </code>
+    /// </example>
     public Pattern<TState> Fold<TState>(TState seed, Func<TState, NoteEvent, TState> step)
     {
         ArgumentNullException.ThrowIfNull(step);
@@ -61,6 +83,14 @@ public static partial class NotePatterns
     /// <c>Merge</c> with a keyboard) and out of the same jack. The notes start on the host's beat grid and end when their events do.
     /// </summary>
     /// <param name="pattern">The notes. Needs a <see cref="HostClock"/> on the runner that plays the stream, and plays nothing while it is stopped.</param>
+    /// <example>
+    /// <code>
+    /// // A written melody becomes a stream, so it goes through the same operators as live notes: here a fifth is added and the notes are strummed.
+    /// Mini.Notes("c3 [e3 g3]*2 ~ &lt;b3 d4&gt;").ToStream()
+    ///     .Harmonize(0, 7).Strum(0.05)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(2400).Adsr(0.005, 0.15, 0.4, 0.2)) * 0.2
+    /// </code>
+    /// </example>
     public static NoteStream ToStream(this Pattern<Note> pattern)
     {
         ArgumentNullException.ThrowIfNull(pattern);

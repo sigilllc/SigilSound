@@ -1,4 +1,5 @@
 using Sigil.Sound;
+using Sigil.Sound.Repl;
 using static Sigil.Sound.Sounds;
 
 namespace SigilgraphHost;
@@ -272,6 +273,9 @@ internal sealed class SigilgraphSession
 
     public bool UsesNoteInput { get; private set; }
 
+    /// <summary>True when the last run sends notes with <c>Out.Notes</c>; the page then shows the note strip.</summary>
+    public bool SendsNotes { get; private set; }
+
     /// <summary>The test source behind <c>In.Audio</c>. Changing it swaps the sound with a short crossfade.</summary>
     public SigilgraphSource Source
     {
@@ -314,13 +318,14 @@ internal sealed class SigilgraphSession
         using (SigilgraphBuild.Enter(build))
             result = run();
 
-        // There is no device to send notes to, so a plain voice plays them; the snippet's own sound stays as it was.
-        if (build.NotesOut is { } pattern)
+        // There is no device to send notes to, so one voice plays them and the page draws them as a strip; the snippet's own sound stays
+        // as it was. A pattern of notes goes the same way as a stream, on the page's note clock, as it does on the device's transport.
+        var notes = build.StreamNotesOut ?? build.LiveNotesOut?.ToStream();
+        if (notes is not null)
+            result += Sound.FromOperator(context => new NoteOutTap(notes, DefaultVoice, NoteTrace.Page, Keys.Clock, context), "Notes out");
+        else if (build.NotesOut is { } pattern)
             result += pattern.Play(DefaultVoice);
-        else if (build.LiveNotesOut is { } live)
-            result += live.Play(DefaultVoice);
-        else if (build.StreamNotesOut is { } stream)
-            result += stream.Play(DefaultVoice);
+        SendsNotes = notes is not null || build.NotesOut is not null;
 
         Declared = [.. build.Declared];
         Assets = [.. build.Assets];
@@ -340,6 +345,7 @@ internal sealed class SigilgraphSession
         ControlOutputsUsed = [];
         UsesAudioInput = false;
         UsesNoteInput = false;
+        SendsNotes = false;
     }
 
     private static Sound DefaultVoice(Voice v) =>

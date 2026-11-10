@@ -784,6 +784,10 @@ button {
     overflow: hidden;
 }
 
+.wave.notes {
+    height: 130px;
+}
+
 .wave canvas {
     display: block;
     width: 100%;

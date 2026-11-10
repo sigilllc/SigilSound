@@ -83,6 +83,16 @@ public sealed partial class NoteStream
     /// Moves every note by <paramref name="semitones"/>. A note that would leave the MIDI range is dropped.
     /// </summary>
     /// <param name="semitones">How far to move, up (positive) or down.</param>
+    /// <example>
+    /// <code>
+    /// // Every key you press sounds a fifth higher.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Transpose(7)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Transpose(int semitones) => Transform("Transpose", (ref NoteEvent n) =>
     {
         n = n with { Pitch = n.Pitch + semitones };
@@ -92,6 +102,16 @@ public sealed partial class NoteStream
     /// <summary>Plays every note at the same velocity.</summary>
     /// <param name="velocity">Above 0 up to 1.</param>
     /// <exception cref="ArgumentOutOfRangeException">Not above 0 and at most 1.</exception>
+    /// <example>
+    /// <code>
+    /// // Every note at the same soft velocity, however hard it was played.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Velocity(0.4)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3:1 e3:0.2");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Velocity(double velocity)
     {
         if (!(velocity > 0 && velocity <= 1)) throw new ArgumentOutOfRangeException(nameof(velocity), velocity, "Velocity must be above 0 and at most 1.");
@@ -159,6 +179,16 @@ public sealed partial class NoteStream
     /// <summary>The notes of both streams as one; the same as <see cref="Merge"/>.</summary>
     /// <param name="a">The first stream.</param>
     /// <param name="b">The second stream.</param>
+    /// <example>
+    /// <code>
+    /// // Two streams added: the key itself, and a fifth above it.
+    /// var keys = new NoteInput();
+    /// var sound = (keys.Stream + keys.Stream.Transpose(7))
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public static NoteStream operator +(NoteStream a, NoteStream b)
     {
         ArgumentNullException.ThrowIfNull(a);
@@ -171,6 +201,16 @@ public sealed partial class NoteStream
     /// once and each ends its own.
     /// </summary>
     /// <param name="others">The streams to add, at least one.</param>
+    /// <example>
+    /// <code>
+    /// // A note and the same note an octave down, as one stream.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Merge(keys.Stream.Transpose(-12))
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Merge(params NoteStream[] others)
     {
         ArgumentNullException.ThrowIfNull(others);
@@ -190,6 +230,16 @@ public sealed partial class NoteStream
     /// </summary>
     /// <param name="semitones">One to eight distances from the note.</param>
     /// <exception cref="ArgumentException">None, or more than eight.</exception>
+    /// <example>
+    /// <code>
+    /// // A major triad on every key: the note, a major third and a fifth above it.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Harmonize(0, 4, 7)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Harmonize(params int[] semitones)
     {
         ArgumentNullException.ThrowIfNull(semitones);
@@ -210,6 +260,16 @@ public sealed partial class NoteStream
     /// <param name="scale">The scale the steps are counted in.</param>
     /// <param name="degrees">One to eight steps from the note's own degree; 0 is the note, 2 a third above, -3 a fourth below.</param>
     /// <exception cref="ArgumentException">None, or more than eight.</exception>
+    /// <example>
+    /// <code>
+    /// // Diatonic triads: each key with the tones two and four steps above it in C major.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Harmonize(Scale.Parse("c major"), 0, 2, 4)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("d3 g3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Harmonize(Scale scale, params int[] degrees)
     {
         ArgumentNullException.ThrowIfNull(scale);
@@ -230,6 +290,16 @@ public sealed partial class NoteStream
     /// <summary>Plays every note later, start and end alike, so each keeps its length.</summary>
     /// <param name="beats">How much later, 0 to 64 beats (<see cref="Beats"/>).</param>
     /// <exception cref="ArgumentOutOfRangeException">Outside 0 to 64.</exception>
+    /// <example>
+    /// <code>
+    /// // The notes arrive half a beat late, at 120 bpm a quarter of a second.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Delay(0.5)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Delay(double beats)
     {
         CheckBeats(beats, nameof(beats), allowZero: true);
@@ -241,6 +311,16 @@ public sealed partial class NoteStream
     /// <param name="beats">The time between repeats, above 0 up to 8 beats.</param>
     /// <param name="decay">The velocity of each repeat as a fraction of the one before, 0 to 1.</param>
     /// <exception cref="ArgumentOutOfRangeException">An argument is out of range.</exception>
+    /// <example>
+    /// <code>
+    /// // Each note comes back three times, a sixteenth apart, each a little softer.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Echo(3, Beats.Sixteenth, 0.6)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Echo(int repeats, double beats, double decay = 0.6)
     {
         if (repeats is < 1 or > 16) throw new ArgumentOutOfRangeException(nameof(repeats), repeats, "Repeats must be 1 to 16.");
@@ -255,6 +335,16 @@ public sealed partial class NoteStream
     /// </summary>
     /// <param name="beats">The gap between notes, above 0 up to 1 beat.</param>
     /// <exception cref="ArgumentOutOfRangeException">Outside the range.</exception>
+    /// <example>
+    /// <code>
+    /// // A chord played one note at a time, a sixteenth apart, in the order the notes came.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Strum(0.25)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3 g3 c4");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Strum(double beats)
     {
         CheckBeats(beats, nameof(beats), allowZero: false, max: 1);
@@ -264,6 +354,16 @@ public sealed partial class NoteStream
     /// <summary>Gives every note the same length, whatever the key does: it ends after <paramref name="beats"/>, held or not.</summary>
     /// <param name="beats">The length, above 0 up to 64 beats.</param>
     /// <exception cref="ArgumentOutOfRangeException">Outside the range.</exception>
+    /// <example>
+    /// <code>
+    /// // Each note lasts exactly a quarter of a beat, however long the key is held.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Length(0.25)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 g3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Length(double beats)
     {
         CheckBeats(beats, nameof(beats), allowZero: false);
@@ -278,6 +378,16 @@ public sealed partial class NoteStream
     /// <param name="velocity">The most a velocity changes either way, 0 to 1.</param>
     /// <param name="seed">Another seed gives another, equally repeatable, feel.</param>
     /// <exception cref="ArgumentOutOfRangeException">Outside the range.</exception>
+    /// <example>
+    /// <code>
+    /// // A chord that is not quite together: each note a little late and a little softer or louder, the same way every time.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Humanize(0.15, 0.2, seed: 3)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3 g3 c4");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Humanize(double timing, double velocity = 0.1, int seed = 0)
     {
         CheckBeats(timing, nameof(timing), allowZero: true, max: 1);
@@ -289,6 +399,16 @@ public sealed partial class NoteStream
 
     /// <summary>One note at a time: of the keys held, only the one <paramref name="priority"/> picks sounds, and it changes as keys go down and up.</summary>
     /// <param name="priority">Which held key wins. Defaults to the last pressed.</param>
+    /// <example>
+    /// <code>
+    /// // Of the keys held, only the lowest sounds.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Mono(NotePriority.Lowest)
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("e3 c3 g3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Mono(NotePriority priority = NotePriority.Last)
     {
         if (!Enum.IsDefined(priority)) throw new ArgumentOutOfRangeException(nameof(priority), priority, "Unknown priority.");
@@ -296,12 +416,33 @@ public sealed partial class NoteStream
     }
 
     /// <summary>Keeps notes sounding after their keys come up, until the next group of keys goes down.</summary>
+    /// <example>
+    /// <code>
+    /// // Each note of this tune lasts a quarter, but the latch holds it until the next note starts, so the tune is played legato.
+    /// Mini.Notes("c3 ~ e3 ~ g3 ~ e3 ~").ToStream().Latch()
+    ///     .Play(v =&gt; Triangle(v.Frequency).LowPass(2000).Adsr(0.01, 0.2, 0.7, 0.4)) * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Latch() => Then("Latch", input => new LatchStage(input));
 
     // --- Raw: more of your own functions (Code mode) ---------------------------------------------------------------------
 
     /// <summary>Turns each note into none, one or several with a function of your own: add the notes to make to <c>emit</c>. See <see cref="Select"/>.</summary>
     /// <param name="expand">Called once per note, on the audio thread. At most <see cref="NoteEmitter.Capacity"/> notes are taken.</param>
+    /// <example>
+    /// <code>
+    /// // Each note also sounds an octave up, softer. A function of your own that makes two notes from one.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.SelectMany((n, emit) =&gt;
+    /// {
+    ///     emit.Add(n);
+    ///     emit.Add(n.Pitch + 12, 0.4f);
+    /// })
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream SelectMany(NoteExpander expand)
     {
         ArgumentNullException.ThrowIfNull(expand);
@@ -315,6 +456,21 @@ public sealed partial class NoteStream
     /// <typeparam name="TState">What the function remembers.</typeparam>
     /// <param name="seed">The state before the first event.</param>
     /// <param name="step">Called for each event with the state so far; returns the new state. Add notes to make to <c>emit</c> (only on a start).</param>
+    /// <example>
+    /// <code>
+    /// // The second key held gets a fifth above it. The function counts the keys down and starts a note of its own.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Scan(0, (down, e, emit) =&gt;
+    /// {
+    ///     if (e.IsOn &amp;&amp; down == 1)
+    ///         emit.Add(e.Pitch + 7, 0.6f);
+    ///     return e.IsOn ? down + 1 : down - 1;
+    /// })
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.5, 0.25));
+    /// keys.NoteOn("c3 e3 g3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public NoteStream Scan<TState>(TState seed, Func<TState, NoteEvent, NoteEmitter, TState> step)
     {
         ArgumentNullException.ThrowIfNull(step);
@@ -329,6 +485,16 @@ public sealed partial class NoteStream
     /// </summary>
     /// <param name="voice">Describes the sound of one note from its <see cref="Voice"/> signals. Called while the sound is built, not per note.</param>
     /// <param name="polyphony">The most notes sounding at once, from 1 to 64. Defaults to 8.</param>
+    /// <example>
+    /// <code>
+    /// // A voice for every note of the stream, here the keys with a fifth added.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Harmonize(0, 7)
+    ///     .Play(v =&gt; Triangle(v.Frequency).LowPass(2200).Adsr(0.01, 0.2, 0.6, 0.4), polyphony: 6);
+    /// keys.NoteOn("a2 e3");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
     public Sound Play(Func<Voice, Sound> voice, int polyphony = 8)
     {
         ArgumentNullException.ThrowIfNull(voice);
@@ -340,6 +506,15 @@ public sealed partial class NoteStream
     /// A control signal that is 1 while any note of the stream sounds and 0 otherwise: it lets a held key open a filter, gate an
     /// effect or trigger an envelope elsewhere. It steps; smooth it with a lowpass if you need a ramp.
     /// </summary>
+    /// <example>
+    /// <code>
+    /// // The gate is 1 while any key is down, so a held key opens a sound that would otherwise be shut.
+    /// var keys = new NoteInput();
+    /// var gate = keys.Stream.Gate();
+    /// keys.NoteOn("c3");
+    /// Saw(110).LowPass(1500) * gate * 0.3
+    /// </code>
+    /// </example>
     public Sound Gate() => Sound.FromOperator(ctx => new StreamGateOperator(this, ctx), "Note stream gate");
 
     // --- Helpers ---------------------------------------------------------------------------------------------------------

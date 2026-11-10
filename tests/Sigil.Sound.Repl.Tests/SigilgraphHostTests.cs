@@ -268,15 +268,30 @@ public sealed class SigilgraphHostTests : IDisposable
     {
         var example = SigilgraphExamples.All.Single(e => e.Name == name);
 
-        var sound = Build(example.Code);
-        var output = new SoundContext(SampleRate, fadeSeconds: 0);
-        output.Play(sound, fadeSeconds: 0);
-        if (_session.UsesNoteInput)
-            ReplApi.Keys.NoteOn(60, 1f);
-        var frames = new StereoFrame[SampleRate];
-        output.Render(frames);
-        output.Dispose();
+        // The page gives the live notes a clock that its engine advances with the audio it renders; here the context does, so a chord
+        // that needs 35 ms to settle settles in the audio rendered below and not in the few milliseconds the test takes.
+        var clock = new HostClock(SampleRate);
+        ReplApi.Keys.Clock = clock;
+        try
+        {
+            var sound = Build(example.Code);
+            var output = new SoundContext(SampleRate, fadeSeconds: 0, clock: clock);
+            output.Play(sound, fadeSeconds: 0);
+            if (_session.UsesNoteInput)
+                ReplApi.Keys.NoteOn(60, 1f);
+            var frames = new StereoFrame[SampleRate];
+            output.Render(frames);
+            output.Dispose();
+            AssertSounds(frames);
+        }
+        finally
+        {
+            ReplApi.Keys.Clock = null;
+        }
+    }
 
+    private static void AssertSounds(StereoFrame[] frames)
+    {
         var mono = frames.Select(f => f.ToMono()).ToArray();
         Assert.All(mono, s => Assert.True(float.IsFinite(s)));
         Assert.Contains(mono, s => Math.Abs(s) > 0.001f);
@@ -305,6 +320,107 @@ public sealed class SigilgraphHostTests : IDisposable
         Assert.True(played.Max(f => Math.Abs(f.Left)) > 0.01f);
         output.Dispose();
     }
+
+    // --- Notes out: one voice plays them and the strip beside the scope draws them ----------------------------------------------
+
+    // The trace is a flat array of [kind, id, pitch, velocity, ...]: kind 0 starts a note, 1 ends it.
+    private static List<(int Kind, int Id, int Pitch)> Events(double[] flat) =>
+        Enumerable.Range(0, flat.Length / 4).Select(i => ((int)flat[4 * i], (int)flat[4 * i + 1], (int)flat[4 * i + 2])).ToList();
+
+    [Fact]
+    public void Out_Notes_is_heard_and_the_trace_gets_each_note_and_its_end()
+    {
+        var clock = new HostClock(SampleRate);
+        ReplApi.Keys.Clock = clock;
+        try
+        {
+            NoteTrace.Page.Drain();
+            var sound = Build("Out.Notes(In.Notes.Harmonize(0, 7));\nSilence");
+            Assert.True(_session.SendsNotes);
+            using var output = new SoundContext(SampleRate, fadeSeconds: 0, clock: clock);
+            output.Play(sound, fadeSeconds: 0);
+
+            ReplApi.Keys.NoteOn(60, 0.8f);
+            var played = new StereoFrame[SampleRate / 4];
+            output.Render(played);
+            Assert.True(played.Max(f => Math.Abs(f.Left)) > 0.01f, "the notes sent out should be heard");
+            var started = Events(NoteTrace.Page.Drain());
+            Assert.Equal([60, 67], started.Where(e => e.Kind == 0).Select(e => e.Pitch).Order());
+
+            ReplApi.Keys.NoteOff(60);
+            output.Render(new StereoFrame[SampleRate / 10]);
+            var ended = Events(NoteTrace.Page.Drain());
+            Assert.Equal(started.Select(e => e.Id).Order(), ended.Where(e => e.Kind == 1).Select(e => e.Id).Order());
+        }
+        finally
+        {
+            ReplApi.Keys.Clock = null;
+        }
+    }
+
+    [Fact]
+    public void A_pattern_sent_out_is_traced_on_the_note_clock()
+    {
+        var clock = new HostClock(SampleRate);
+        ReplApi.Keys.Clock = clock;
+        try
+        {
+            NoteTrace.Page.Drain();
+            var sound = Build("Out.Notes(Mini.Notes(\"c4 e4\"));\nSilence"); // two notes in a cycle: C4 at beat 0, E4 at beat 2
+            using var output = new SoundContext(SampleRate, fadeSeconds: 0, clock: clock);
+            output.Play(sound, fadeSeconds: 0);
+
+            output.Render(new StereoFrame[SampleRate / 4]); // a quarter of a second is half a beat: only C4 has started
+            var first = Events(NoteTrace.Page.Drain());
+            Assert.Equal([60], first.Where(e => e.Kind == 0).Select(e => e.Pitch));
+            Assert.DoesNotContain(first, e => e.Kind == 1);
+
+            output.Render(new StereoFrame[SampleRate]); // 1.25 s: E4 at 1 s, and C4 ended at 1 s
+            var later = Events(NoteTrace.Page.Drain());
+            Assert.Contains(later, e => e.Kind == 0 && e.Pitch == 64);
+            Assert.Contains(later, e => e.Kind == 1);
+        }
+        finally
+        {
+            ReplApi.Keys.Clock = null;
+        }
+    }
+
+    [Fact]
+    public void Replacing_the_sound_ends_the_notes_it_was_sending()
+    {
+        var clock = new HostClock(SampleRate);
+        ReplApi.Keys.Clock = clock;
+        try
+        {
+            NoteTrace.Page.Drain();
+            var sound = Build("Out.Notes(In.Notes);\nSilence");
+            var output = new SoundContext(SampleRate, fadeSeconds: 0, clock: clock);
+            output.Play(sound, fadeSeconds: 0);
+            ReplApi.Keys.NoteOn("c3 e3");
+            output.Render(new StereoFrame[SampleRate / 10]);
+            var started = Events(NoteTrace.Page.Drain()).Count(e => e.Kind == 0);
+            Assert.Equal(2, started);
+
+            output.Dispose(); // the sound goes away with the keys still down
+
+            Assert.Equal(started, Events(NoteTrace.Page.Drain()).Count(e => e.Kind == 1));
+        }
+        finally
+        {
+            ReplApi.Keys.Clock = null;
+        }
+    }
+
+    [Theory]
+    [InlineData("Out.Notes(In.Notes.Transpose(7)); Silence", true)]
+    [InlineData("var n = In.Notes;\nSilence", true)]
+    [InlineData("Out.Notes(Mini.Notes(\"c3\")); Silence", false)]
+    [InlineData("In.Audio", false)]
+    [InlineData("// In.Notes is in a comment\nSilence", false)]
+    [InlineData("var x = other.In.Notes;\nSilence", false)]
+    public void The_keyboard_is_offered_for_a_snippet_that_reads_In_Notes(string code, bool expected) =>
+        Assert.Equal(expected, SigilgraphUsage.UsesNotes(code));
 
     public static TheoryData<string> ExampleNames() => new(SigilgraphExamples.All.Select(e => e.Name));
 

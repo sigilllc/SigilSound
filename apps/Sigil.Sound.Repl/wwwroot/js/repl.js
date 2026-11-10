@@ -163,6 +163,10 @@
 
     const LEAD_SECONDS = 0.2; // how far ahead the pump keeps the worklet fed
 
+    // The notes the snippet sends out (Out.Notes), for the strip beside the oscilloscope. Events come from the engine with the frame of
+    // the audio timeline they sit at: `written` is where the block being rendered starts, because each block is pushed right after.
+    const noteStrip = window.sigilNoteStrip.create();
+
     const audio = {
         context: null,
         node: null,
@@ -186,6 +190,7 @@
                 Object.assign(audio, { context, node, analyser });
                 setInterval(audio.pump, 25);
                 startScope();
+                startNoteStrip();
             }
             await audio.context.resume();
             return audio.context.sampleRate;
@@ -201,6 +206,7 @@
             const keep = Math.round(seconds * audio.context.sampleRate);
             audio.node.port.postMessage({ flush: keep });
             audio.written = Math.min(audio.written, audio.read + keep);
+            noteStrip.cut(audio.written);   // notes in the audio that was thrown away never happen
         },
 
         push(bytes) {
@@ -287,6 +293,27 @@
             g.stroke();
         }
         draw();
+    }
+
+    // ---- Notes out -----------------------------------------------------------------------------
+
+    function startNoteStrip() {
+        const css = getComputedStyle(document.documentElement);
+        const colors = {
+            grid: "rgba(255, 255, 255, 0.045)",
+            bar: css.getPropertyValue("--teal").trim(),
+            barSoft: "rgba(29, 233, 182, 0.5)",
+            head: css.getPropertyValue("--amber").trim(),
+            text: css.getPropertyValue("--dim").trim(),
+        };
+
+        function frame() {
+            requestAnimationFrame(frame);
+            // The canvas is there only while the snippet sends notes, so look for it every frame.
+            const canvas = document.getElementById("notes");
+            if (canvas) window.sigilNoteStrip.draw(canvas, noteStrip, audio.read, audio.context.sampleRate, colors);
+        }
+        frame();
     }
 
     function initResizer() {
@@ -479,6 +506,12 @@
     window.sigilRepl = {
         audio,
         samples,
+
+        // Called by the engine after a block that sent notes: [kind, id, pitch, velocity, ...]; see note-strip.js.
+        notes: {
+            add(events) { noteStrip.add(events, audio.written); },
+            clear() { noteStrip.clear(); },
+        },
 
         // The rotary knob of the Sigilgraph controls strip. The page owns the value; the dial only reports a position from 0 to 1,
         // and the control applies its taper. Dragging up turns it up; Shift (or the wheel) turns it finely.

@@ -30,7 +30,7 @@ public class KeyboardUsageTests
     {
         var users = ReplExamples.All.Where(e => KeyboardUsage.Uses(e.Code)).Select(e => e.Name).ToArray();
 
-        Assert.Equal(["Live notes (Keys)", "Falling notes (Keys)"], users);
+        Assert.Equal(["Live notes (Keys)", "Falling notes (Keys)", "Note streams (Keys)", "Follow the chord (Keys)"], users);
     }
 
     [Fact]

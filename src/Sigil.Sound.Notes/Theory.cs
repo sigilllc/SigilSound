@@ -63,6 +63,14 @@ public sealed class Scale
     /// is fit to ask of every note as it plays.
     /// </summary>
     /// <param name="pitch">A MIDI pitch.</param>
+    /// <example>
+    /// <code>
+    /// // Only the notes of C major: C# and D# are not tones of it and are left out.
+    /// Mini.Notes("c3 c#3 d3 d#3 e3 f3 g3 a3")
+    ///     .Where(n =&gt; Scale.Major(48).Contains(n.Pitch))
+    ///     .Play(v =&gt; Triangle(v.Frequency).Adsr(0.005, 0.1, 0.4, 0.15), bpm: 140) * 0.3
+    /// </code>
+    /// </example>
     public bool Contains(int pitch) => (_pitchClasses & (1 << (((pitch % 12) + 12) % 12))) != 0;
 
     /// <summary>The MIDI pitch of degree 0.</summary>
@@ -354,6 +362,13 @@ public sealed class Chord
     /// A step whose note would leave the MIDI range is left out.
     /// </summary>
     /// <param name="steps">The steps, such as <c>Mini.Integers("7 6 5 4 3 2 1 0")</c>, a fall through two octaves of a triad.</param>
+    /// <example>
+    /// <code>
+    /// // Steps of a chord: 0 is its lowest tone, 1 the next, and past the top the run climbs an octave. -1 is the tone below the lowest.
+    /// Chord.Of(60, "maj7").Steps(Mini.Integers("0 1 2 3 4 3 2 1 -1 0"))
+    ///     .Play(v =&gt; Triangle(v.Frequency).Adsr(0.005, 0.15, 0.3, 0.2), bpm: 130) * 0.3
+    /// </code>
+    /// </example>
     public Pattern<Note> Steps(Pattern<int> steps)
     {
         ArgumentNullException.ThrowIfNull(steps);
@@ -364,6 +379,13 @@ public sealed class Chord
     /// <summary>Plays steps of this chord written in <see cref="Mini"/> notation; see <see cref="Steps(Pattern{int})"/>.</summary>
     /// <param name="steps">The steps, such as <c>"0 2 4 [7 5]"</c>.</param>
     /// <exception cref="MiniNotationException">The text is not valid.</exception>
+    /// <example>
+    /// <code>
+    /// // The same steps written as text; they follow whichever chord this is.
+    /// Chord.Parse("a3:min7").Steps("0 2 4 [3 1] 2 0")
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(2000).Adsr(0.005, 0.15, 0.3, 0.2), bpm: 120) * 0.25
+    /// </code>
+    /// </example>
     public Pattern<Note> Steps(string steps)
     {
         ArgumentNullException.ThrowIfNull(steps);
@@ -473,6 +495,13 @@ public static class ChordPatterns
 
     /// <summary>The lowest tone of each chord, as a pattern of pitches: the bass line of a progression, or of the chord being played.</summary>
     /// <param name="chords">The chords.</param>
+    /// <example>
+    /// <code>
+    /// // The bass line of a progression: the lowest tone of each chord, an octave down.
+    /// Mini.Chords("&lt;c3:min7 f3:7 bb2:maj7 g3:7&gt;").Lowest().Select(p =&gt; new Note(p - 12))
+    ///     .Play(v =&gt; Sine(v.Frequency).Adsr(0.01, 0.3, 0.6, 0.3), bpm: 100) * 0.5
+    /// </code>
+    /// </example>
     public static Pattern<int> Lowest(this Pattern<Chord> chords)
     {
         ArgumentNullException.ThrowIfNull(chords);
@@ -481,6 +510,13 @@ public static class ChordPatterns
 
     /// <summary>The highest tone of each chord, as a pattern of pitches.</summary>
     /// <param name="chords">The chords.</param>
+    /// <example>
+    /// <code>
+    /// // The top voice of a progression, an octave up, as a melody.
+    /// Mini.Chords("&lt;c3:min7 f3:7 bb2:maj7 g3:7&gt;").Highest().Select(p =&gt; new Note(p + 12))
+    ///     .Play(v =&gt; Triangle(v.Frequency).Adsr(0.005, 0.2, 0.3, 0.2), bpm: 100) * 0.3
+    /// </code>
+    /// </example>
     public static Pattern<int> Highest(this Pattern<Chord> chords)
     {
         ArgumentNullException.ThrowIfNull(chords);

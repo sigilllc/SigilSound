@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.JSInterop;
+using ReplHost;
 
 namespace Sigil.Sound.Repl;
 
@@ -29,6 +30,7 @@ public sealed class ReplEngine(IJSRuntime js)
     };
 
     private SoundContext? _output;
+    private HostClock? _noteClock;
     private StereoFrame[] _frames = [];
 
     /// <summary>Raised when the playing sound throws while rendering; playback falls back to silence.</summary>
@@ -47,8 +49,17 @@ public sealed class ReplEngine(IJSRuntime js)
     public async Task StartAsync(DotNetObjectReference<ReplEngine> self)
     {
         int sampleRate = await js.InvokeAsync<int>("sigilRepl.audio.start", self);
+        // The clock of the notes: streams measure their echoes and chord boundaries on the audio that is rendered, not on the wall clock,
+        // so a key, an echo and a pattern played as notes keep time with each other. The context advances it after every block it
+        // renders (a call renders up to seconds of audio in many blocks, so advancing it once per call would show every block the same beat).
+        if (_noteClock is null || _noteClock.SampleRate != sampleRate)
+        {
+            _noteClock = new HostClock(sampleRate);
+            ReplApi.Keys.Clock = _noteClock;
+        }
+
         if (_output is null || _output.RenderContext.SampleRate != sampleRate)
-            _output = new SoundContext(sampleRate, fadeSeconds: 0.03);
+            _output = new SoundContext(sampleRate, fadeSeconds: 0.03, clock: _noteClock);
     }
 
     public void Play(Sound sound)
@@ -59,6 +70,9 @@ public sealed class ReplEngine(IJSRuntime js)
 
         // Audio rendered ahead belongs to the old sound; drop most of it so the change is heard now.
         Js.InvokeVoid("sigilRepl.audio.flush", AudibleLeadSeconds);
+
+        // A pattern that follows the clock starts from its first note when you press Run, as it did before the sounds had a clock.
+        _noteClock?.Seek(0, 0);
         _output.Play(sound);
     }
 
@@ -116,7 +130,7 @@ public sealed class ReplEngine(IJSRuntime js)
         catch (Exception e)
         {
             // The running graph is broken; start over from silence.
-            _output = new SoundContext(SampleRate, fadeSeconds: 0.03);
+            _output = new SoundContext(SampleRate, fadeSeconds: 0.03, clock: _noteClock);
             Current = null;
             block.Clear();
             RenderFailed?.Invoke($"{e.GetType().Name}: {e.Message}");
@@ -132,6 +146,10 @@ public sealed class ReplEngine(IJSRuntime js)
                 continue;
             samples[i] = float.IsFinite(s) ? Math.Clamp(s, -1f, 1f) : 0f;
         }
+
+        // The notes this block sent out, for the strip. The strip places them at the frame of the audio timeline this block starts at.
+        if (NoteTrace.Page.HasPending)
+            Js.InvokeVoid("sigilRepl.notes.add", NoteTrace.Page.Drain());
 
         return MemoryMarshal.AsBytes(samples).ToArray();
     }

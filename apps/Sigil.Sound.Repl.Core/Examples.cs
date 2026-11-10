@@ -440,6 +440,38 @@ public static class Examples
 
             (synth * 0.2 + tune * 0.25).Reverb(decay: 1.8, mix: 0.2)
             """),
+        new("Note streams",
+            """
+            // Live notes, changed on the way to the sound. A NoteInput's Stream is its notes as they happen: operators shape it,
+            // Play turns it into sound, and the end of a key ends everything made from it, however many notes that was.
+            //
+            // The chord below is pressed with NoteOn. Where keeps the notes below C5 (a small function over each note), Harmonize adds
+            // the tone two steps above in C major, and Echo brings every note back twice, softer, an eighth later.
+            // Change the chord, swap Harmonize(...) for Strum(0.1), or add .Select(n => n.Snap(Scale.Parse("d dorian"))).
+            var keys = new NoteInput();
+
+            var plucks = keys.Stream
+                .Where(n => n.Pitch < 72)
+                .Harmonize(Scale.Parse("c major"), 0, 2)
+                .Echo(2, Beats.Eighth, 0.5)
+                .Play(v => Saw(v.Frequency).LowPass(2200).Adsr(0.003, 0.2, 0, 0.25));
+
+            keys.NoteOn("c3 e3 g3");
+
+            plucks * 0.25
+            """),
+        new("A tune through a stream",
+            """
+            // A written melody becomes a stream with ToStream, so it goes through the same operators as notes you play.
+            // Latch lets each note ring until the next one starts (the tune becomes legato), Harmonize adds a fifth to every note,
+            // and Strum spreads each pair a little, the lower note first.
+            var tune = Mini.Notes("c3 ~ e3 [g3 b3] ~ a3 g3 ~").ToStream();
+
+            tune.Latch().Harmonize(0, 7).Strum(0.08)
+                .Play(v => Triangle(v.Frequency).LowPass(2400).Adsr(0.01, 0.2, 0.6, 0.4))
+                .Reverb(decay: 1.5, mix: 0.2)
+                * 0.3
+            """),
         new("Acid line",
             """
             // A monosynth line whose filter is driven by a pattern of numbers, locked to the same tempo:

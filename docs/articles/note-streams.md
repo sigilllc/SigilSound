@@ -132,6 +132,10 @@ foreach (var e in runner.Reset())
 
 `Process` does not allocate once the stream is built. The returned events are valid until the next call. A runner is for one thread. `runner.Poll()` is for readers that are asked at no fixed rate (a live pattern is one); it runs the stream for the time the clock says has passed.
 
+## Try it
+
+The REPL has starter snippets for all of this. **Note streams** and **A tune through a stream** are self-contained; **Note streams (Keys)** and **Follow the chord (Keys)** use the keyboard under the editor, so hold a chord and hear the run follow it. In Sigilgraph mode the four **Notes out** snippets send notes with `Out.Notes`, and a strip beside the oscilloscope draws them as they sound.
+
 ## Limits
 
 - Per step: 128 notes sounding, 512 events a block, 512 scheduled events (delays, echoes), 16 notes from one note in `SelectMany`, 8 intervals in `Harmonize`, 16 echoes.

@@ -91,6 +91,36 @@ internal static class ReplExamples
         (synth * 0.3).Reverb(decay: 1.5, mix: 0.15)
         """);
 
+    private static readonly Examples.Example NoteStreamKeys = new("Note streams (Keys)",
+        """
+        // Keys.Stream is the notes you play on the keyboard under the editor, as a stream: live notes with an identity, to change on the
+        // way to the sound. Hold a chord (click the keys, or click the keyboard and use A S D F G H J K).
+        //
+        // Every key also sounds the tone two steps above it in C major and comes back twice, softer, an eighth later. Let go of a key and
+        // everything made from it ends. Try Strum(0.1) in place of Harmonize, or add
+        // .Select(n => n.Snap(Scale.Parse("d dorian"))) to keep whatever you play in the scale.
+        var plucks = Keys.Stream
+            .Harmonize(Scale.Parse("c major"), 0, 2)
+            .Echo(2, Beats.Eighth, 0.5)
+            .Play(v => Saw(v.Frequency).LowPass(2200).Adsr(0.003, 0.2, 0, 0.25));
+
+        plucks * 0.3
+        """);
+
+    private static readonly Examples.Example FollowChordKeys = new("Follow the chord (Keys)",
+        """
+        // Hold a chord on the keyboard and a run follows it. The run is written once, as steps of the chord: 0 is its lowest tone,
+        // 1 the next, past the top it climbs an octave. Change the chord and the same text follows the new one.
+        //
+        // Chord() treats notes that start within 35 ms as one chord, keeps the last chord after you let go, and (with Beat) hands a new
+        // chord over on the next beat, as the AutoArp device does. Try the steps "7 6 5 4 3 2 1 0" for a falling run.
+        var chord = Keys.Stream.Chord(switchOn: ChordSwitch.Beat);
+
+        chord.Steps(Mini.Integers("0 1 2 3 4 3 2 1")).Transpose(12)
+            .Play(v => Triangle(v.Frequency).LowPass(2400).Adsr(0.005, 0.15, 0, 0.2), bpm: 120)
+            * 0.4
+        """);
+
     public static IReadOnlyList<Examples.Example> All { get; } = Build();
 
     private static List<Examples.Example> Build()
@@ -102,6 +132,8 @@ internal static class ReplExamples
         all.Insert(cabinet < 0 ? all.Count : cabinet + 1, RoomFromIr);
         all.Add(Keyboard);
         all.Add(FallingNotes);
+        all.Add(NoteStreamKeys);
+        all.Add(FollowChordKeys);
         return all;
     }
 }

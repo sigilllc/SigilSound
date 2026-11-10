@@ -66,5 +66,67 @@ internal static class SigilgraphExamples
                 .LowPass(cutoff, q: 1.5)
                 .Adsr(attack: 0.01, decay: 0.2, sustain: 0.6, release: 0.4)) * level
             """),
+        new("Notes out: a tune",
+            """
+            // Sigilgraph: Out.Notes sends notes out of the device's Note Out jack, to any instrument it is wired to. A pattern is the
+            // simplest thing to send; here a melody with <a b> (one per cycle) and Every (reversed every fourth cycle).
+            //
+            // On the page there is no device to send to, so one voice plays them, and the Notes out strip beside the scope shows what
+            // is sent: time runs right to left under the playhead, one row per semitone.
+            Out.Notes(Mini.Notes("c3 [e3 g3]*2 ~ <b3 d4>").Every(4, p => p.Rev()));
+
+            Silence
+            """),
+        new("Notes out: harmonizer",
+            """
+            // Sigilgraph: In.Notes is the notes arriving at the device's Note In, as a stream. Play the keyboard under the editor:
+            // every key also sends the tone two steps above it in C major, and both come back twice, softer, an eighth later.
+            // Out.Notes sends the result out of Note Out. Wire it to an instrument on the device; on this page one voice plays it.
+            //
+            // A script that only sends notes ends with Silence: it has no sound of its own.
+            Out.Notes(
+                In.Notes
+                    .Harmonize(Scale.Parse("c major"), 0, 2)
+                    .Echo(2, Beats.Eighth, 0.5));
+
+            Silence
+            """),
+        new("Notes out: follow the chord",
+            """
+            // Sigilgraph: hold a chord on the keyboard (on the device, wire a Tonnetz or a keyboard to Note In) and a run falls through it.
+            // The run is written once as steps of the chord: 0 is its lowest tone, 1 the next, past the top it climbs an octave,
+            // -1 is the tone below the lowest. Sometimes and Degrade add the dice, the same way every time (the numbers are seeds).
+            //
+            // In.Notes.Chord() groups notes that start within 35 ms into one chord and, with Cycle, hands a new chord over only at the
+            // bar line, so a run that starts on one chord finishes on it. Hold a chord for a bar before the run starts.
+            var chord = In.Notes.Chord(switchOn: ChordSwitch.Cycle);
+
+            var runs = Mini.Integers("<[7 6 5 4 3 2 1 0] [8 6 5 3 2 0]> ~ [4 3 2 1 0] ~")
+                .Sometimes(0.25, p => p.Shift(0.0625), 9)
+                .Degrade(0.12, 3);
+
+            Out.Notes(
+                chord.Steps(runs)
+                    .Transpose(12)
+                    .Sometimes(0.2, p => p.Transpose(12), 21)
+                    .Velocity(0.7));
+
+            Silence
+            """),
+        new("Notes out: lock to a scale",
+            """
+            // Sigilgraph: functions of your own shape the notes. In Graph mode a function may use only the note, numbers, comparisons
+            // and Math, plus the note's own helpers; make anything else (a scale, a pattern) in a variable above it.
+            //
+            // Snap moves every key to the nearest tone of D dorian, Where keeps two notes in three (Chance picks the same ones every time),
+            // and the kept notes also send a fifth above. Play the keyboard, including the black keys: they land on the scale.
+            var dorian = Scale.Parse("d dorian");
+            var locked = In.Notes.Select(n => n.Snap(dorian));
+            var fifths = locked.Where(n => n.Chance(0.66, 5)).Transpose(7);
+
+            Out.Notes(locked + fifths);
+
+            Silence
+            """),
     ];
 }
