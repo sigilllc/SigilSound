@@ -6,9 +6,6 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), geolocation=(), payment=(), usb=()
-  # PRE-LAUNCH ONLY: keeps search engines away while the site is reachable but its links (NuGet, GitHub) are not live yet.
-  # REMOVE THIS LINE AT LAUNCH, then redeploy the docs. build-site.sh prints a reminder while it is here.
-  X-Robots-Tag: noindex, nofollow
 
 # Every file under _framework has its content hash in its name (dotnet.e0ijh3zhds.js, System.Private.CoreLib.acqhqif0l6.wasm),
 # so a changed file is a new URL and the old one can be cached for good. The rest of the site keeps Cloudflare's default
