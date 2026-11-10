@@ -209,7 +209,10 @@ internal static class NoteIds
         (Mix(id ^ Mix(seed + salt * 7919L)) >>> 11) / (double)(1L << 53);
 }
 
-/// <summary>A fixed-size list of things to do at a time, kept in order of time and then of arrival.</summary>
+/// <summary>
+/// A fixed-size list of things to do at a time, taken earliest first and, at the same time, in the order they were added. It is a
+/// binary heap, so adding and taking are both O(log n) however many are waiting.
+/// </summary>
 internal sealed class ScheduledQueue
 {
     public const int Capacity = 512;
@@ -234,12 +237,15 @@ internal sealed class ScheduledQueue
         if (_count == Capacity)
             return false;
 
-        var item = new Item(due, _sequence++, op, owner, noteEvent);
         int index = _count++;
-        while (index > 0 && _items[index - 1].Due > due)
+        var item = new Item(due, _sequence++, op, owner, noteEvent);
+        while (index > 0)
         {
-            _items[index] = _items[index - 1];
-            index--;
+            int parent = (index - 1) >> 1;
+            if (!Before(item, _items[parent]))
+                break;
+            _items[index] = _items[parent];
+            index = parent;
         }
 
         _items[index] = item;
@@ -249,16 +255,35 @@ internal sealed class ScheduledQueue
     /// <summary>Takes the earliest item due before <paramref name="before"/>.</summary>
     public bool TryTake(double before, out Item item)
     {
-        if (_count > 0 && _items[0].Due < before)
+        if (_count == 0 || !(_items[0].Due < before))
         {
-            item = _items[0];
-            Array.Copy(_items, 1, _items, 0, --_count);
-            return true;
+            item = default;
+            return false;
         }
 
-        item = default;
-        return false;
+        item = _items[0];
+        var last = _items[--_count];
+        int index = 0;
+        while (true)
+        {
+            int child = 2 * index + 1;
+            if (child >= _count)
+                break;
+            if (child + 1 < _count && Before(_items[child + 1], _items[child]))
+                child++;
+            if (!Before(_items[child], last))
+                break;
+            _items[index] = _items[child];
+            index = child;
+        }
+
+        if (_count > 0)
+            _items[index] = last;
+        return true;
     }
 
     public void Clear() => _count = 0;
+
+    // Earlier time first; at the same time, the one added first.
+    private static bool Before(in Item a, in Item b) => a.Due < b.Due || (a.Due == b.Due && a.Sequence < b.Sequence);
 }

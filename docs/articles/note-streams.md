@@ -27,23 +27,21 @@ A key pressed again while it is down ends its first note before the second start
 
 | Group | Operators |
 | --- | --- |
-| Pitch | `Transpose`, `Octave`, `Detune`, `Range(low, high, mode)`, `Quantize(scale)` |
-| Dynamics | `Velocity`, `ScaleVelocity`, `ClampVelocity`, `VelocityCurve` |
-| Choose | `Keep(pick)`, `Drop(pick)`, with `Pick.Pitch`, `Pick.InScale`, `Pick.Velocity`, `Pick.Chance`, `Pick.Channel`, combined with `And`, `Or`, `Not` |
-| One into several | `Harmonize(semitones)`, `Harmonize(scale, degrees)`, `Chordify(chord)` |
+| Change or choose | `Select(n => ...)`, `Where(n => ...)`, and the shorthands `Transpose(semitones)` and `Velocity(v)` |
+| One into several | `Harmonize(semitones)`, `Harmonize(scale, degrees)`, `SelectMany` |
 | Time | `Delay`, `Echo`, `Strum`, `Length`, `Humanize` |
 | Voicing | `Mono(priority)`, `Latch()` |
-| Routing | `Channel`, `Merge` |
+| Combine | `Merge(...)`, or `a + b` |
 | Out | `Play(voice)`, `Gate()`, `Compile()` (for a host), and the bridges below |
 
-A pick is a described test, not a function, so it can be shared and combined. `Chance` is repeatable: which notes it picks depends only on the seed and the note.
+Only what a function cannot say is an operator: the ones that **wait** (time), that **remember** across notes (voicing) or that **start several notes** from one. Everything per note is a small function over the note, with these helpers on `NoteEvent`: `Transpose(n)`, `Detune(cents)`, `Snap(scale)`, `InScale(scale)`, `Chance(p, seed)`, and C# `with` for the rest (`n with { Velocity = 0.5f }`). `Chance` is repeatable: which notes it picks depends only on the seed and the note.
 
 ```csharp
-// Notes below middle C go an octave down; the rest are echoed softly. Two streams from one input, merged.
+// Notes below middle C go an octave down; the rest are echoed softly. Two streams from one input, added.
 var keys = new NoteInput();
-var low = keys.Stream.Keep(Pick.Pitch(0, 59)).Octave(-1);
-var high = keys.Stream.Keep(Pick.Pitch(60, 127)).Echo(1, Beats.Eighth, 0.4);
-var sound = low.Merge(high).Play(v => Square(v.Frequency).LowPass(1800).Adsr(0.005, 0.15, 0.3, 0.2));
+var low = keys.Stream.Where(n => n.Pitch < 60).Transpose(-12);
+var high = keys.Stream.Where(n => n.Pitch >= 60).Echo(1, Beats.Eighth, 0.4);
+var sound = (low + high).Play(v => Square(v.Frequency).LowPass(1800).Adsr(0.005, 0.15, 0.3, 0.2));
 keys.NoteOn("c2 c4 e4");
 sound * 0.2
 ```
@@ -68,7 +66,7 @@ melody.Harmonize(0, 7).Strum(0.05).Play(v => Saw(v.Frequency).LowPass(2400).Adsr
 
 ## Writing against the chord that arrives
 
-`stream.Chord()` is the chord the stream is playing, as a `Pattern<Chord>`. That makes everything the library does with a written chord work with a played one: `chord.Arp(ArpMode.Down)`, `chord.Notes()`, and **steps of the chord**, which is the way to write a line that follows the harmony.
+`stream.Chord()` is the chord the stream is playing, as a `Pattern<Chord>`. That makes everything the library does with a written chord work with a played one: `chord.Arp(ArpMode.Down)`, `chord.Notes()`, and **steps of the chord** (`chord.Steps(...)`, the same name as on a single chord), which is the way to write a line that follows the harmony.
 
 ```csharp
 using Sigil.Sound;
@@ -76,11 +74,11 @@ using Sigil.Sound;
 // Whatever chord arrives, a run falling through it: step 0 is its lowest tone, 1 the next one up, past the top it climbs an octave.
 var keys = new NoteInput { Clock = clock };
 var chord = keys.Stream.Chord(switchOn: ChordSwitch.Cycle);
-var run = chord.Notes(Mini.Integers("7 6 5 4 3 2 1 0")).Transpose(12);
+var run = chord.Steps(Mini.Integers("7 6 5 4 3 2 1 0")).Transpose(12);
 Out.Notes(run);
 ```
 
-The same steps work on a fixed chord (`Chord.Major(60).Steps("0 1 2 3")`) and on a written progression (`Mini.Chords("<c3:min7 f3:7>").Notes(Mini.Integers("0 2 4"))`). A step with no chord, or a note that would leave the MIDI range, is left out.
+The same steps work on a fixed chord (`Chord.Major(60).Steps("0 1 2 3")`) and on a written progression (`Mini.Chords("<c3:min7 f3:7>").Steps(Mini.Integers("0 2 4"))`). A step with no chord, or a note that would leave the MIDI range, is left out.
 
 The three choices of `Chord` are the AutoArp device's:
 
@@ -94,9 +92,9 @@ The chord is the set of keys down when a group of presses has settled. Letting g
 
 A pattern written against the chord is a **live pattern**: it answers for now, whatever time it is asked about, and it is caught up with the notes whenever it is queried (once per block, by whatever plays it). That means it cannot be written out as a score; `ToPattern` throws. Everything else works: play it, shape it with `Sometimes`, `Degrade`, `Fast`, `Every`.
 
-## Your own functions: map, filter, reduce
+## Your own functions: map, filter, expand, reduce
 
-The operators above are the library's own code. When they are not enough, four more take a function of yours:
+`Select` and `Where` take a function of yours. Three more do more than one note at a time:
 
 ```csharp
 using Sigil.Sound;
@@ -105,14 +103,14 @@ var keys = new NoteInput();
 var shaped = keys.Stream
     .Select(n => n with { Pitch = n.Pitch + (n.Velocity > 0.8f ? 12 : 0) })       // change a note
     .Where(n => n.Pitch % 12 != 1)                                                  // keep some
-    .SelectMany((n, emit) => { emit.Add(n); emit.Add(n.Pitch + 7, 0.5f); })        // make none, one or several
+    .SelectMany((n, emit) => { emit.Add(n); emit.Add(n.Pitch + 7, 0.5f); })        // make none, one or several (Code mode)
     .Scan(0, (down, e, emit) => e.IsOn ? down + 1 : down - 1);                      // carry a state
 var count = keys.Stream.Fold(0, (down, e) => e.IsOn ? down + 1 : down - 1);        // reduce to a live Pattern<int>
 ```
 
 - The function sees and returns the note as it **starts**. Its `Id` and kind are ignored: the engine still ends the note when the key comes up, so a function cannot strand a note.
 - A function runs on the audio thread, once per note. It must not allocate, lock, block or take long. An exception stops the stream and reaches the host that runs it.
-- A host that runs scripts it did not write should not offer these four. The Sigil Workbench's Graph mode refuses them and offers the declarative operators and `Pick`; the same work is possible there without running code of the script's own.
+- A host that runs scripts it did not write should hold the function to the note. The Sigil Workbench's Graph mode accepts `Select` and `Where` only when the body is an expression over the note, arithmetic and `Math` (and the note's own helpers); a call into anything else is refused, because a call such as `Mini.Notes("...")` costs 270 microseconds and 170 KB (measured), and a function runs for every note. Make such a value in a variable above the call. `SelectMany`, `Scan` and `Fold` are Code mode only there.
 
 ## Sending a stream to a host
 
@@ -136,6 +134,7 @@ foreach (var e in runner.Reset())
 
 ## Limits
 
-- Per step: 128 notes sounding, 512 events a block, 512 scheduled events (delays, echoes), 16 notes from one note in `SelectMany`, 8 intervals in `Harmonize`, 16 echoes. A start that does not fit is dropped; its end is never sent.
+- Per step: 128 notes sounding, 512 events a block, 512 scheduled events (delays, echoes), 16 notes from one note in `SelectMany`, 8 intervals in `Harmonize`, 16 echoes.
+- Operator arguments are plain numbers, fixed when the stream is built (the same as `Pattern<Note>.Transpose`): a knob cannot drive `Transpose` or `Echo`. A start that does not fit is dropped; its end is never sent.
 - The stream's notes carry no bend, pressure or slide (a `PlayingNote`'s expression is for `NoteInput.Play`).
 - Events are quantized to the block they fall in. A host that wants sub-block timing is a later refinement.

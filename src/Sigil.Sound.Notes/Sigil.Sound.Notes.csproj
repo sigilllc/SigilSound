@@ -4,6 +4,9 @@
     <Description>Notes, scales, chords, patterns, mini-notation and polyphonic playback for Sigil.Sound.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Sigil.Sound.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Sigil.Sound\Sigil.Sound.csproj" />
   </ItemGroup>
 </Project>

@@ -24,7 +24,7 @@ public enum NoteEventKind : byte
 /// <param name="Pitch">The nearest MIDI pitch, 0 to 127; 60 is middle C.</param>
 /// <param name="Velocity">How hard the note was played, from 0 to 1. Meaningful for an <c>On</c>.</param>
 /// <param name="Cents">Hundredths of a semitone above <paramref name="Pitch"/> (negative for below).</param>
-/// <param name="Channel">A routing tag that operators leave alone unless asked (<see cref="NoteStream.Channel"/>, <see cref="Pick.Channel"/>).</param>
+/// <param name="Channel">A routing tag that operators leave alone; a function of yours may set or read it (<c>n with { Channel = 2 }</c>).</param>
 public readonly record struct NoteEvent(NoteEventKind Kind, long Id, int Pitch, float Velocity = 0.8f, float Cents = 0f, int Channel = 0)
 {
     /// <summary>True for the event that starts the note.</summary>
@@ -36,6 +36,58 @@ public readonly record struct NoteEvent(NoteEventKind Kind, long Id, int Pitch, 
     /// <summary>The pitch as a fraction of a MIDI note number: <c>60.5</c> is a quarter tone above middle C.</summary>
     public double PitchWithCents => Pitch + Cents / 100.0;
 
+    /// <summary>This note moved by <paramref name="semitones"/>. A note moved out of the MIDI range is dropped by the stream that gets it.</summary>
+    /// <param name="semitones">How far to move, up (positive) or down.</param>
+    public NoteEvent Transpose(int semitones) => this with { Pitch = Pitch + semitones };
+
+    /// <summary>This note moved by <paramref name="cents"/> hundredths of a semitone, carrying whole semitones into the pitch.</summary>
+    /// <param name="cents">How far to move, up (positive) or down.</param>
+    public NoteEvent Detune(double cents)
+    {
+        double total = Cents + cents;
+        int shift = (int)Math.Round(total / 100.0);
+        return this with { Pitch = Pitch + shift, Cents = (float)(total - shift * 100.0) };
+    }
+
+    /// <summary>True when the note is a tone of <paramref name="scale"/>, in any octave. <c>Where(n =&gt; n.InScale(scale))</c> keeps those.</summary>
+    /// <param name="scale">The scale, such as <c>Scale.Parse("d dorian")</c>.</param>
+    public bool InScale(Scale scale)
+    {
+        ArgumentNullException.ThrowIfNull(scale);
+        return scale.Contains(Pitch);
+    }
+
+    /// <summary>
+    /// This note moved to a tone of <paramref name="scale"/>, in any octave; a note already in the scale is returned as it is. The cents
+    /// of a moved note are cleared. <c>Select(n =&gt; n.Snap(scale))</c> quantizes a stream.
+    /// </summary>
+    /// <param name="scale">The tones allowed.</param>
+    /// <param name="mode">Which tone a note between two goes to. Defaults to the closest, and the lower one when two are equally close.</param>
+    public NoteEvent Snap(Scale scale, QuantizeMode mode = QuantizeMode.Nearest)
+    {
+        ArgumentNullException.ThrowIfNull(scale);
+        if (scale.Contains(Pitch))
+            return this;
+
+        for (int distance = 1; distance <= 12; distance++)
+        {
+            if (mode != QuantizeMode.Up && scale.Contains(Pitch - distance))
+                return this with { Pitch = Pitch - distance, Cents = 0f };
+            if (mode != QuantizeMode.Down && scale.Contains(Pitch + distance))
+                return this with { Pitch = Pitch + distance, Cents = 0f };
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// True for a random share of notes: <c>Where(n =&gt; n.Chance(0.3))</c> lets 3 in 10 through. Which ones depends only on the
+    /// <paramref name="seed"/> and the note's <see cref="Id"/>, so the same performance is picked the same way every time.
+    /// </summary>
+    /// <param name="probability">The share, 0 to 1.</param>
+    /// <param name="seed">Another seed picks other notes.</param>
+    public bool Chance(double probability, int seed = 0) => NoteIds.Unit(seed, Id) < probability;
+
     /// <summary>An event that starts a note.</summary>
     public static NoteEvent Start(long id, int pitch, float velocity = 0.8f, float cents = 0f, int channel = 0) =>
         new(NoteEventKind.On, id, pitch, velocity, cents, channel);
@@ -45,23 +97,7 @@ public readonly record struct NoteEvent(NoteEventKind Kind, long Id, int Pitch, 
         new(NoteEventKind.Off, id, pitch, 0f, cents, channel);
 }
 
-/// <summary>What <see cref="NoteStream.Range"/> does with a note outside the range.</summary>
-public enum RangeMode
-{
-    /// <summary>Reflects it off the edge it passed, as a wavefolder does: a note 3 semitones above the top comes back 3 below it.</summary>
-    Fold,
-
-    /// <summary>Moves it by octaves until it is inside, which keeps what note it is. A range narrower than an octave may have no place for it; the note is then dropped.</summary>
-    Wrap,
-
-    /// <summary>Drops the note.</summary>
-    Drop,
-
-    /// <summary>Moves it to the nearest edge of the range.</summary>
-    Clamp,
-}
-
-/// <summary>Which scale tone <see cref="NoteStream.Quantize"/> picks for a note between two of them.</summary>
+/// <summary>Which scale tone <see cref="NoteEvent.Snap"/> picks for a note between two of them.</summary>
 public enum QuantizeMode
 {
     /// <summary>The closest tone; the lower one when two are equally close.</summary>

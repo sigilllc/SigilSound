@@ -36,6 +36,7 @@ public sealed class Scale
     };
 
     private readonly int[] _steps;
+    private readonly int _pitchClasses; // bit n is set when pitch class n belongs to the scale
 
     /// <summary>A scale from a root pitch and the semitone steps above it, which must rise from 0 and stay within one octave.</summary>
     /// <param name="root">The MIDI pitch of degree 0.</param>
@@ -53,7 +54,16 @@ public sealed class Scale
 
         Root = root;
         Name = name;
+        foreach (int step in _steps)
+            _pitchClasses |= 1 << (((root + step) % 12) + 12) % 12;
     }
+
+    /// <summary>
+    /// True when <paramref name="pitch"/> is a tone of the scale in some octave. It reads a precomputed set and allocates nothing, so it
+    /// is fit to ask of every note as it plays.
+    /// </summary>
+    /// <param name="pitch">A MIDI pitch.</param>
+    public bool Contains(int pitch) => (_pitchClasses & (1 << (((pitch % 12) + 12) % 12))) != 0;
 
     /// <summary>The MIDI pitch of degree 0.</summary>
     public int Root { get; }
@@ -407,10 +417,10 @@ public static class ChordPatterns
     /// <param name="steps">The steps, such as <c>Mini.Integers("7 6 5 4 3 2 1 0")</c>.</param>
     /// <example>
     /// <code>
-    /// Mini.Chords("&lt;c3:min7 f3:7&gt;").Notes(Mini.Integers("[7 6 5 4 3 2 1 0] ~ [4 2 0] ~")).Play(v => Saw(v.Frequency).Adsr(0.003, 0.2, 0, 0.2))
+    /// Mini.Chords("&lt;c3:min7 f3:7&gt;").Steps(Mini.Integers("[7 6 5 4 3 2 1 0] ~ [4 2 0] ~")).Play(v => Saw(v.Frequency).Adsr(0.003, 0.2, 0, 0.2))
     /// </code>
     /// </example>
-    public static Pattern<Note> Notes(this Pattern<Chord> chords, Pattern<int> steps)
+    public static Pattern<Note> Steps(this Pattern<Chord> chords, Pattern<int> steps)
     {
         ArgumentNullException.ThrowIfNull(chords);
         ArgumentNullException.ThrowIfNull(steps);
@@ -451,14 +461,14 @@ public static class ChordPatterns
         });
     }
 
-    /// <summary>Plays steps of the chords written in <see cref="Mini"/> notation; see <see cref="Notes(Pattern{Chord}, Pattern{int})"/>.</summary>
+    /// <summary>Plays steps of the chords written in <see cref="Mini"/> notation; see <see cref="Steps(Pattern{Chord}, Pattern{int})"/>.</summary>
     /// <param name="chords">The chords.</param>
     /// <param name="steps">The steps, such as <c>"0 2 4 [7 5]"</c>.</param>
     /// <exception cref="MiniNotationException">The text is not valid.</exception>
-    public static Pattern<Note> Notes(this Pattern<Chord> chords, string steps)
+    public static Pattern<Note> Steps(this Pattern<Chord> chords, string steps)
     {
         ArgumentNullException.ThrowIfNull(steps);
-        return chords.Notes(Mini.Integers(steps));
+        return chords.Steps(Mini.Integers(steps));
     }
 
     /// <summary>The lowest tone of each chord, as a pattern of pitches: the bass line of a progression, or of the chord being played.</summary>

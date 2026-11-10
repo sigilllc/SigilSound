@@ -4,7 +4,7 @@ public sealed partial class NoteStream
 {
     /// <summary>
     /// The chord the stream is playing, as a <see cref="Pattern{T}"/> to write against: <c>stream.Chord().Arp(ArpMode.Down)</c> arpeggiates
-    /// whatever chord arrives, and <c>stream.Chord().Notes(Mini.Integers("7 6 5 4"))</c> plays steps of it. The same choices as the
+    /// whatever chord arrives, and <c>stream.Chord().Steps(Mini.Integers("7 6 5 4"))</c> plays steps of it. The same choices as the
     /// AutoArp device decide what counts as a chord and when a new one takes over.
     /// </summary>
     /// <param name="settle">

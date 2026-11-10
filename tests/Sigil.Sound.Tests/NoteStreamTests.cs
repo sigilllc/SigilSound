@@ -140,7 +140,7 @@ public class NoteStreamTests
     [Fact]
     public void Detune_carries_whole_semitones_into_the_pitch()
     {
-        using var rig = Rig(s => s.Detune(130));
+        using var rig = Rig(s => s.Select(n => n.Detune(130)));
 
         rig.Keys.NoteOn(60, 0.8f, 10.0);
         rig.Render();
@@ -151,21 +151,20 @@ public class NoteStreamTests
     }
 
     [Theory]
-    [InlineData(RangeMode.Drop, 76, -1)]
-    [InlineData(RangeMode.Clamp, 76, 72)]
-    [InlineData(RangeMode.Wrap, 76, 64)]
-    [InlineData(RangeMode.Fold, 76, 68)]
-    [InlineData(RangeMode.Fold, 40, 56)]
-    [InlineData(RangeMode.Wrap, 40, 52)]
-    [InlineData(RangeMode.Drop, 60, 60)]
-    public void Range_moves_or_drops_a_note_outside_it(RangeMode mode, int pitch, int expected)
+    [InlineData(76, -1)]
+    [InlineData(40, -1)]
+    [InlineData(60, 60)]
+    public void Where_keeps_the_notes_in_a_range_and_a_dropped_note_has_no_end(int pitch, int expected)
     {
-        using var rig = Rig(s => s.Range(48, 72, mode));
+        using var rig = Rig(s => s.Where(n => n.Pitch >= 48 && n.Pitch <= 72));
 
         rig.Keys.NoteOn(pitch);
         rig.Render();
+        rig.Keys.NoteOff(pitch);
+        rig.Render();
 
         Assert.Equal(expected < 0 ? Array.Empty<int>() : new[] { expected }, rig.StartPitches);
+        rig.AssertAllEnded();
     }
 
     [Theory]
@@ -174,9 +173,10 @@ public class NoteStreamTests
     [InlineData(QuantizeMode.Up, 61, 62)]
     [InlineData(QuantizeMode.Down, 61, 60)]
     [InlineData(QuantizeMode.Up, 60, 60)]
-    public void Quantize_moves_a_note_to_a_tone_of_the_scale(QuantizeMode mode, int pitch, int expected)
+    public void Snap_moves_a_note_to_a_tone_of_the_scale(QuantizeMode mode, int pitch, int expected)
     {
-        using var rig = Rig(s => s.Quantize(Scale.Major(60), mode));
+        var scale = Scale.Major(60);
+        using var rig = Rig(s => s.Select(n => n.Snap(scale, mode)));
 
         rig.Keys.NoteOn(pitch, 0.8f, 30.0);
         rig.Render();
@@ -187,28 +187,44 @@ public class NoteStreamTests
             Assert.Equal(0f, start.Cents); // a snapped note has no cents left
     }
 
+    [Fact]
+    public void The_helpers_of_a_note_work_on_a_note_by_itself()
+    {
+        var cMajor = Scale.Major(60);
+        var note = NoteEvent.Start(1, 61, 0.8f, 20f); // C#, a little sharp
+
+        Assert.False(note.InScale(cMajor));
+        Assert.True(note.Transpose(1).InScale(cMajor));
+        Assert.Equal(62, note.Snap(cMajor, QuantizeMode.Up).Pitch);
+
+        var chromatic = Scale.Chromatic(0);
+        Assert.Equal(note, note.Snap(chromatic)); // already a tone: returned as it is, cents and all
+
+        var lowered = note.Detune(-130); // 20 - 130 = -110 cents: one semitone down and 10 cents flat
+        Assert.Equal((60, -10f), (lowered.Pitch, lowered.Cents));
+
+        Assert.False(note.Chance(0));
+        Assert.True(note.Chance(1));
+        Assert.Equal(note.Chance(0.5, 3), note.Chance(0.5, 3)); // repeatable
+    }
+
     // --- Dynamics --------------------------------------------------------------------------------------------------------
 
     [Fact]
-    public void Velocity_operators_set_scale_clamp_and_curve()
+    public void Velocity_sets_it_and_a_function_can_scale_clamp_or_curve_it()
     {
         using var set = Rig(s => s.Velocity(0.5));
         set.Keys.NoteOn(60, 0.9f);
         set.Render();
         Assert.Equal(0.5f, set.Starts.Single().Event.Velocity);
 
-        using var scale = Rig(s => s.ScaleVelocity(0.5));
-        scale.Keys.NoteOn(60, 0.8f);
-        scale.Render();
-        Assert.Equal(0.4f, scale.Starts.Single().Event.Velocity, 0.001f);
-
-        using var clamp = Rig(s => s.ClampVelocity(0.3, 0.6));
+        using var clamp = Rig(s => s.Select(n => n with { Velocity = Math.Clamp(n.Velocity, 0.3f, 0.6f) }));
         clamp.Keys.NoteOn(60, 0.9f);
         clamp.Keys.NoteOn(62, 0.1f);
         clamp.Render();
         Assert.Equal([0.6f, 0.3f], clamp.Starts.Select(e => e.Event.Velocity).ToArray());
 
-        using var curve = Rig(s => s.VelocityCurve(2));
+        using var curve = Rig(s => s.Select(n => n with { Velocity = n.Velocity * n.Velocity }));
         curve.Keys.NoteOn(60, 0.5f);
         curve.Render();
         Assert.Equal(0.25f, curve.Starts.Single().Event.Velocity, 0.001f);
@@ -217,9 +233,9 @@ public class NoteStreamTests
     // --- Filter and routing ----------------------------------------------------------------------------------------------
 
     [Fact]
-    public void Keep_and_Drop_choose_by_a_pick_and_a_dropped_note_has_no_end()
+    public void Where_chooses_and_a_refused_note_has_no_end()
     {
-        using var rig = Rig(s => s.Keep(Pick.Pitch(60, 71)));
+        using var rig = Rig(s => s.Where(n => n.Pitch >= 60 && n.Pitch <= 71));
 
         rig.Keys.NoteOn("c3 c4 c5");
         rig.Render();
@@ -229,17 +245,17 @@ public class NoteStreamTests
         Assert.Equal([60], rig.StartPitches);
         rig.AssertAllEnded();
 
-        using var drop = Rig(s => s.Drop(Pick.Pitch(60, 71)));
+        using var drop = Rig(s => s.Where(n => !(n.Pitch >= 60 && n.Pitch <= 71)));
         drop.Keys.NoteOn("c3 c4 c5");
         drop.Render();
         Assert.Equal([48, 72], drop.StartPitches.Order());
     }
 
     [Fact]
-    public void Picks_combine()
+    public void Tests_combine_the_way_c_sharp_combines_them()
     {
-        var inScale = Pick.InScale(Scale.Major(0));
-        using var rig = Rig(s => s.Keep(inScale.And(Pick.Pitch(60, 71)).Or(Pick.Velocity(0.95, 1))));
+        var cMajor = Scale.Major(0);
+        using var rig = Rig(s => s.Where(n => (n.InScale(cMajor) && n.Pitch >= 60 && n.Pitch <= 71) || n.Velocity >= 0.95f));
 
         rig.Keys.NoteOn(61, 0.5f); // not in C major
         rig.Keys.NoteOn(62, 0.5f); // in C major, in range
@@ -248,12 +264,6 @@ public class NoteStreamTests
         rig.Render();
 
         Assert.Equal([62, 81], rig.StartPitches);
-
-        using var not = Rig(s => s.Keep(Pick.Pitch(60, 71).Not()));
-        not.Keys.NoteOn(62);
-        not.Keys.NoteOn(80);
-        not.Render();
-        Assert.Equal([80], not.StartPitches);
     }
 
     [Fact]
@@ -261,7 +271,7 @@ public class NoteStreamTests
     {
         int[] Run(int seed)
         {
-            using var rig = Rig(s => s.Keep(Pick.Chance(0.5, seed)));
+            using var rig = Rig(s => s.Where(n => n.Chance(0.5, seed)));
             for (int p = 20; p < 120; p++)
                 rig.Keys.NoteOn(p);
             rig.Render();
@@ -273,21 +283,35 @@ public class NoteStreamTests
         Assert.NotEqual(first, Run(2));
         Assert.InRange(first.Length, 25, 75);
 
-        using var none = Rig(s => s.Keep(Pick.Chance(0, 1)));
+        using var none = Rig(s => s.Where(n => n.Chance(0, 1)));
         none.Keys.NoteOn(60);
         none.Render();
         Assert.Empty(none.Events);
     }
 
     [Fact]
-    public void Channel_tags_notes_and_Pick_Channel_finds_them()
+    public void A_function_can_tag_notes_with_a_channel_and_read_the_tag_back()
     {
-        using var rig = Rig(s => s.Channel(3).Keep(Pick.Channel(3)));
+        using var rig = Rig(s => s.Select(n => n with { Channel = 3 }).Where(n => n.Channel == 3));
 
         rig.Keys.NoteOn(60);
         rig.Render();
 
         Assert.Equal(3, Assert.Single(rig.Starts).Event.Channel);
+    }
+
+    [Fact]
+    public void Plus_merges_two_streams_like_Merge_does()
+    {
+        using var rig = Rig(s => s.Transpose(12) + s.Transpose(-12));
+
+        rig.Keys.NoteOn(60);
+        rig.Render();
+        rig.Keys.NoteOff(60);
+        rig.Render();
+
+        Assert.Equal([48, 72], rig.StartPitches.Order());
+        rig.AssertAllEnded();
     }
 
     [Fact]
@@ -355,17 +379,6 @@ public class NoteStreamTests
         rig.Render();
 
         Assert.Equal(expected, rig.StartPitches.Order());
-    }
-
-    [Fact]
-    public void Chordify_builds_a_chord_of_the_given_shape_on_each_note()
-    {
-        using var rig = Rig(s => s.Chordify(Chord.Minor(0)));
-
-        rig.Keys.NoteOn(62);
-        rig.Render();
-
-        Assert.Equal([62, 65, 69], rig.StartPitches.Order());
     }
 
     // --- Time ------------------------------------------------------------------------------------------------------------
@@ -699,9 +712,9 @@ public class NoteStreamTests
             "length-echo" => s.Length(0.3).Echo(2, 0.5),
             "mono-lowest" => s.Mono(NotePriority.Lowest).Echo(1, 0.2),
             "latch-harmonize" => s.Latch().Harmonize(Scale.Minor(60), 0, 2, 4),
-            "merge" => s.Merge(s.Octave(1), s.Delay(0.3).Keep(Pick.Chance(0.5, 4))),
+            "merge" => s.Merge(s.Transpose(12), s.Delay(0.3).Where(n => n.Chance(0.5, 4))),
             "pattern-merge" => Mini.Notes("c3 [e3 g3]*2 ~ <b3 d4>").ToStream().Merge(s.Strum(0.02)),
-            _ => s.Detune(30).Range(36, 96, RangeMode.Fold).Quantize(Scale.Major(60)).Harmonize(0, 7).Strum(0.03).Echo(2, 0.25).Humanize(0.05).Length(0.4),
+            _ => s.Select(n => n.Detune(30)).Where(n => n.Pitch >= 36 && n.Pitch <= 96).Select(n => n.Snap(Scale.Major(60))).Harmonize(0, 7).Strum(0.03).Echo(2, 0.25).Humanize(0.05).Length(0.4),
         };
     }
 
@@ -759,7 +772,7 @@ public class NoteStreamTests
     [Fact]
     public void Running_a_block_allocates_nothing_once_the_stream_is_built()
     {
-        using var rig = Rig(s => s.Transpose(2).Harmonize(0, 7).Keep(Pick.Pitch(30, 100)).Echo(2, 0.25).Strum(0.01).Humanize(0.05).Delay(0.1));
+        using var rig = Rig(s => s.Transpose(2).Harmonize(0, 7).Where(n => n.Pitch >= 30 && n.Pitch <= 100).Echo(2, 0.25).Strum(0.01).Humanize(0.05).Delay(0.1));
         rig.Keys.NoteOn("c3 e3 g3");
         rig.Render(300); // warm up: jitting, first echoes
 
@@ -839,7 +852,6 @@ public class NoteStreamTests
     public void Arguments_are_checked_when_the_stream_is_built()
     {
         var s = NoteStream.Silence;
-        Assert.Throws<ArgumentOutOfRangeException>(() => s.Range(70, 60));
         Assert.Throws<ArgumentOutOfRangeException>(() => s.Velocity(0));
         Assert.Throws<ArgumentOutOfRangeException>(() => s.Echo(0, 1));
         Assert.Throws<ArgumentOutOfRangeException>(() => s.Echo(17, 1));
@@ -850,8 +862,8 @@ public class NoteStreamTests
         Assert.Throws<ArgumentException>(() => s.Harmonize());
         Assert.Throws<ArgumentException>(() => s.Harmonize(0, 1, 2, 3, 4, 5, 6, 7, 8));
         Assert.Throws<ArgumentException>(() => s.Merge());
-        Assert.Throws<ArgumentOutOfRangeException>(() => Pick.Pitch(80, 60));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Pick.Chance(2));
+        Assert.Throws<ArgumentNullException>(() => s.Select(null!));
+        Assert.Throws<ArgumentNullException>(() => s.Where(null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => new NoteInput().NoteOn(60, 0.5f, 150.0));
     }
 }

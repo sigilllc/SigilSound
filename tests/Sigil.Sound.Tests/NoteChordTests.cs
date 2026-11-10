@@ -257,8 +257,8 @@ public class NoteChordTests
         rig.Keys.NoteOn("c4 e4 g4");
         rig.Advance(10);
 
-        Assert.Equal([60, 64, 67, 72, 76, 79], Pitches(rig.Chord.Notes("0 1 2 3 4 5"), 0));
-        Assert.Equal([79, 67, 55, 52], Pitches(rig.Chord.Notes("5 2 -1 -2"), 0));
+        Assert.Equal([60, 64, 67, 72, 76, 79], Pitches(rig.Chord.Steps("0 1 2 3 4 5"), 0));
+        Assert.Equal([79, 67, 55, 52], Pitches(rig.Chord.Steps("5 2 -1 -2"), 0));
     }
 
     [Fact]
@@ -268,18 +268,18 @@ public class NoteChordTests
         rig.Keys.NoteOn("c4 e4 g4");
         rig.Advance(10);
 
-        var events = rig.Chord.Notes("0 ~ [1 2]").Cycle(0);
+        var events = rig.Chord.Steps("0 ~ [1 2]").Cycle(0);
 
         Assert.Equal([60, 64, 67], events.Select(e => e.Value.Pitch));
         Assert.Equal([new Fraction(0), new Fraction(2, 3), new Fraction(5, 6)], events.Select(e => e.Whole.Begin));
-        Assert.Empty(rig.Chord.Notes("100").Cycle(0));
+        Assert.Empty(rig.Chord.Steps("100").Cycle(0));
     }
 
     [Fact]
     public void A_run_written_against_a_cycle_chord_uses_one_chord_even_when_the_chord_changes_in_the_bar()
     {
         using var rig = new ChordRig(s => s.Chord(switchOn: ChordSwitch.Cycle));
-        var run = rig.Chord.Notes("7 6 5 4 3 2 1 0");
+        var run = rig.Chord.Steps("7 6 5 4 3 2 1 0");
         rig.Keys.NoteOn("c4 e4 g4");
         rig.AdvanceBeats(0.5);
 
@@ -328,7 +328,7 @@ public class NoteChordTests
     {
         Assert.Equal([60, 64, 67, 72, 55], Pitches(Chord.Major(60).Steps("0 1 2 3 -1"), 0));
 
-        var progression = Mini.Chords("<c3:min7 f3:7>").Notes(Mini.Integers("0 2 4"));
+        var progression = Mini.Chords("<c3:min7 f3:7>").Steps(Mini.Integers("0 2 4"));
         Assert.Equal([48, 55, 60], Pitches(progression, 0));
         Assert.Equal([53, 60, 65], Pitches(progression, 1)); // F7 is F A C Eb: step 2 is C, step 4 is the F above
     }
@@ -340,12 +340,21 @@ public class NoteChordTests
         rig.Keys.NoteOn("c4 e4 g4");
         rig.Advance(10);
 
-        var ex = Assert.Throws<InvalidOperationException>(() => rig.Chord.Notes("0 1 2").ToPattern());
+        var ex = Assert.Throws<InvalidOperationException>(() => rig.Chord.Steps("0 1 2").ToPattern());
         Assert.Contains("live notes", ex.Message);
 
         // Checking it for runaway density is not writing it out, and leaves it as it was.
         rig.Chord.Validate();
         Assert.Equal(C, rig.Now());
+    }
+
+    [Fact]
+    public void A_live_pattern_is_refused_even_before_any_chord_has_arrived()
+    {
+        using var rig = new ChordRig();
+
+        Assert.Null(rig.Now()); // it has no events yet, and still knows it follows live notes
+        Assert.Throws<InvalidOperationException>(() => rig.Chord.Steps("0 1").ToPattern());
     }
 
     // --- Fold ------------------------------------------------------------------------------------------------------------

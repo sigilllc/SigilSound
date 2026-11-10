@@ -17,8 +17,8 @@ public delegate void NoteExpander(NoteEvent note, NoteEmitter emit);
 /// <see cref="NoteInput.Stream"/>; <c>pattern.ToStream()</c> turns a score into one.
 /// </para>
 /// <para>
-/// <b>Notes always end.</b> Whatever an operator does, the end of a note ends exactly the notes it made from it, even a raw function
-/// of your own (<see cref="Select"/>, <see cref="SelectMany"/>), and everything still sounding is ended when the stream is reset,
+/// <b>Notes always end.</b> Whatever an operator does, the end of a note ends exactly the notes it made from it, even a function
+/// of your own (<see cref="Select"/>, <see cref="Where"/>, <see cref="SelectMany"/>), and everything still sounding is ended when the stream is reset,
 /// replaced or disposed. Capacities are fixed (128 notes sounding per step, 512 events a block); past them a note's start is dropped
 /// and its end never sent, never the other way round.
 /// </para>
@@ -77,105 +77,17 @@ public sealed partial class NoteStream
     public NoteStreamRunner Compile(HostClock? clock = null, int sampleRate = RenderContext.DefaultSampleRate) =>
         new(this, () => clock ?? Clock, sampleRate);
 
-    // --- Pitch -----------------------------------------------------------------------------------------------------------
+    // --- Shaping one note at a time -----------------------------------------------------------------------------------
 
-    /// <summary>Moves every note by <paramref name="semitones"/>. A note that would leave the MIDI range is dropped.</summary>
+    /// <summary>
+    /// Moves every note by <paramref name="semitones"/>. A note that would leave the MIDI range is dropped.
+    /// </summary>
     /// <param name="semitones">How far to move, up (positive) or down.</param>
     public NoteStream Transpose(int semitones) => Transform("Transpose", (ref NoteEvent n) =>
     {
         n = n with { Pitch = n.Pitch + semitones };
         return true;
     });
-
-    /// <summary>Moves every note by <paramref name="octaves"/> octaves. A note that would leave the MIDI range is dropped.</summary>
-    /// <param name="octaves">How many octaves up (positive) or down.</param>
-    public NoteStream Octave(int octaves) => Transpose(octaves * 12);
-
-    /// <summary>Moves every note by <paramref name="cents"/> hundredths of a semitone, on top of any detune it already has.</summary>
-    /// <param name="cents">How far to move, up (positive) or down.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Not a number.</exception>
-    public NoteStream Detune(double cents)
-    {
-        if (!double.IsFinite(cents)) throw new ArgumentOutOfRangeException(nameof(cents), cents, "Cents must be a number.");
-        return Transform("Detune", (ref NoteEvent n) =>
-        {
-            double total = n.Cents + cents;
-            int shift = (int)Math.Round(total / 100.0);
-            n = n with { Pitch = n.Pitch + shift, Cents = (float)(total - shift * 100.0) };
-            return true;
-        });
-    }
-
-    /// <summary>Keeps every note between <paramref name="low"/> and <paramref name="high"/>, moving or dropping the ones outside as <paramref name="mode"/> says.</summary>
-    /// <param name="low">The lowest MIDI pitch allowed, 0 to 127.</param>
-    /// <param name="high">The highest MIDI pitch allowed, at least <paramref name="low"/>.</param>
-    /// <param name="mode">What happens to a note outside. Defaults to dropping it.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The range is not inside 0 to 127, or ends before it starts.</exception>
-    public NoteStream Range(int low, int high, RangeMode mode = RangeMode.Drop)
-    {
-        if (low < 0 || high > 127 || low > high) throw new ArgumentOutOfRangeException(nameof(low), low, "The range must lie inside 0 to 127 and end after it starts.");
-        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown range mode.");
-        return Transform("Range", (ref NoteEvent n) =>
-        {
-            int p = n.Pitch;
-            if (p >= low && p <= high)
-                return true;
-
-            switch (mode)
-            {
-                case RangeMode.Clamp:
-                    p = Math.Clamp(p, low, high);
-                    break;
-                case RangeMode.Wrap:
-                    while (p < low) p += 12;
-                    while (p > high) p -= 12;
-                    break;
-                case RangeMode.Fold:
-                    for (int i = 0; i < 16 && (p < low || p > high); i++)
-                        p = p > high ? 2 * high - p : 2 * low - p;
-                    break;
-            }
-
-            if (p < low || p > high)
-                return false;
-            n = n with { Pitch = p, Cents = mode == RangeMode.Clamp || mode == RangeMode.Fold ? 0f : n.Cents };
-            return true;
-        });
-    }
-
-    /// <summary>Moves every note to a tone of <paramref name="scale"/>, in any octave. A note already in the scale is untouched; the cents of a moved note are cleared.</summary>
-    /// <param name="scale">The tones allowed, such as <c>Scale.Parse("d dorian")</c>.</param>
-    /// <param name="mode">Which tone a note between two goes to. Defaults to the closest.</param>
-    public NoteStream Quantize(Scale scale, QuantizeMode mode = QuantizeMode.Nearest)
-    {
-        ArgumentNullException.ThrowIfNull(scale);
-        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown quantize mode.");
-        var allowed = PitchClasses(scale);
-        return Transform("Quantize", (ref NoteEvent n) =>
-        {
-            if (allowed[Class(n.Pitch)])
-                return true;
-
-            for (int distance = 1; distance <= 12; distance++)
-            {
-                if (mode != QuantizeMode.Up && allowed[Class(n.Pitch - distance)])
-                {
-                    n = n with { Pitch = n.Pitch - distance, Cents = 0f };
-                    return true;
-                }
-
-                if (mode != QuantizeMode.Down && allowed[Class(n.Pitch + distance)])
-                {
-                    n = n with { Pitch = n.Pitch + distance, Cents = 0f };
-                    return true;
-                }
-            }
-
-            return false;
-        });
-    }
-
-    // --- Dynamics --------------------------------------------------------------------------------------------------------
 
     /// <summary>Plays every note at the same velocity.</summary>
     /// <param name="velocity">Above 0 up to 1.</param>
@@ -191,75 +103,67 @@ public sealed partial class NoteStream
         });
     }
 
-    /// <summary>Multiplies every velocity by <paramref name="factor"/>; the result stays between 1/127 and 1 so a note never turns silent.</summary>
-    /// <param name="factor">0 or more; 0.5 halves the velocity.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Negative or not a number.</exception>
-    public NoteStream ScaleVelocity(double factor)
+    /// <summary>
+    /// Changes each note with a function of your own. The function sees the note as it starts and returns the note to play; its
+    /// <see cref="NoteEvent.Id"/> and kind are ignored, so the engine still ends the note when the key comes up, and a result outside
+    /// the MIDI range drops it. Everything else about a note is one expression away: <c>n with { Velocity = 0.5f }</c>,
+    /// <c>n.Transpose(7)</c>, <c>n.Snap(scale)</c>, <c>n.Detune(20)</c>.
+    /// </summary>
+    /// <param name="map">Called once per note, on the audio thread: it must not allocate, lock, or take long.</param>
+    /// <remarks>
+    /// A host that runs scripts it did not write may accept only a body that is an expression over the note and arithmetic. The Sigil
+    /// Workbench's Graph mode does, and refuses anything that calls other code. A function that throws stops the stream; the host decides what that means.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// // The note an octave up when it is struck hard, and a fifth below it when it is not.
+    /// var keys = new NoteInput();
+    /// var sound = keys.Stream.Select(n => n.Velocity &gt; 0.7f ? n.Transpose(12) : n.Transpose(-5))
+    ///     .Play(v =&gt; Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.2, 0.4, 0.2));
+    /// keys.NoteOn("c3:0.9 e3:0.4");
+    /// sound * 0.3
+    /// </code>
+    /// </example>
+    public NoteStream Select(Func<NoteEvent, NoteEvent> map)
     {
-        if (!(factor >= 0) || !double.IsFinite(factor)) throw new ArgumentOutOfRangeException(nameof(factor), factor, "The factor must be 0 or more.");
-        return Transform("ScaleVelocity", (ref NoteEvent n) =>
+        ArgumentNullException.ThrowIfNull(map);
+        return Transform("Select", (ref NoteEvent n) =>
         {
-            n = n with { Velocity = (float)Math.Clamp(n.Velocity * factor, 1.0 / 127, 1.0) };
+            n = map(n);
             return true;
         });
     }
 
-    /// <summary>Keeps every velocity between <paramref name="low"/> and <paramref name="high"/>.</summary>
-    /// <param name="low">The softest velocity allowed, above 0.</param>
-    /// <param name="high">The hardest velocity allowed, at most 1 and at least <paramref name="low"/>.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The range is not inside 0 (exclusive) to 1, or ends before it starts.</exception>
-    public NoteStream ClampVelocity(double low, double high)
+    /// <summary>
+    /// Keeps the notes a function of your own says yes to; a note it refuses has no end to send either. See <see cref="Select"/> for what
+    /// the function may do.
+    /// </summary>
+    /// <param name="keep">Called once per note, on the audio thread.</param>
+    /// <example>
+    /// <code>
+    /// // Only the notes of D dorian, and only a third of them, picked the same way every time.
+    /// var keys = new NoteInput();
+    /// var dorian = Scale.Parse("d dorian");
+    /// var sound = keys.Stream.Where(n =&gt; n.InScale(dorian) &amp;&amp; n.Chance(0.7))
+    ///     .Play(v =&gt; Square(v.Frequency).LowPass(1500).Adsr(0.005, 0.2, 0.4, 0.2));
+    /// keys.NoteOn("d3 e3 f3 g3 a3 b3 c4 f#3");
+    /// sound * 0.2
+    /// </code>
+    /// </example>
+    public NoteStream Where(Func<NoteEvent, bool> keep)
     {
-        if (!(low > 0 && high <= 1 && low <= high)) throw new ArgumentOutOfRangeException(nameof(low), low, "The range must lie inside 0 (exclusive) to 1 and end after it starts.");
-        return Transform("ClampVelocity", (ref NoteEvent n) =>
-        {
-            n = n with { Velocity = (float)Math.Clamp(n.Velocity, low, high) };
-            return true;
-        });
+        ArgumentNullException.ThrowIfNull(keep);
+        return Transform("Where", (ref NoteEvent n) => keep(n));
     }
 
-    /// <summary>Reshapes the velocity response: velocity raised to <paramref name="exponent"/>, so above 1 favors loud playing and below 1 evens it out.</summary>
-    /// <param name="exponent">Above 0.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Not above 0.</exception>
-    public NoteStream VelocityCurve(double exponent)
+    /// <summary>The notes of both streams as one; the same as <see cref="Merge"/>.</summary>
+    /// <param name="a">The first stream.</param>
+    /// <param name="b">The second stream.</param>
+    public static NoteStream operator +(NoteStream a, NoteStream b)
     {
-        if (!(exponent > 0) || !double.IsFinite(exponent)) throw new ArgumentOutOfRangeException(nameof(exponent), exponent, "The exponent must be above 0.");
-        return Transform("VelocityCurve", (ref NoteEvent n) =>
-        {
-            n = n with { Velocity = (float)Math.Clamp(Math.Pow(n.Velocity, exponent), 1.0 / 127, 1.0) };
-            return true;
-        });
-    }
-
-    // --- Filter and routing ----------------------------------------------------------------------------------------------
-
-    /// <summary>Lets through only the notes that match <paramref name="pick"/>.</summary>
-    /// <param name="pick">What to keep, such as <c>Pick.Pitch(60, 127)</c>.</param>
-    public NoteStream Keep(NotePick pick)
-    {
-        ArgumentNullException.ThrowIfNull(pick);
-        return Transform("Keep", (ref NoteEvent n) => pick.Matches(n));
-    }
-
-    /// <summary>Removes the notes that match <paramref name="pick"/>.</summary>
-    /// <param name="pick">What to remove, such as <c>Pick.Velocity(0, 0.2)</c>.</param>
-    public NoteStream Drop(NotePick pick)
-    {
-        ArgumentNullException.ThrowIfNull(pick);
-        return Transform("Drop", (ref NoteEvent n) => !pick.Matches(n));
-    }
-
-    /// <summary>Tags every note with a channel, for <see cref="Pick.Channel"/> further on.</summary>
-    /// <param name="channel">0 or more.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Negative.</exception>
-    public NoteStream Channel(int channel)
-    {
-        if (channel < 0) throw new ArgumentOutOfRangeException(nameof(channel), channel, "The channel must be 0 or more.");
-        return Transform("Channel", (ref NoteEvent n) =>
-        {
-            n = n with { Channel = channel };
-            return true;
-        });
+        ArgumentNullException.ThrowIfNull(a);
+        ArgumentNullException.ThrowIfNull(b);
+        return a.Merge(b);
     }
 
     /// <summary>
@@ -318,19 +222,6 @@ public sealed partial class NoteStream
             int offset = n.Pitch - scale[degree];
             foreach (int step in steps)
                 emit.Add(n with { Pitch = scale[degree + step] + offset });
-        }));
-    }
-
-    /// <summary>Plays each note as the bottom of a chord of this shape: <c>Chordify(Chord.Major(0))</c> makes every note a major triad.</summary>
-    /// <param name="shape">The chord, taken as the distances of its tones from its lowest tone.</param>
-    public NoteStream Chordify(Chord shape)
-    {
-        ArgumentNullException.ThrowIfNull(shape);
-        var intervals = shape.Pitches.Select(p => p - shape.Pitches[0]).Take(NoteEmitter.Capacity).ToArray();
-        return Then("Chordify", input => new FanOutStage(input, (n, emit) =>
-        {
-            foreach (int interval in intervals)
-                emit.Add(n with { Pitch = n.Pitch + interval });
         }));
     }
 
@@ -407,31 +298,7 @@ public sealed partial class NoteStream
     /// <summary>Keeps notes sounding after their keys come up, until the next group of keys goes down.</summary>
     public NoteStream Latch() => Then("Latch", input => new LatchStage(input));
 
-    // --- Raw: your own functions (Code mode) -----------------------------------------------------------------------------
-
-    /// <summary>
-    /// Changes each note with a function of your own. The function sees the note as it starts and returns the note to play; its
-    /// <see cref="NoteEvent.Id"/> and kind are ignored, so the engine still ends the note when the key comes up.
-    /// </summary>
-    /// <param name="map">Called once per note, on the audio thread: it must not allocate, lock, or take long.</param>
-    /// <remarks>A function that throws stops the stream; the host decides what that means. Graph-mode scripts cannot call this.</remarks>
-    public NoteStream Select(Func<NoteEvent, NoteEvent> map)
-    {
-        ArgumentNullException.ThrowIfNull(map);
-        return Transform("Select", (ref NoteEvent n) =>
-        {
-            n = map(n);
-            return true;
-        });
-    }
-
-    /// <summary>Keeps the notes a function of your own says yes to. See <see cref="Select"/> for what the function may do.</summary>
-    /// <param name="keep">Called once per note, on the audio thread.</param>
-    public NoteStream Where(Func<NoteEvent, bool> keep)
-    {
-        ArgumentNullException.ThrowIfNull(keep);
-        return Transform("Where", (ref NoteEvent n) => keep(n));
-    }
+    // --- Raw: more of your own functions (Code mode) ---------------------------------------------------------------------
 
     /// <summary>Turns each note into none, one or several with a function of your own: add the notes to make to <c>emit</c>. See <see cref="Select"/>.</summary>
     /// <param name="expand">Called once per note, on the audio thread. At most <see cref="NoteEmitter.Capacity"/> notes are taken.</param>
@@ -483,16 +350,6 @@ public sealed partial class NoteStream
         if (!ok)
             throw new ArgumentOutOfRangeException(name, beats, $"Beats must be {(allowZero ? "0" : "above 0")} up to {max}.");
     }
-
-    private static bool[] PitchClasses(Scale scale)
-    {
-        var allowed = new bool[12];
-        for (int degree = 0; degree < scale.Count; degree++)
-            allowed[Class(scale[degree])] = true;
-        return allowed;
-    }
-
-    private static int Class(int pitch) => ((pitch % 12) + 12) % 12;
 
     // The highest degree of the scale whose tone is at or below the pitch.
     private static int DegreeAtOrBelow(Scale scale, int pitch)
