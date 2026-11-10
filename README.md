@@ -85,7 +85,7 @@ Versions are `MAJOR.MINOR.PATCH`. What to expect:
 
 ## Build & Test
 
-Supports .NET 8.0 (LTS) and .NET 10.0.
+Works on .NET 8 or later. The libraries are built for net8.0 and net10.0, and a project on a newer .NET (9, for example) uses the closest of those. `Sigil.Sound.Repl.Core` is .NET 10 only.
 
 ```bash
 dotnet build

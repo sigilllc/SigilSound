@@ -448,34 +448,12 @@ body[data-layout="landing"] .content {
   gap: 18px;
 }
 
-.lp-kicker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  font-family: var(--bs-font-monospace);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  color: var(--bs-secondary-color);
-}
-
-.lp-pill {
-  padding: 2px 8px;
-  border: 1px solid var(--bs-border-color);
-  border-radius: 3px;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--bs-body-color);
-}
-
 .lp-title {
-  font-family: var(--bs-font-monospace);
-  font-size: clamp(28px, 4vw, 48px) !important;
+  font-family: var(--bs-font-sans-serif);
+  font-size: clamp(32px, 4.4vw, 52px) !important;
   font-weight: 700 !important;
-  line-height: 1.1;
+  line-height: 1.12;
   letter-spacing: -0.02em;
-  text-transform: uppercase;
   color: var(--bs-emphasis-color);
 }
 
@@ -502,32 +480,26 @@ body[data-layout="landing"] .content {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
-  padding: 0 22px;
+  height: 46px;
+  padding: 0 24px;
   border: 1px solid transparent;
-  border-radius: 3px;
-  font-family: var(--bs-font-monospace);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  border-radius: 4px;
+  font-family: var(--bs-font-sans-serif);
+  font-size: 15px;
+  font-weight: 600;
   text-decoration: none !important;
-  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease;
 }
 
-.lp-btn:hover {
-  transform: translateY(-1px);
-}
-
+/* Flat on purpose: solid fills, and a hover that only changes the colour. No glow, no lift, no brightness filter. */
 .lp-btn-primary {
   background: var(--sg-teal);
   border-color: var(--sg-teal);
   color: #04141a !important;
-  box-shadow: 0 4px 16px rgba(25, 230, 180, 0.2);
 }
 
 .lp-btn-primary:hover {
-  filter: brightness(1.08);
+  background: #14c99d;
+  border-color: #14c99d;
 }
 
 .lp-btn-ghost {
@@ -538,24 +510,27 @@ body[data-layout="landing"] .content {
 
 .lp-btn-ghost:hover {
   border-color: var(--sg-accent);
+  background: var(--sg-well);
 }
 
 .lp-chip {
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 12px;
+  height: 34px;
+  padding: 0 14px;
   border: 1px solid var(--bs-border-color);
-  border-radius: 3px;
-  font-family: var(--bs-font-monospace);
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  border-radius: 4px;
+  background: var(--sg-panel);
+  font-family: var(--bs-font-sans-serif);
+  font-size: 14px;
+  font-weight: 500;
   color: var(--bs-body-color);
   text-decoration: none !important;
 }
 
 .lp-chip:hover {
   border-color: var(--sg-accent);
+  background: var(--sg-well);
   color: var(--sg-accent);
 }
 
@@ -568,32 +543,6 @@ body[data-layout="landing"] .content {
   background: var(--sg-well);
 }
 
-.lp-chrome {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--sg-panel);
-  font-family: var(--bs-font-monospace);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--bs-secondary-color);
-}
-
-.lp-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.lp-dots i {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.lp-dots i:nth-child(1) { background: #c3a3f0; }
-.lp-dots i:nth-child(2) { background: #27a7f3; }
-.lp-dots i:nth-child(3) { background: #47cdab; }
 
 .lp-window pre {
   margin: 0;
@@ -618,13 +567,6 @@ body[data-layout="landing"] .content {
   padding: 14px 18px;
   border-radius: 6px;
   background: var(--sg-panel);
-}
-
-.lp-install-label {
-  font-family: var(--bs-font-monospace);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: var(--bs-secondary-color);
 }
 
 .lp-install > code {
@@ -677,12 +619,10 @@ body[data-layout="landing"] .content {
 }
 
 .lp-more h2 {
-  margin-bottom: 14px;
-  font-size: 12px !important;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--bs-secondary-color);
+  margin-bottom: 16px;
+  font-size: 22px !important;
+  font-weight: 700;
+  color: var(--bs-emphasis-color);
 }
 
 .lp-more-cols {

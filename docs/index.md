@@ -17,7 +17,6 @@ _disableContribution: true
 
 <section class="lp-hero" aria-label="Overview">
   <div class="lp-copy">
-    <div class="lp-kicker"><span>SIGIL.SOUND</span><span class="lp-pill">MIT licensed, .NET 8 and 10</span></div>
     <h1 class="lp-title">Sound synthesis for your .NET app</h1>
     <p class="lp-sub">A fluent API for sound synthesis in your .NET app. Build an instrument or an effect in a few lines, then record it to a file or play it live.</p>
     <div class="lp-cta">
@@ -33,10 +32,6 @@ _disableContribution: true
   </div>
 
   <div class="lp-window">
-    <div class="lp-chrome">
-      <span class="lp-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="lp-chrome-title">first sound</span>
-    </div>
 
 ```csharp
 // A sound used as a parameter: a slow sine sweeps the filter cutoff.
@@ -49,9 +44,8 @@ Saw(110).LowPass(cutoff: sweep, q: 4) * 0.4
 </section>
 
 <section class="lp-install" aria-label="Install">
-  <span class="lp-install-label">INSTALL</span>
   <code>dotnet add package Sigil.Sound</code>
-  <span class="lp-install-note">Patterns and notes are in <code>Sigil.Sound.Notes</code>.</span>
+  <span class="lp-install-note">MIT licensed. Works on .NET 8 or later. Patterns and notes are in <code>Sigil.Sound.Notes</code>.</span>
 </section>
 
 <section class="lp-grid" aria-label="What it does">
