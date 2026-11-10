@@ -449,11 +449,12 @@ body[data-layout="landing"] .content {
 }
 
 .lp-title {
-  font-family: var(--bs-font-sans-serif);
-  font-size: clamp(32px, 4.4vw, 52px) !important;
+  font-family: var(--bs-font-monospace);
+  font-size: clamp(28px, 4vw, 48px) !important;
   font-weight: 700 !important;
-  line-height: 1.12;
+  line-height: 1.1;
   letter-spacing: -0.02em;
+  text-transform: uppercase;
   color: var(--bs-emphasis-color);
 }
 
