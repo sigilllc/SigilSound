@@ -281,7 +281,7 @@ public class NoteExpressionTests
     }
 
     [Fact]
-    public void Expression_can_be_set_from_another_thread_while_rendering()
+    public async Task Expression_can_be_set_from_another_thread_while_rendering()
     {
         var keys = new NoteInput();
         using var output = Output(keys.Play(v => Saw(v.Frequency).LowPass(400 + v.Slide * 3000) * (0.2 + v.Pressure * 0.5)));
@@ -300,7 +300,7 @@ public class NoteExpressionTests
 
         var samples = Render(output, 1.0);
         stop.Cancel();
-        hand.Wait();
+        await hand;
 
         Assert.False(SignalAnalysis.HasNonFinite(samples));
         Assert.True(SignalAnalysis.Peak(samples) > 0.01f);

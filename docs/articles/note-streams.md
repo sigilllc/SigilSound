@@ -15,7 +15,7 @@ plucks * 0.3
 
 ## Notes have an identity
 
-A [`NoteEvent`](xref:Sigil.Sound.NoteEvent) is a start (`On`) or an end (`Off`) with an `Id` that pairs them, a pitch (the nearest MIDI note), a velocity, `Cents` (how far the note is from that pitch) and a `Channel` tag. The identity is what lets operators do something to a note and still end it correctly:
+A [`NoteEvent`](../api/Sigil.Sound.NoteEvent.yml) is a start (`On`) or an end (`Off`) with an `Id` that pairs them, a pitch (the nearest MIDI note), a velocity, `Cents` (how far the note is from that pitch) and a `Channel` tag. The identity is what lets operators do something to a note and still end it correctly:
 
 - **A note always ends.** The end of a note ends exactly the notes an operator made from it, even when the operator turned one note into five (`Harmonize`), dropped it (`Keep`), delayed it (`Delay`) or ran code of yours (`SelectMany`). You never write the end of a note; the engine sends it.
 - **Everything ends on a stop.** When a stream is reset, replaced or disposed, everything still sounding is ended. Capacities are fixed (128 notes sounding per step, 512 events a block); past them a note's start is dropped and its end is never sent, never the other way round.
