@@ -45,8 +45,16 @@ function isExample(pre) {
   return false;
 }
 
+// Links to the REPL itself (the landing page's button) carry the public address in the markup, because docfx rejects a link
+// to a folder it does not build. Here they are pointed at the REPL of the same site, so a local preview opens the local one.
+function pointReplHomeLinks() {
+  const base = replBase();
+  document.querySelectorAll("a[data-repl-home]").forEach(a => (a.href = base));
+}
+
 export default {
   start() {
+    pointReplHomeLinks();
     addReplLinks();
     new MutationObserver(addReplLinks).observe(document.body, { childList: true, subtree: true });
   },

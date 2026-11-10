@@ -1,34 +1,117 @@
-# Sigil.Sound
+---
+layout: landing
+title: Sigil.Sound - composable sound synthesis for .NET
+description: Describe a sound as an immutable value, compose it like LINQ, and render it to memory, to a WAV file or live. Examples play in your browser.
+_disableToc: true
+_disableAffix: true
+_disableBreadcrumb: true
+_disableNextArticle: true
+_disableContribution: true
+---
 
-Composable sound synthesis for .NET. Describe a sound as an immutable value, compose it like LINQ, and render it when you need it.
+<!-- The landing page. Raw HTML on purpose: docfx does not parse markdown inside an HTML block. Styled by body[data-layout="landing"]
+     in templates/sigil/public/main.css. The code sample is the one in articles/getting-started.md, which DocExampleTests runs;
+     this file is not scanned, so keep the two identical. -->
 
-Every example in this site is a complete snippet. Press **Open in REPL** under any example to hear it in your browser, then edit it.
+<div class="lp">
 
-## Start here
+<section class="lp-hero" aria-label="Overview">
+  <div class="lp-copy">
+    <div class="lp-kicker"><span>SIGIL.SOUND</span><span class="lp-pill">MIT licensed, .NET 8 and 10</span></div>
+    <h1 class="lp-title">Composable sound synthesis for .NET</h1>
+    <p class="lp-sub">Describe a sound as an immutable value, compose it like LINQ, and render it when you need it: to memory, to a WAV file, or live.</p>
+    <div class="lp-cta">
+      <a class="lp-btn lp-btn-primary" href="articles/getting-started.md">Get started <span aria-hidden="true">&rarr;</span></a>
+      <a class="lp-btn lp-btn-ghost" href="https://sound.sigilaud.io/repl/" data-repl-home target="_blank" rel="noopener">Try it in the REPL</a>
+    </div>
+    <div class="lp-links">
+      <a class="lp-chip" href="https://www.nuget.org/packages/Sigil.Sound" rel="noopener">NuGet</a>
+      <a class="lp-chip" href="https://github.com/sigilllc/SigilSound" rel="noopener">GitHub</a>
+      <a class="lp-chip" href="api/Sigil.Sound.yml">API reference</a>
+      <a class="lp-chip" href="articles/versioning.md">Versioning</a>
+    </div>
+  </div>
 
-- [Getting started](articles/getting-started.md): a first sound and how to render it.
-- [Defaults](articles/defaults.md): every method works with no arguments; what each default is.
-- [Sources](articles/sources.md): oscillators, noise, functions of time and samples.
-- [Parameters and modulation](articles/parameters.md): numbers, sounds and functions as parameters, including FM.
+  <div class="lp-window">
+    <div class="lp-chrome">
+      <span class="lp-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="lp-chrome-title">first sound</span>
+    </div>
 
-## Build a sound
+```csharp
+// A sound used as a parameter: a slow sine sweeps the filter cutoff.
+var sweep = Sine(0.25).Range(200, 2000);
 
-- [Shaping sound](articles/shaping.md): levels, envelopes, filters and tone controls.
-- [Effects](articles/effects.md): delay, reverb, modulation, distortion, pitch and stereo.
+Saw(110).LowPass(cutoff: sweep, q: 4) * 0.4
+```
 
-## Notes and patterns
+  </div>
+</section>
 
-- [Notes and patterns](articles/notes-and-patterns.md): sequences, scales, chords, transforms and instruments.
-- [Mini-notation](articles/mini-notation.md): the compact text language for patterns.
+<section class="lp-install" aria-label="Install">
+  <span class="lp-install-label">INSTALL</span>
+  <code>dotnet add package Sigil.Sound</code>
+  <span class="lp-install-note">Patterns and notes are in <code>Sigil.Sound.Notes</code>.</span>
+</section>
 
-## Playing and extending
+<section class="lp-grid" aria-label="What it does">
+  <a class="lp-card" href="articles/sources.md">
+    <h2>Sources</h2>
+    <p>Oscillators, noise, functions of time and samples. Every method works with no arguments.</p>
+  </a>
+  <a class="lp-card" href="articles/parameters.md">
+    <h2>Modulation</h2>
+    <p>A parameter takes a number, another sound or a function of time, so one idea reaches pitch, cutoff, gain and mix, including FM.</p>
+  </a>
+  <a class="lp-card" href="articles/effects.md">
+    <h2>Effects</h2>
+    <p>Filters, envelopes, delay, reverb, modulation, distortion, pitch and stereo.</p>
+  </a>
+  <a class="lp-card" href="articles/notes-and-patterns.md">
+    <h2>Notes and patterns</h2>
+    <p>Sequences, scales, chords and a compact mini-notation, played by any instrument you describe.</p>
+  </a>
+  <a class="lp-card" href="articles/rendering-and-live.md">
+    <h2>Render or play live</h2>
+    <p>Render to memory or WAV offline, or send the same sound to live output with slots you can swap while it plays.</p>
+  </a>
+  <a class="lp-card" href="articles/custom-operators.md">
+    <h2>Extend it</h2>
+    <p>Write your own <code>IOperator</code> and use it like a built-in.</p>
+  </a>
+</section>
 
-- [Samples](articles/samples.md): loading, speed, loop modes and samplers.
-- [Rendering and live playback](articles/rendering-and-live.md): render to memory or WAV, and live output with slots.
-- [Custom operators](articles/custom-operators.md): writing your own `IOperator`.
+<section class="lp-more" aria-label="Documentation">
+  <h2>Documentation</h2>
+  <div class="lp-more-cols">
+    <div>
+      <h3>Start here</h3>
+      <ul>
+        <li><a href="articles/getting-started.md">Getting started</a></li>
+        <li><a href="articles/defaults.md">Defaults</a></li>
+        <li><a href="articles/controls.md">Controls</a></li>
+        <li><a href="articles/shaping.md">Shaping sound</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Notes and playback</h3>
+      <ul>
+        <li><a href="articles/mini-notation.md">Mini-notation</a></li>
+        <li><a href="articles/live-notes.md">Live notes and expression</a></li>
+        <li><a href="articles/samples.md">Samples</a></li>
+        <li><a href="articles/rendering-and-live.md">Rendering and live playback</a></li>
+        <li><a href="articles/hosting.md">Hosting</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Reference</h3>
+      <ul>
+        <li><a href="api/Sigil.Sound.yml">API reference</a></li>
+        <li><a href="articles/versioning.md">Versioning</a></li>
+        <li><a href="https://github.com/sigilllc/SigilSound/blob/main/CONTRIBUTING.md" rel="noopener">Contributing</a></li>
+      </ul>
+    </div>
+  </div>
+</section>
 
-## Reference
-
-- [API reference](api/Sigil.Sound.yml): every public type and member, from the XML docs.
-- [Writing doc examples](articles/writing-examples.md): the format each example follows.
-- [Versioning](articles/versioning.md): what 0.x and 1.0 mean, what a patch may change, and how to depend on the packages.
+</div>
