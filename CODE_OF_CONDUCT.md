@@ -6,8 +6,8 @@ We are here to make Sigil.Sound better and more useful for everyone who makes so
 
 **What is not acceptable.** Attacks, harassment or insults aimed at contributors or users, and anything else that goes after people instead of the work or pulls the discussion away from it. No exceptions.
 
-**What happens.** Maintainers can edit, hide or delete comments, close or lock threads, warn people, and remove them from the project, temporarily or for good. We don't have to debate it first.
+**What happens.** The maintainer can edit, hide or delete comments, close or lock threads, warn people, and remove them from the project, temporarily or for good. We don't have to debate it first.
 
-**Telling us.** Write to conduct@sigilaud.io. Reports are private. If it is about a maintainer, you can also report it to GitHub directly ("Report content", or GitHub Support).
+**Telling us.** Write to conduct@sigilaud.io. Reports are private. If it is about the maintainer, you can also report it to GitHub directly ("Report content", or GitHub Support).
 
 This applies in every project space, and wherever someone speaks for the project. Security vulnerabilities go through [SECURITY.md](SECURITY.md), not here.
