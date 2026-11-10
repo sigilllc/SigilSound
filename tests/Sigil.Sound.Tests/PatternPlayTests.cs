@@ -118,10 +118,10 @@ public class PatternPlayTests
         var block = new StereoFrame[256];
         for (int i = 0; i < 2000; i++) op.RenderBlock(block);
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 2000; i++) op.RenderBlock(block);
-
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        AllocationAssert.None(() =>
+        {
+            for (int i = 0; i < 2000; i++) op.RenderBlock(block);
+        });
     }
 
     [Fact]

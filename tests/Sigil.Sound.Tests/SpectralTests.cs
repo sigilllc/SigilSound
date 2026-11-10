@@ -152,14 +152,14 @@ public class FftPlanTests
         var (re, im) = RandomSignal(2048, 1);
         plan.Forward(re, im);
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 200; i++)
+        AllocationAssert.None(() =>
         {
-            plan.Forward(re, im);
-            plan.Inverse(re, im);
-        }
-
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+            for (int i = 0; i < 200; i++)
+            {
+                plan.Forward(re, im);
+                plan.Inverse(re, im);
+            }
+        });
     }
 
     [Fact]
@@ -346,10 +346,10 @@ public class StftProcessorTests
         var output = new float[4096];
         for (int i = 0; i < 4; i++) processor.Process(input, output);
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 50; i++) processor.Process(input, output);
-
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        AllocationAssert.None(() =>
+        {
+            for (int i = 0; i < 50; i++) processor.Process(input, output);
+        });
     }
 
     [Fact]

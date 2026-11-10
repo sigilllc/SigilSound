@@ -85,12 +85,11 @@ public class SoundTests
         for (int i = 0; i < 200; i++)
             op.RenderBlock(block);
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 1000; i++)
-            op.RenderBlock(block);
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-
-        Assert.Equal(0, allocated);
+        AllocationAssert.None(() =>
+        {
+            for (int i = 0; i < 1000; i++)
+                op.RenderBlock(block);
+        });
     }
 
     [Fact]

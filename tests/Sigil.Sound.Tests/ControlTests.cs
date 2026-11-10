@@ -198,15 +198,14 @@ public class ControlTests
         for (int i = 0; i < 50; i++)
             op.RenderBlock(buffer);
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 500; i++)
+        AllocationAssert.None(() =>
         {
-            control.Value = (i & 31) / 31.0;
-            op.RenderBlock(buffer);
-        }
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-
-        Assert.Equal(0, allocated);
+            for (int i = 0; i < 500; i++)
+            {
+                control.Value = (i & 31) / 31.0;
+                op.RenderBlock(buffer);
+            }
+        });
     }
 }
 

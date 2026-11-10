@@ -314,21 +314,25 @@ public class LiveNotesTests
             for (int b = 0; b < 20; b++) output.Render(block);
         }
 
-        long allocated = 0;
-        for (int round = 0; round < 5; round++)
+        // Only the renders are measured; pressing and releasing keys sits between them and may allocate (it is not the audio thread).
+        AllocationAssert.NoneOf(() =>
         {
-            for (int n = 0; n < 6; n++) keys.NoteOn(50 + n, 0.8f);
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int b = 0; b < 20; b++) output.Render(block);
-            allocated += GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = 0;
+            for (int round = 0; round < 5; round++)
+            {
+                for (int n = 0; n < 6; n++) keys.NoteOn(50 + n, 0.8f);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int b = 0; b < 20; b++) output.Render(block);
+                allocated += GC.GetAllocatedBytesForCurrentThread() - before;
 
-            keys.AllNotesOff();
-            before = GC.GetAllocatedBytesForCurrentThread();
-            for (int b = 0; b < 20; b++) output.Render(block);
-            allocated += GC.GetAllocatedBytesForCurrentThread() - before;
-        }
+                keys.AllNotesOff();
+                before = GC.GetAllocatedBytesForCurrentThread();
+                for (int b = 0; b < 20; b++) output.Render(block);
+                allocated += GC.GetAllocatedBytesForCurrentThread() - before;
+            }
 
-        Assert.Equal(0, allocated);
+            return allocated;
+        });
     }
 
     [Fact]

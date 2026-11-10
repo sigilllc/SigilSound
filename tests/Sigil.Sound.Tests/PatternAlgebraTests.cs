@@ -324,15 +324,14 @@ public class PatternAlgebraTests
             pattern.Query(new Arc(i, i + 1), buffer);
         }
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 1000; i++)
+        AllocationAssert.None(() =>
         {
-            buffer.Clear();
-            pattern.Query(new Arc(new Fraction(i, 4), new Fraction(i + 1, 4)), buffer);
-        }
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-
-        Assert.Equal(0, allocated);
+            for (int i = 0; i < 1000; i++)
+            {
+                buffer.Clear();
+                pattern.Query(new Arc(new Fraction(i, 4), new Fraction(i + 1, 4)), buffer);
+            }
+        });
     }
 
     [Fact]
