@@ -94,7 +94,7 @@ dotnet test
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first (it says what to open an issue for before writing code), and note the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately: see [SECURITY.md](SECURITY.md). For questions, use [Discussions](https://github.com/sigilllc/SigilSound/discussions).
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), which says what to open an issue for before writing code. Questions and bugs: open an issue. Security problems: report privately, see [SECURITY.md](SECURITY.md). Please keep to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Heritage
 
