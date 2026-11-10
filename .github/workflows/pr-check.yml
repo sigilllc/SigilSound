@@ -1,6 +1,7 @@
-name: PR check
+name: Check
 
 # Builds the solution and runs the tests for every pull request, so a contribution is checked before a maintainer reads it.
+# It also runs on every push to main and by hand, so the maintainers' own changes, which go straight to main, are checked too.
 # Release checks and the full blessing stay local (project convention); this is the one narrow exception, because a contributor's
 # local run cannot be seen.
 #
@@ -9,12 +10,15 @@ name: PR check
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-check-${{ github.event.pull_request.number }}
+  group: check-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,9 +38,10 @@ jobs:
             8.0.x
             10.0.x
 
-      # Contributors sign off each commit (git commit -s). People who own or belong to the organization are exempt.
+      # Contributors sign off each commit (git commit -s). People who own or belong to the organization are exempt, and so is
+      # anything that is not a pull request (a push to main was already merged by one of them).
       - name: Commits are signed off
-        if: ${{ !contains(fromJSON('["OWNER","MEMBER"]'), github.event.pull_request.author_association) }}
+        if: ${{ github.event_name == 'pull_request' && !contains(fromJSON('["OWNER","MEMBER"]'), github.event.pull_request.author_association) }}
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
