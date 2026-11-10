@@ -1,7 +1,7 @@
 ---
 layout: landing
-title: Sigil.Sound - composable sound synthesis for .NET
-description: Describe a sound as an immutable value, compose it like LINQ, and render it to memory, to a WAV file or live. Examples play in your browser.
+title: Sigil.Sound - sound synthesis for your .NET app
+description: A fluent API for sound synthesis in your .NET app. Build an instrument or an effect in a few lines, then record it to a file or play it live. Examples play in your browser.
 _disableToc: true
 _disableAffix: true
 _disableBreadcrumb: true
@@ -18,8 +18,8 @@ _disableContribution: true
 <section class="lp-hero" aria-label="Overview">
   <div class="lp-copy">
     <div class="lp-kicker"><span>SIGIL.SOUND</span><span class="lp-pill">MIT licensed, .NET 8 and 10</span></div>
-    <h1 class="lp-title">Composable sound synthesis for .NET</h1>
-    <p class="lp-sub">Describe a sound as an immutable value, compose it like LINQ, and render it when you need it: to memory, to a WAV file, or live.</p>
+    <h1 class="lp-title">Sound synthesis for your .NET app</h1>
+    <p class="lp-sub">A fluent API for sound synthesis in your .NET app. Build an instrument or an effect in a few lines, then record it to a file or play it live.</p>
     <div class="lp-cta">
       <a class="lp-btn lp-btn-primary" href="articles/getting-started.md">Get started <span aria-hidden="true">&rarr;</span></a>
       <a class="lp-btn lp-btn-ghost" href="https://sound.sigilaud.io/repl/" data-repl-home target="_blank" rel="noopener">Try it in the REPL</a>

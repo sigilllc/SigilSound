@@ -12,8 +12,10 @@ Saw(110).Adsr(0.005, 0.1, 0.4, 0.2).Delay(0.375, feedback: 0.5, mix: 0.4)
 ```
 
 ```csharp
-// A tape-style delay that bounces echoes between the speakers.
-Saw(110).Adsr(0.005, 0.1, 0.4, 0.2).TapeDelay(time: 0.375, feedback: 0.5, pingPong: true)
+// Staccato plucks on eighth notes. Each echo lands between two notes and bounces across the stereo field.
+Mini.Notes("c4 e4 g4 e4 a4 g4 e4 ~")
+    .Play(v => Saw(v.Frequency).LowPass(2000, q: 1).Adsr(0.002, 0.15, 0, 0.05), bpm: 120)
+    .TapeDelay(time: 0.375, feedback: 0.5, pingPong: true) * 0.4
 ```
 
 ```csharp

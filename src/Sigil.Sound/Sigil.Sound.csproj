@@ -2,7 +2,7 @@
   <!-- Core package: no package references, no P/Invoke, must stay browser-wasm clean. -->
   <PropertyGroup>
     <RootNamespace>Sigil.Sound</RootNamespace>
-    <Description>Composable, immutable sound descriptions and a block-based DSP engine.</Description>
+    <Description>A fluent API for sound synthesis in your .NET app: instruments, effects, recording to a file and live playback, on a block-based DSP engine.</Description>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Sigil.Sound.Tests" />
