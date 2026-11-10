@@ -12,16 +12,28 @@ These two files ship with the REPL web app only (`apps/Sigil.Sound.Repl/Host/Bui
 | `pluck.wav` | A plucked C3 made by this project: eight computed harmonics and a little noise for the pick. | Created by the Sigil.Sound authors. Covered by this repository's MIT licence. |
 | `IR_Speakers_Living_Room.wav` | An impulse response of a living room, used by the "Room from an IR" example. | By **mansardian**, <https://freesound.org/s/172677/>, licensed **Creative Commons 0** (public domain dedication). Attribution is not required and is given here with thanks. |
 
+## Fonts, served from this site
+
+The REPL and the docs site serve their own copies of these fonts (Latin subset, variable weight, `woff2`) from the `fonts` folders next to their style sheets, so no page request goes to Google. The licence text of each is in the same folder.
+
+| Font | Used for | Terms |
+| --- | --- | --- |
+| [Inter](https://github.com/rsms/inter) | Docs body text | SIL Open Font License 1.1 |
+| [Montserrat](https://github.com/JulietaUla/Montserrat) | Headings and page typography | SIL Open Font License 1.1 |
+| [Roboto Mono](https://github.com/googlefonts/robotomono) | Code and numbers | SIL Open Font License 1.1 |
+
+The files are the ones Google Fonts serves, checked against the licence files in the `google/fonts` repository on 2026-11-10. Older releases of Roboto Mono were Apache 2.0; the current variable font is OFL 1.1, and that is the version used here.
+
 ## Loaded by the online REPL at run time
 
-The REPL page fetches these from public CDNs when it opens. They are not copied into this repository or into the packages.
+The REPL page fetches this from a public CDN when it opens. It is not copied into this repository or into the packages.
 
 | Component | Used for | Terms |
 | --- | --- | --- |
 | [Monaco Editor](https://github.com/microsoft/monaco-editor) 0.52.2, from cdn.jsdelivr.net | The code editor | MIT |
-| [Montserrat](https://fonts.google.com/specimen/Montserrat) and [Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono), from Google Fonts | Page typography | SIL Open Font License 1.1 and Apache 2.0 respectively |
 
-Terms for the last two rows are those the upstream projects publish; they were not re-checked when this file was written.
+The terms are those the upstream project publishes; they were not re-checked when this file was written.
+
 
 ## NuGet dependencies
 
