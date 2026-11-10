@@ -123,6 +123,64 @@ public class SoundTests
         Assert.Equal(bytesPerSample * 8, BitConverter.ToInt16(bytes, 34));
     }
 
+    [Theory]
+    [InlineData(0.5)]       // 24000 frames, not a multiple of the 256 block
+    [InlineData(0.0053333)] // about 256 frames, near a block boundary
+    [InlineData(1.2345)]
+    public void Render_with_start_offset_matches_that_stretch_of_a_longer_render(double start)
+    {
+        // Stateful on purpose: a noise source, a filter and a delay line all carry state across the skipped part.
+        Sound Build() => (Noise() + Saw(110)).LowPass(900).Delay(0.1, feedback: 0.5);
+
+        var full = Build().Render(start + 0.25);
+        var tail = Build().Render(0.25, startSeconds: start);
+
+        int skip = (int)Math.Round(start * full.SampleRate);
+        Assert.Equal(12_000, tail.FrameCount);
+        for (int i = 0; i < tail.FrameCount; i++)
+        {
+            Assert.Equal(full[skip + i].Left, tail[i].Left);
+            Assert.Equal(full[skip + i].Right, tail[i].Right);
+        }
+    }
+
+    [Fact]
+    public void Render_with_start_offset_reaches_an_envelope_that_has_already_decayed()
+    {
+        var note = Sine(440).Adsr(0.001, 0.05, 0, 0.01);
+
+        var early = note.Render(0.02);
+        var late = note.Render(0.02, startSeconds: 1.0);
+
+        Assert.True(early.Frames.ToArray().Max(f => Math.Abs(f.Left)) > 0.1f);
+        Assert.True(late.Frames.ToArray().Max(f => Math.Abs(f.Left)) < 1e-4f);
+    }
+
+    [Fact]
+    public void RenderToWav_with_start_offset_writes_the_later_stretch()
+    {
+        using var whole = new MemoryStream();
+        using var offset = new MemoryStream();
+
+        Sine(440).Adsr(0.001, 0.05, 0, 0.01).RenderToWav(whole, 0.2, 48_000, WavFormat.Float32);
+        Sine(440).Adsr(0.001, 0.05, 0, 0.01).RenderToWav(offset, 0.1, 48_000, WavFormat.Float32, startSeconds: 0.1);
+
+        var a = AudioBuffer.FromWav(whole.ToArray());
+        var b = AudioBuffer.FromWav(offset.ToArray());
+        Assert.Equal(4800, b.FrameCount);
+        for (int i = 0; i < b.FrameCount; i++)
+            Assert.Equal(a[4800 + i].Left, b[i].Left);
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public void Render_rejects_an_invalid_start_offset(double start)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Sine(440).Render(0.1, startSeconds: start));
+    }
+
     [Fact]
     public void Compile_rejects_invalid_context()
     {

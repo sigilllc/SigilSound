@@ -1,1 +1,3 @@
 #nullable enable
+Sigil.Sound.NoteInput.NoteOff(string! notes) -> void
+Sigil.Sound.NoteInput.NoteOn(string! notes) -> void

@@ -2,7 +2,7 @@ namespace Sigil.Sound;
 
 /// <summary>
 /// Notes played live, from a keyboard, a game or a UI, as opposed to a <see cref="Pattern"/> written in advance.
-/// Create one, build a sound from it with <see cref="Play"/>, and call <see cref="NoteOn"/> and <see cref="NoteOff"/>
+/// Create one, build a sound from it with <see cref="Play"/>, and call <see cref="NoteOn(int, float)"/> and <see cref="NoteOff(int)"/>
 /// from any thread while that sound renders.
 /// </summary>
 /// <remarks>
@@ -24,8 +24,8 @@ namespace Sigil.Sound;
 ///
 /// var keys = new NoteInput();
 /// var synth = keys.Play(v => Saw(v.Frequency).LowPass(2000).Adsr(0.01, 0.2, 0.6, 0.4), polyphony: 6);
-/// keys.NoteOn(60);   // middle C sounds until...
-/// keys.NoteOff(60);  // ...it is released and its envelope rings out
+/// keys.NoteOn("c4");   // middle C sounds until...
+/// keys.NoteOff("c4");  // ...it is released and its envelope rings out
 /// </code>
 /// </example>
 public sealed class NoteInput
@@ -36,7 +36,7 @@ public sealed class NoteInput
     private readonly List<PlayingNote> _notes = [];
 
     /// <summary>
-    /// Starts a note you can keep shaping while it sounds, and returns it. Unlike <see cref="NoteOn"/>, which names a note by
+    /// Starts a note you can keep shaping while it sounds, and returns it. Unlike <see cref="NoteOn(int, float)"/>, which names a note by
     /// its pitch, the note is its own object: two started on the same pitch are two notes, and ending or bending one leaves the
     /// other alone. This is the entry for a player with per-note expression, such as an MPE controller.
     /// </summary>
@@ -44,7 +44,7 @@ public sealed class NoteInput
     /// <param name="velocity">How hard the note is played, above 0 up to 1. Defaults to 0.8.</param>
     /// <returns>The note. Set its <see cref="PlayingNote.Bend"/>, <see cref="PlayingNote.Pressure"/> and <see cref="PlayingNote.Slide"/>; end it with <see cref="PlayingNote.Release"/>.</returns>
     /// <remarks>
-    /// <see cref="NoteOff"/> does not end a note started here; call <see cref="PlayingNote.Release"/> (or <see cref="AllNotesOff"/>).
+    /// <see cref="NoteOff(int)"/> does not end a note started here; call <see cref="PlayingNote.Release"/> (or <see cref="AllNotesOff"/>).
     /// A sound built later still starts with the notes held now, with their current bend, pressure and slide.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">The pitch is not 0 to 127, or the velocity is not above 0 and at most 1.</exception>
@@ -105,6 +105,50 @@ public sealed class NoteInput
         }
     }
 
+    /// <summary>
+    /// Starts the notes written in <see cref="Mini"/> notation, all at once: <c>"a2 g3 e4"</c> is the same as three calls to
+    /// <see cref="NoteOn(int, float)"/>. This is the way to name notes in a score's own terms (<c>c4</c>, <c>eb3</c>) instead of
+    /// MIDI numbers, and a chord can be written as <c>"[c3,e3,g3]"</c> or <c>"c3,e3,g3"</c>.
+    /// </summary>
+    /// <param name="notes">
+    /// Mini-notation for notes, as in <see cref="Mini.Notes"/>: <c>c4:0.6</c> sets the velocity, a name without an octave is in
+    /// octave 3, and <c>~</c> is a rest. Time has no meaning for a live input, so the notes of the first cycle all start now;
+    /// <c>"c3 e3 g3"</c> is a chord, not an arpeggio. A velocity of 0 (<c>c4:0</c>) ends the note, as in MIDI.
+    /// </param>
+    /// <exception cref="MiniNotationException">The text is not valid. No note is started.</exception>
+    /// <example>
+    /// <code>
+    /// var keys = new NoteInput();
+    /// var synth = keys.Play(v => Saw(v.Frequency).LowPass(1500).Adsr(0.01, 0.2, 0.7, 0.4), polyphony: 6);
+    /// keys.NoteOn("a2 g3 e4:0.6");
+    /// synth * 0.25
+    /// </code>
+    /// </example>
+    public void NoteOn(string notes)
+    {
+        foreach (var note in ParseNotes(notes))
+            NoteOn(note.Pitch, note.Velocity);
+    }
+
+    /// <summary>
+    /// Ends the notes written in <see cref="Mini"/> notation, the counterpart of <see cref="NoteOn(string)"/>. Velocities in the
+    /// text are ignored. A note that is not held is skipped.
+    /// </summary>
+    /// <param name="notes">Mini-notation for notes, such as <c>"a2 g3 e4"</c>.</param>
+    /// <exception cref="MiniNotationException">The text is not valid. No note is ended.</exception>
+    public void NoteOff(string notes)
+    {
+        foreach (var note in ParseNotes(notes))
+            NoteOff(note.Pitch);
+    }
+
+    // The whole text is parsed before any note is touched, so a typo in the last note does not leave the first ones sounding.
+    private static List<Note> ParseNotes(string notes)
+    {
+        ArgumentNullException.ThrowIfNull(notes);
+        return Mini.Notes(notes).Cycle(0).Select(e => e.Value).ToList();
+    }
+
     /// <summary>Ends every held note of <paramref name="pitch"/>; its voice releases and rings out. Does nothing if none is held.</summary>
     /// <param name="pitch">The MIDI pitch, 0 to 127.</param>
     public void NoteOff(int pitch)
@@ -131,7 +175,7 @@ public sealed class NoteInput
     }
 
     /// <summary>
-    /// True while <paramref name="pitch"/> is held: between its <see cref="NoteOn"/> and <see cref="NoteOff"/>, or while a note
+    /// True while <paramref name="pitch"/> is held: between its <see cref="NoteOn(int, float)"/> and <see cref="NoteOff(int)"/>, or while a note
     /// started on it with <see cref="Start"/> has not been released.
     /// </summary>
     /// <param name="pitch">The MIDI pitch, 0 to 127.</param>

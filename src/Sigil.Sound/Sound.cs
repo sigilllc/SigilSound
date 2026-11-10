@@ -285,37 +285,77 @@ public sealed partial class Sound
         return new(ctx => new MultiplyOperator(a.Compile(ctx), b.Compile(ctx), ctx), $"({a} * {b})");
     }
 
-    /// <summary>Renders <paramref name="seconds"/> of audio offline.</summary>
+    /// <summary>
+    /// Renders <paramref name="seconds"/> of audio offline, beginning <paramref name="startSeconds"/> into the sound.
+    /// The skipped part is still run (and discarded) so oscillators, envelopes, delay lines and filters are in the state
+    /// they would have reached by then, and the result matches that same stretch of a longer render from zero.
+    /// </summary>
+    /// <param name="seconds">How much audio to keep, in seconds.</param>
+    /// <param name="sampleRate">Sample rate in Hz.</param>
+    /// <param name="blockSize">Processing block size in frames. The skipped part is processed in the same block grid as a render from zero.</param>
+    /// <param name="startSeconds">How far into the sound to begin, in seconds. Defaults to 0 (the start).</param>
     public AudioBuffer Render(double seconds, int sampleRate = RenderContext.DefaultSampleRate,
-        int blockSize = RenderContext.DefaultBlockSize)
+        int blockSize = RenderContext.DefaultBlockSize, double startSeconds = 0)
     {
         if (seconds < 0 || double.IsNaN(seconds))
             throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "Duration must not be negative.");
+        if (startSeconds < 0 || double.IsNaN(startSeconds) || double.IsInfinity(startSeconds))
+            throw new ArgumentOutOfRangeException(nameof(startSeconds), startSeconds, "Start offset must be a finite number of seconds, zero or more.");
 
         var context = new RenderContext(sampleRate, blockSize).Validate();
         var op = Compile(context);
+        long skip = (long)Math.Round(startSeconds * sampleRate);
         var frames = new StereoFrame[(int)Math.Round(seconds * sampleRate)];
-        for (int offset = 0; offset < frames.Length; offset += blockSize)
+
+        if (skip == 0)
         {
-            int count = Math.Min(blockSize, frames.Length - offset);
-            op.RenderBlock(frames.AsSpan(offset, count));
+            for (int offset = 0; offset < frames.Length; offset += blockSize)
+            {
+                int count = Math.Min(blockSize, frames.Length - offset);
+                op.RenderBlock(frames.AsSpan(offset, count));
+            }
+
+            return new AudioBuffer(frames, sampleRate);
+        }
+
+        // Walk the whole timeline in the usual block grid so block-sized operator state matches a render from zero,
+        // keeping only the frames at or past the start offset.
+        long end = skip + frames.Length;
+        var scratch = new StereoFrame[blockSize];
+        for (long position = 0; position < end; position += blockSize)
+        {
+            int count = (int)Math.Min(blockSize, end - position);
+            var block = scratch.AsSpan(0, count);
+            block.Clear();
+            op.RenderBlock(block);
+
+            long keepFrom = Math.Max(position, skip);
+            long keepTo = position + count;
+            if (keepFrom < keepTo)
+                block.Slice((int)(keepFrom - position), (int)(keepTo - keepFrom)).CopyTo(frames.AsSpan((int)(keepFrom - skip)));
         }
 
         return new AudioBuffer(frames, sampleRate);
     }
 
-    /// <summary>Renders <paramref name="seconds"/> of audio and writes it as a WAV file.</summary>
+    /// <summary>
+    /// Renders <paramref name="seconds"/> of audio and writes it as a WAV file.
+    /// Pass <paramref name="startSeconds"/> to capture a stretch from well into the sound (see <see cref="Render"/>).
+    /// </summary>
     public void RenderToWav(string path, double seconds, int sampleRate = RenderContext.DefaultSampleRate,
-        WavFormat format = WavFormat.Pcm16)
+        WavFormat format = WavFormat.Pcm16, double startSeconds = 0)
     {
         using var stream = File.Create(path);
-        RenderToWav(stream, seconds, sampleRate, format);
+        RenderToWav(stream, seconds, sampleRate, format, startSeconds);
     }
 
-    /// <summary>Renders <paramref name="seconds"/> of audio and writes it as WAV to a stream (works without a file system).</summary>
+    /// <summary>
+    /// Renders <paramref name="seconds"/> of audio and writes it as WAV to a stream (works without a file system).
+    /// Pass <paramref name="startSeconds"/> to capture a stretch from well into the sound (see <see cref="Render"/>).
+    /// </summary>
     public void RenderToWav(Stream stream, double seconds, int sampleRate = RenderContext.DefaultSampleRate,
-        WavFormat format = WavFormat.Pcm16) =>
-        WavWriter.Write(stream, Render(seconds, sampleRate), format);
+        WavFormat format = WavFormat.Pcm16, double startSeconds = 0) =>
+        WavWriter.Write(stream, Render(seconds, sampleRate, startSeconds: startSeconds), format);
 
     /// <summary>A description of how the sound is built, such as <c>Saw(110).LowPass(800)</c>.</summary>
     public override string ToString() => _description;

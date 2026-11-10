@@ -230,6 +230,28 @@
         const css = getComputedStyle(document.documentElement);
         const teal = css.getPropertyValue("--teal").trim();
         const rule = css.getPropertyValue("--line-2").trim();
+        const count = data.length / 2;
+        // What the last frame drew, so this frame can keep the picture on the same part of the signal.
+        const shown = new Float32Array(count);
+        let haveShown = false;
+
+        // Each rising zero crossing in the first half is a place the picture can start. A signal that crosses zero twice in a cycle
+        // has two such places, and "the first one" can flip between them from frame to frame, which draws two shapes alternating.
+        // So start at the crossing whose window best matches the window drawn last frame; on the first frame take the first crossing.
+        function triggerStart(samples, previous) {
+            let best = -1, bestError = Infinity;
+            for (let s = 1; s < count; s++) {
+                if (!(samples[s - 1] < 0 && samples[s] >= 0)) continue;
+                if (!previous) return s;
+                let error = 0;
+                for (let i = 0; i < count; i++) {
+                    const d = samples[s + i] - previous[i];
+                    error += d * d;
+                }
+                if (error < bestError) { bestError = error; best = s; }
+            }
+            return best < 0 ? 0 : best;
+        }
 
         function draw() {
             requestAnimationFrame(draw);
@@ -250,18 +272,16 @@
             g.stroke();
 
             audio.analyser.getFloatTimeDomainData(data);
-            // Start at a rising zero crossing so periodic sounds stand still.
-            let start = 0;
-            for (let i = 1; i < data.length / 2; i++) {
-                if (data[i - 1] < 0 && data[i] >= 0) { start = i; break; }
-            }
-            const count = data.length / 2;
+            // Start at a rising zero crossing so periodic sounds stand still, and keep to the same crossing from frame to frame.
+            const start = triggerStart(data, haveShown ? shown : null);
+            for (let i = 0; i < count; i++) shown[i] = data[start + i];
+            haveShown = true;
             g.strokeStyle = teal;
             g.lineWidth = 1.5;
             g.beginPath();
             for (let i = 0; i < count; i++) {
                 const x = (i / (count - 1)) * w;
-                const y = h / 2 - data[start + i] * (h / 2 - 4);
+                const y = h / 2 - shown[i] * (h / 2 - 4);
                 if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
             }
             g.stroke();

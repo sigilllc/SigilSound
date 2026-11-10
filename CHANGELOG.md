@@ -2,6 +2,13 @@
 
 All notable changes to the Sigil.Sound packages. The format follows [Keep a Changelog](https://keepachangelog.com/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0 a minor version may change the public API; [Versioning](docs/articles/versioning.md) says what each number promises.
 
+## Unreleased
+
+### Sigil.Sound
+
+- **Notes by name on a live input.** `NoteInput.NoteOn(string)` and `NoteOff(string)` take mini-notation (`keys.NoteOn("a2 g3 e4:0.6")`, `"[c3,e3,g3]"`): every note in the text starts or ends at once, with the velocity from `:0.6`. Invalid text throws `MiniNotationException` before any note starts. The numeric overloads are unchanged.
+- **Render from an offset.** `Render` and both `RenderToWav` overloads take a trailing `startSeconds` (default 0). The skipped part is still run and discarded, so oscillators, envelopes, delay lines and filters are in the state they would have reached by then, and the result matches that stretch of a longer render from zero. The new parameter changes the signatures of `Render` and `RenderToWav`: source compatible, but code built against 0.1.0 needs a rebuild.
+
 ## 0.1.0
 
 The first public release of `Sigil.Sound`, `Sigil.Sound.Notes`, `Sigil.Sound.Testing` and `Sigil.Sound.Repl.Core`. The first three target .NET 8.0 and .NET 10.0, are trimmable and AOT-compatible, and `Sigil.Sound` has no dependencies and runs in the browser (WebAssembly). `Sigil.Sound.Repl.Core` targets .NET 10.0 only.

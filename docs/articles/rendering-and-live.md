@@ -25,6 +25,15 @@ var mix = (Saw(110).LowPass(900) * 0.4).Limit();
 mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 ```
 
+To capture a stretch from well into a sound, pass `startSeconds`. The skipped part is still run and thrown away, so oscillators, envelopes, delay lines and filters are in the state they would have reached by then, and the result matches that stretch of a longer render from zero. `Render` takes it too:
+
+```csharp
+// Eight seconds of the mix, beginning two minutes in.
+mix.RenderToWav("demo-later.wav", seconds: 8, sampleRate: 48_000, startSeconds: 120);
+```
+
+Skipping costs the time of rendering the skipped part, since there is no way to jump a stateful sound ahead without running it.
+
 The file-path overload is not allowed inside the REPL: it cannot write to a disk there.
 
 ## Live playback

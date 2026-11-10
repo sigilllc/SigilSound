@@ -10,13 +10,13 @@
 // A chord held on a NoteInput: three voices of the same sound, at three pitches.
 var keys = new NoteInput();
 var synth = keys.Play(v => Saw(v.Frequency).LowPass(1500).Adsr(0.01, 0.2, 0.7, 0.4), polyphony: 6);
-keys.NoteOn(48);
-keys.NoteOn(55);
-keys.NoteOn(64);
+keys.NoteOn("a2 g3 e4");
 synth * 0.25
 ```
 
-`NoteOn(pitch)` and `NoteOff(pitch)` name a note by its pitch, which is all a simple keyboard needs. The voice reads the note from the `Voice` signals: `Frequency`, `Pitch`, `Velocity` and `Gate`.
+`NoteOn` and `NoteOff` name notes in [mini-notation](mini-notation.md), the same text `Mini.Notes` reads, so a note is written as in a score: `c4`, `eb3`, `f#2`. A name without an octave is in octave 3, and `:0.6` sets the velocity (`e4:0.6`). Time means nothing to a live input, so every note in the text starts at once: `"a2 g3 e4"` is a chord, and so is `"[a2,g3,e4]"`. `~` is a rest and is skipped. A typo (`"a2 zz"`) throws before any note starts.
+
+For a number, such as a MIDI note from a controller, `NoteOn(pitch)` and `NoteOff(pitch)` take the pitch directly (`keys.NoteOn(45)` is `a2`). The voice reads the note from the `Voice` signals: `Frequency`, `Pitch`, `Velocity` and `Gate`.
 
 ## A note you can keep shaping
 

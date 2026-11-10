@@ -25,6 +25,8 @@ A pattern is one cycle of four beats. Steps in the text share that cycle equally
 
 Names are a letter A to G, optionally `#` or `b`, then an octave. `c4` is middle C. Octaves run from -1 to 9.
 
+Names without an octave are in octave 3. `NoteInput.NoteOn("a2 g3 e4")` reads the same note names for [live notes](live-notes.md); there the notes of the first cycle all start at once.
+
 ## Chords
 
 A chord name is a root and a quality: `c3:min7`, `f3:7`, `g3:maj7`, `a3:sus4`. Qualities include `maj`, `min`, `dim`, `aug`, `sus2`, `sus4`, `7`, `maj7`, `min7`.

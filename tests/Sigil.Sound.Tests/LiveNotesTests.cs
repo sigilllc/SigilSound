@@ -362,4 +362,77 @@ public class LiveNotesTests
         AudioAssert.IsSilent(Render(output, 0.1));
         Assert.False(keys.IsHeld(60));
     }
+
+    [Fact]
+    public void Note_names_start_the_same_notes_as_their_midi_numbers()
+    {
+        var keys = new NoteInput();
+
+        keys.NoteOn("a2 g3 e4");
+
+        Assert.True(keys.IsHeld(45));
+        Assert.True(keys.IsHeld(55));
+        Assert.True(keys.IsHeld(64));
+        Assert.False(keys.IsHeld(60));
+    }
+
+    [Fact]
+    public void A_chord_in_brackets_and_a_rest_are_read_as_mini_notation()
+    {
+        var keys = new NoteInput();
+
+        keys.NoteOn("[c4,e4,g4] ~");
+
+        Assert.True(keys.IsHeld(60));
+        Assert.True(keys.IsHeld(64));
+        Assert.True(keys.IsHeld(67));
+    }
+
+    [Fact]
+    public void A_velocity_in_the_text_sets_how_loud_the_note_is()
+    {
+        var keys = new NoteInput();
+        using var output = Output(keys.Play(v => Held()));
+
+        keys.NoteOn("c4:0.5");
+        var samples = Render(output, 0.2);
+
+        Assert.InRange(SignalAnalysis.Peak(samples), 0.49f, 0.51f);
+    }
+
+    [Fact]
+    public void A_name_without_an_octave_is_in_octave_3_and_flats_and_sharps_work()
+    {
+        var keys = new NoteInput();
+
+        keys.NoteOn("c eb f#4");
+
+        Assert.True(keys.IsHeld(48));
+        Assert.True(keys.IsHeld(51));
+        Assert.True(keys.IsHeld(66));
+    }
+
+    [Fact]
+    public void Releasing_by_name_ends_those_notes_only()
+    {
+        var keys = new NoteInput();
+        keys.NoteOn("c4 e4 g4");
+
+        keys.NoteOff("e4 g4");
+
+        Assert.True(keys.IsHeld(60));
+        Assert.False(keys.IsHeld(64));
+        Assert.False(keys.IsHeld(67));
+    }
+
+    [Fact]
+    public void Text_that_is_not_valid_starts_no_note_at_all()
+    {
+        var keys = new NoteInput();
+
+        Assert.Throws<MiniNotationException>(() => keys.NoteOn("c4 e4 zz"));
+
+        Assert.False(keys.IsHeld(60));
+        Assert.False(keys.IsHeld(64));
+    }
 }

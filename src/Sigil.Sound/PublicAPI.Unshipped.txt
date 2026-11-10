@@ -1,1 +1,7 @@
 #nullable enable
+*REMOVED*Sigil.Sound.Sound.Render(double seconds, int sampleRate = 48000, int blockSize = 256) -> Sigil.Sound.AudioBuffer!
+*REMOVED*Sigil.Sound.Sound.RenderToWav(System.IO.Stream! stream, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16) -> void
+*REMOVED*Sigil.Sound.Sound.RenderToWav(string! path, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16) -> void
+Sigil.Sound.Sound.Render(double seconds, int sampleRate = 48000, int blockSize = 256, double startSeconds = 0) -> Sigil.Sound.AudioBuffer!
+Sigil.Sound.Sound.RenderToWav(System.IO.Stream! stream, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16, double startSeconds = 0) -> void
+Sigil.Sound.Sound.RenderToWav(string! path, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16, double startSeconds = 0) -> void

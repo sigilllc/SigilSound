@@ -7,8 +7,8 @@ Effects that have a wet/dry balance take `mix`, from 0 (dry) to 1 (wet).
 ## Time-based
 
 ```csharp
-// A dotted echo: 375 ms, fed back at half strength, mixed at 40%.
-Saw(110).Adsr(0.005, 0.1, 0.4, 0.2).Delay(0.375, feedback: 0.5, mix: 0.4)
+// A hi-hat tick every half second. The dotted-eighth echoes fall between the ticks, so the rhythm doubles up.
+(Noise().BandPass(7000, q: 2) * Fn(t => Exp(-(t % 0.5) * 60)) * 2.5).Delay(0.375, feedback: 0.5, mix: 0.4) * 0.8
 ```
 
 ```csharp
@@ -26,8 +26,8 @@ Noise().Adsr(0, 0.01, 0, 0.001).Comb(220, feedback: 0.995)
 `Reverb(size, decay, damping, mix)` places a sound in a room:
 
 ```csharp
-// A short, damp room.
-Sine(440).Adsr(0.005, 0.2, 0, 0.1).Reverb(size: 0.6, decay: 1.5, damping: 0.6, mix: 0.35)
+// A clap every second in a large hall: each tail is still ringing when the next clap lands.
+(Noise().BandPass(1500, q: 1) * Fn(t => Exp(-(t % 1) * 35)) * 3.5).Reverb(size: 2.5, decay: 4, damping: 0.4, mix: 0.5) * 0.8
 ```
 
 ## Impulse responses
@@ -35,18 +35,39 @@ Sine(440).Adsr(0.005, 0.2, 0, 0.1).Reverb(size: 0.6, decay: 1.5, damping: 0.6, m
 `Convolve(impulse, mix)` plays a sound through an impulse response: a recording of how a space, a speaker cabinet or any other linear system answers a single click. It is how a guitar cabinet or a real concert hall is put on a sound. The convolver adds no latency, and a response of up to ten seconds, mono or stereo, runs comfortably in real time.
 
 ```csharp
-// A guitar cabinet, as it would load from a file: a short response whose resonance colours the sound.
-// This one is built in code, a 1.2 kHz ring that fades in 12 ms. Listen for the saw going from buzzy to boxy.
+// A drum groove in a recorded living room: every hit comes back with the room's reflections.
+// IR_Speakers_Living_Room.wav comes with the page (CC0, by mansardian on Freesound). Samples.Load reads it by name.
+var bpm = 110;
+var room = Samples.Load("IR_Speakers_Living_Room.wav");
+
+var kick = Mini.Notes("c1 ~ ~ c1 ~ c1 ~ ~");
+var snare = Mini.Notes("~ c3 ~ c3");
+var hats = Mini.Notes("c4*8").Degrade(0.2, seed: 3);
+
+var drums =
+    kick.Play(v => Sine(Fn(t => 48 + 110 * Exp(-t * 28))).Adsr(0.001, 0.25, 0, 0.02), bpm) * 0.9
+    + snare.Play(v => Noise().BandPass(1800, q: 1.2).Adsr(0.001, 0.12, 0, 0.05), bpm) * 0.5
+    + hats.Play(v => Noise(4).HighPass(7000).Adsr(0.001, 0.04, 0, 0.01), bpm) * 0.25;
+
+drums.Convolve(room, mix: 0.5) * 0.7
+```
+
+A response is an `AudioBuffer`, so it can come from a file or be built in code. Here is a guitar cabinet built in code:
+
+```csharp
+// A guitar cabinet built in code: a 1.2 kHz ring that fades in 12 ms, so the riff goes from buzzy to boxy.
 const int rate = 48_000;
 var frames = new StereoFrame[rate * 12 / 1000];
 for (int i = 0; i < frames.Length; i++)
     frames[i] = StereoFrame.Mono((float)(Sin(2 * PI * 1200 * i / rate) * Exp(-i / 90.0)));
 var cabinet = new AudioBuffer(frames, rate);
 
-Saw(110).Distort(drive: 4).Convolve(cabinet) * 0.4
+Mini.Notes("e2 e2 ~ e2 g2 e2 d2 ~")
+    .Play(v => Square(v.Frequency, 0.5).Adsr(0.002, 0.2, 0.3, 0.1).Distort(drive: 4), bpm: 120)
+    .Convolve(cabinet) * 0.15
 ```
 
-A response is an `AudioBuffer`, so it can come from a file or be built in code. A response whose tail dies away over seconds is a reverb, and `mix` sets how much of it to blend in:
+A response whose tail dies away over seconds is a reverb, and `mix` sets how much of it to blend in:
 
 ```csharp
 // A room from noise: a response that starts loud and dies away over 1.5 s is what a reverb tail is.
@@ -61,8 +82,9 @@ for (int i = 0; i < frames.Length; i++)
 }
 var room = new AudioBuffer(frames, rate);
 
-var pluck = Saw(220).LowPass(2000).Adsr(0.002, 0.2, 0, 0.1) * Fn(t => t % 1 < 0.5 ? 1 : 0);
-pluck.Convolve(room, mix: 0.4) * 0.5
+Mini.Notes("c3 e3 g3 c4 ~ g3 e3 ~")
+    .Play(v => Noise().Adsr(0, 0.01, 0, 0.001).Comb(v.Frequency, feedback: 0.99), bpm: 120)
+    .Convolve(room, mix: 0.4) * 1.4
 ```
 
 What to know:
@@ -73,34 +95,27 @@ What to know:
 - **Length and memory.** Longer than ten seconds is cut there, with a short fade-out. A response takes about 32 bytes per tap when it is stereo (16 when mono), and every running instance, such as each voice of a `Play`, needs the same again for its own state. A ten second stereo response is about 16 MB plus 16 MB per instance, so keep responses short when many voices run at once.
 - **Everything else is composition.** There is no pre-delay, filter or width parameter, because the library already has them: `Delay` before, `HighPass` and `LowPass` after, `Spread` for the width.
 
-In a project, load the file yourself. In the REPL, drop the `.wav` on the page and name it with `Samples.Load`.
-
-```csharp
-using static Sigil.Sound.Sounds;
-using Sigil.Sound;
-
-// A cabinet from disk, under a distorted saw, with a low cut after it.
-var cabinet = AudioBuffer.FromWav("cab.wav");
-Saw(110).Distort(drive: 4).Convolve(cabinet).HighPass(80) * 0.4
-```
+In a project, load a file with `AudioBuffer.FromWav(path)`. In the REPL, drop your own `.wav` on the page and name it with `Samples.Load`, as the first example does.
 
 ## Modulation
 
 ```csharp
-// A slow chorus: three voices, detuned slightly by a 0.5 Hz LFO.
-(Saw(110) + Saw(165)).LowPass(1500).Chorus(rate: 0.5, voices: 3) * 0.3
+// A chorused electric piano: the plucks shimmer as four copies drift in and out of step.
+Mini.Notes("c4 e4 g4 b4 g4 e4 c4 ~")
+    .Play(v => Triangle(v.Frequency).Adsr(0.003, 0.6, 0.2, 0.3), bpm: 110)
+    .Chorus(rate: 0.5, voices: 4) * 0.4
 ```
 
 ```csharp
-// A phaser sweeps notches through the spectrum.
-Saw(110).Phaser(rate: 0.2, feedback: 0.6, stages: 6) * 0.4
+// A phaser on noise: the notches sweep up and down, so the hiss turns into a jet passing overhead.
+Noise().LowPass(4000).Phaser(rate: 0.2, feedback: 0.8, stages: 8, mix: 0.6) * 0.7
 ```
 
 ## Distortion and grit
 
 ```csharp
-// Soft clipping, pushed hard: a warm overdrive.
-Saw(110).Distort(drive: 8) * 0.4
+// A sine that gets fuzzier: the drive sweeps from clean to heavy, and harmonics bloom as it does.
+Sine(110).Distort(drive: Sine(0.25).Range(1, 12)) * 0.4
 ```
 
 ```csharp
@@ -109,8 +124,10 @@ Sine(110).Fold(amount: Sine(0.2).Range(1.0, 7.0), symmetry: 0.25, mix: 1.0).LowP
 ```
 
 ```csharp
-// Bit reduction and sample-rate reduction together: lo-fi and gritty.
-Saw(110).BitCrush(bits: 5, rate: 6000) * 0.4
+// A melody that gets crushed and then cleans up: the bit depth falls to 2 and climbs back every 4 seconds.
+Mini.Notes("c4 e4 g4 c5 ~ g4 e4 c4")
+    .Play(v => Triangle(v.Frequency).Adsr(0.005, 0.25, 0.5, 0.2), bpm: 120)
+    .BitCrush(bits: Sine(0.25).Range(2, 12), rate: 6000) * 0.5
 ```
 
 ## Pitch
@@ -118,38 +135,45 @@ Saw(110).BitCrush(bits: 5, rate: 6000) * 0.4
 `PitchShift(semitones, mix)` moves the whole spectrum up or down without changing the speed. It is spectral, so there is a delay of about 40 ms.
 
 ```csharp
-// A fifth up, mixed with the dry signal.
-Saw(110).PitchShift(7, mix: 0.5) * 0.4
+// A melody with a fifth above it: the shifted copy is mixed in at half level, so the tune comes back in harmony.
+Mini.Notes("c4 d4 e4 g4 a4 ~ g4 e4")
+    .Play(v => Triangle(v.Frequency).Adsr(0.005, 0.2, 0.5, 0.2), bpm: 120)
+    .PitchShift(7, mix: 0.5) * 0.4
 ```
 
 ## Feedback loops
 
-`Feedback` feeds the output of a chain back into its input. Keep the loop gain below 1 or it grows without bound.
+`Feedback` feeds the output of a chain back into its input. Keep the loop gain below 1 or it grows without bound. A distortion in the loop has a gain of its drive at low levels, so its `level` brings that back: here 4 × 0.25 × 0.7 is below 1.
 
 ```csharp
-// A pitch-climbing echo: each repeat rises an octave and darkens slightly.
-Noise().Adsr(0, 0.005, 0, 0.001)
-    .Feedback(echo => echo.Delay(0.3, mix: 1).PitchShift(12).LowPass(5000) * 0.5)
+// Echoes fed back through a distortion: each repeat comes back fuzzier and darker than the one before.
+Sine(330).Adsr(0.002, 0.05, 0, 0.02)
+    .Feedback(echo => echo.Delay(0.3, mix: 1).Distort(drive: 4, level: 0.25).LowPass(3000) * 0.7) * 0.6
 ```
 
 ## Stereo and dynamics
 
 ```csharp
-// Equal-power panning: a saw drifting between the speakers.
-Saw(110).Pan(Sine(0.3)) * 0.4
+// Equal-power panning: a bell line that swings from left to right and back every four seconds.
+Mini.Notes("a3 c4 e4 a4 e4 c4 ~ ~")
+    .Play(v => Sine(v.Frequency).Adsr(0.002, 0.5, 0, 0.3), bpm: 100)
+    .Pan(Sine(0.25)) * 0.4
 ```
 
 ```csharp
-// Balance turns one side down without narrowing the stereo image.
-(Saw(110) + Saw(165)).Chorus().Balance(-0.3) * 0.3
+// Balance turns one side down without narrowing the stereo image: here the balance swings from one ear to the other.
+(Triangle(130.81) + Triangle(164.81) + Triangle(196)).Chorus(rate: 0.5, voices: 4).Balance(Sine(0.25)) * 0.3
 ```
 
 ```csharp
-// Width 0 collapses a stereo sound to mono, which keeps the bass centred.
-Saw(55).LowPass(300).Chorus(rate: 0.4, voices: 3).Spread(0.0) * 0.5
+// The width swings from 0 (mono, the chorus collapses to the centre) to 2.5 (wide), so the pad opens and closes.
+(Triangle(110) + Triangle(165)).LowPass(1200).Chorus(rate: 0.5, voices: 4).Spread(Sine(0.25).Range(0, 2.5)) * 0.3
 ```
 
 ```csharp
-// Compression: a sine pushed down by 4:1 above -16 dB, then made up.
-Sine(110).Adsr(0.005, 0.2, 0.8, 0.3).Compress(thresholdDb: -16, ratio: 4, makeupGainDb: 3)
+// Sidechain pumping: the kick ducks the pad on every beat, so the pad breathes in time with the drum.
+var kick = Sine(Fn(t => 50 + 90 * Exp(-(t % 0.5) * 30))) * Fn(t => Exp(-(t % 0.5) * 7));
+var pad = (Triangle(110) + Triangle(165) + Triangle(220)).LowPass(900);
+
+(pad.Compress(thresholdDb: -20, ratio: 8, attack: 0.002, release: 0.25, sidechain: kick) * 0.3 + kick * 0.6)
 ```
