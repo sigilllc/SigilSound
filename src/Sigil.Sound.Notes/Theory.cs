@@ -85,6 +85,25 @@ public sealed class Scale
         return degrees.Select(d => Note(d)).ToArray();
     }
 
+    /// <summary>The notes on the degrees written as whole numbers in <see cref="Mini"/> notation: <c>Scale.Parse("c3 minor").Degrees("0 2 4 7")</c>.</summary>
+    /// <exception cref="MiniNotationException">The text is not valid.</exception>
+    public IReadOnlyList<Note> Degrees(string degrees)
+    {
+        ArgumentNullException.ThrowIfNull(degrees);
+        return Mini.Integers(degrees).Cycle(0).Select(e => Note(e.Value)).ToArray();
+    }
+
+    /// <summary>
+    /// Turns degrees written in <see cref="Mini"/> notation into a pattern of notes, so the scale and the melody are both text:
+    /// <c>Scale.Parse("c3 minor").Notes("0 2 &lt;4 7&gt; ~")</c>.
+    /// </summary>
+    /// <exception cref="MiniNotationException">The text is not valid.</exception>
+    public Pattern<Note> Notes(string degrees)
+    {
+        ArgumentNullException.ThrowIfNull(degrees);
+        return Notes(Mini.Integers(degrees));
+    }
+
     /// <summary>Turns a pattern of degrees into a pattern of notes.</summary>
     public Pattern<Note> Notes(Pattern<int> degrees)
     {

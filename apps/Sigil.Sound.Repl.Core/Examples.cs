@@ -368,16 +368,17 @@ public static class Examples
             //   "a(3,8)"     3 hits spread over 8 steps (a Euclidean rhythm)
             //   "<a b>"      one per cycle, in turn   "a?"     sometimes dropped (always the same ones)
             // Scales turn degrees into notes; Every, Rev, Degrade and friends reshape a pattern like data.
+            // Mini.Drums reads drum names (bd sn hh oh cp rim ...) instead of pitches.
             var bpm = 120;
-            var scale = Scale.Minor(Pitch.C2);              // degree 0 is the root, 7 is the root an octave up
+            var scale = Scale.Parse("c2 minor");            // degree 0 is the root, 7 is the root an octave up
 
-            var bass = scale.Notes(Mini.Integers("0 ~ 0 [3 5] ~ 7 <5 3> ~"))
+            var bass = scale.Notes("0 ~ 0 [3 5] ~ 7 <5 3> ~")
                 .Every(4, p => p.Rev());                     // every fourth cycle plays backwards
-            var lead = scale.Notes(Mini.Integers("7 9 [10 12] ~ 14(3,8) <10 9>"))
+            var lead = scale.Notes("7 9 [10 12] ~ 14(3,8) <10 9>")
                 .Degrade(0.2, seed: 1);
-            var kick = Mini.Notes("c1(5,8)");
-            var snare = Mini.Notes("~ c3");
-            var hats = Mini.Notes("c4*8").Degrade(0.25, seed: 3);
+            var kick = Mini.Drums("bd(5,8)");
+            var snare = Mini.Drums("~ sn");
+            var hats = Mini.Drums("hh*8").Degrade(0.25, seed: 3);
 
             // Each lambda describes ONE note. Inside it, Fn(t => ...) counts from the start of that note,
             // so every bass note gets its own filter sweep and every kick its own pitch drop.
@@ -417,6 +418,23 @@ public static class Examples
             (pad * 0.8 + shimmer * 0.3)
                 .Reverb(decay: 3.5, mix: 0.3)
                 .Limit()
+            """),
+        new("Notes by name",
+            """
+            // Notes are written the way a score names them: c4, eb3, f#2. A name without an octave is in octave 3,
+            // and :0.6 sets the velocity. Mini.Notes, Notes.Parse, Scale.Parse, Chord.Parse and NoteInput all read the same text.
+            //
+            // A NoteInput is live notes: NoteOn starts them, NoteOff releases them. Given a string, every note in it starts
+            // at once, so this is a chord. The three names below are the same notes as the numbers 45, 55 and 64.
+            var keys = new NoteInput();
+            var synth = keys.Play(v => Saw(v.Frequency).LowPass(1500).Adsr(0.01, 0.2, 0.7, 0.4), polyphony: 6);
+            keys.NoteOn("a2 g3 e4:0.6");
+
+            // The same names as a pattern: "[c3,e3,g3]" is a chord, "<...>" picks one per cycle, "~" is a rest.
+            var tune = Mini.Notes("<[a3,c4,e4] [f3,a3,c4] [c3,e3,g3] [g3,b3,d4]>")
+                .Play(v => Triangle(v.Frequency).Adsr(0.01, 0.3, 0.3, 0.4), bpm: 80, polyphony: 8);
+
+            (synth * 0.2 + tune * 0.25).Reverb(decay: 1.8, mix: 0.2)
             """),
         new("Acid line",
             """

@@ -36,9 +36,9 @@ internal static class ReplExamples
         var bpm = 110;
         var room = Samples.Load("IR_Speakers_Living_Room.wav");
 
-        var kick = Mini.Notes("c1 ~ ~ c1 ~ c1 ~ ~");
-        var snare = Mini.Notes("~ c3 ~ c3");
-        var hats = Mini.Notes("c4*8").Degrade(0.2, seed: 3);
+        var kick = Mini.Drums("bd ~ ~ bd ~ bd ~ ~");
+        var snare = Mini.Drums("~ sn ~ sn");
+        var hats = Mini.Drums("hh*8").Degrade(0.2, seed: 3);
 
         var drums =
             kick.Play(v => Sine(Fn(t => 48 + 110 * Exp(-t * 28))).Adsr(0.001, 0.25, 0, 0.02), bpm) * 0.9

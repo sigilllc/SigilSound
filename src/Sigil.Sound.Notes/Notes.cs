@@ -10,15 +10,18 @@ public static class Notes
 
     /// <summary>
     /// Parses whitespace-separated note names in scientific pitch notation, such as <c>"C4 Eb4 G4"</c>.
-    /// Accepts <c>#</c> and <c>b</c> accidentals; octave -1 through 9.
+    /// Accepts <c>#</c> and <c>b</c> accidentals; octave -1 through 9. The names are read as <see cref="Mini.Notes"/> reads them:
+    /// a name without an octave is in octave 3 and <c>:0.6</c> sets the velocity (<c>"C4:0.6"</c>). Unlike mini-notation, the
+    /// notes are a plain list: no rests, groups or repeats.
     /// </summary>
+    /// <exception cref="FormatException">A word is not a note name.</exception>
     public static IReadOnlyList<Note> Parse(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
         var tokens = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         var notes = new Note[tokens.Length];
         for (int i = 0; i < tokens.Length; i++)
-            notes[i] = new Note(ParsePitch(tokens[i]));
+            notes[i] = Mini.ParseNote(tokens[i]);
         return notes;
     }
 

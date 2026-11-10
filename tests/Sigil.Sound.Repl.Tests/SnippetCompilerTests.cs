@@ -76,4 +76,17 @@ public class SnippetCompilerTests
     {
         Assert.Null(Record.Exception(SnippetCompiler.Warm));
     }
+
+    [Fact]
+    public void The_notes_by_name_example_sounds_the_chord_it_names()
+    {
+        var code = Examples.All.Single(e => e.Name == "Notes by name").Code;
+        var result = SnippetCompiler.Compile(code);
+        Assert.True(result.Success, string.Join("\n", result.Diagnostics));
+
+        // Only the NoteInput chord sounds in the first moments (the pattern's chord is one cycle in); it must be audible.
+        var audio = result.Run().Render(1.0);
+        AudioAssert.IsFinite(audio);
+        Assert.True(SignalAnalysis.Rms(audio.ToMono()) > 0.005, "the named chord should be heard");
+    }
 }

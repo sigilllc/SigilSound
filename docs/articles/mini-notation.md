@@ -1,6 +1,6 @@
 # Mini-notation
 
-Mini-notation is a short text language for patterns. `Mini.Notes` reads note names, `Mini.Integers` reads whole numbers (scale degrees, for example), `Mini.Numbers` reads decimals, and `Mini.Chords` reads chord names.
+Mini-notation is a short text language for patterns. `Mini.Notes` reads note names, `Mini.Drums` reads drum names, `Mini.Integers` reads whole numbers (scale degrees, for example), `Mini.Numbers` reads decimals, and `Mini.Chords` reads chord names.
 
 A pattern is one cycle of four beats. Steps in the text share that cycle equally, so `c3 e3 g3` puts each note on a quarter of it.
 
@@ -25,11 +25,19 @@ A pattern is one cycle of four beats. Steps in the text share that cycle equally
 
 Names are a letter A to G, optionally `#` or `b`, then an octave. `c4` is middle C. Octaves run from -1 to 9.
 
-Names without an octave are in octave 3. `NoteInput.NoteOn("a2 g3 e4")` reads the same note names for [live notes](live-notes.md); there the notes of the first cycle all start at once.
+Names without an octave are in octave 3. The same note names are read everywhere text names a note: `Notes.Parse("c e4 g4:0.6")`, `Scale.Parse("c3 minor")`, `Chord.Parse("c3:min7")`, and `NoteInput.NoteOn("a2 g3 e4")` for [live notes](live-notes.md), where the notes of the first cycle all start at once. A MIDI number is the way in only when a number is what you have.
 
 ## Chords
 
-A chord name is a root and a quality: `c3:min7`, `f3:7`, `g3:maj7`, `a3:sus4`. Qualities include `maj`, `min`, `dim`, `aug`, `sus2`, `sus4`, `7`, `maj7`, `min7`.
+A chord name is a root and a quality: `c3:min7`, `f3:7`, `g3:maj7`, `a3:sus4`. Qualities include `maj`, `min`, `dim`, `aug`, `sus2`, `sus4`, `7`, `maj7`, `min7`. `Chord.Parse("c3:min7")` builds one chord from the same text.
+
+## Drums
+
+`Mini.Drums` reads drum names and gives notes on the General MIDI drum map, so one pattern can drive your own sounds or a MIDI drum kit: `bd` bass drum, `sn` snare, `rim` side stick, `cp` clap, `hh` and `oh` closed and open hi-hat, `lt`, `mt` and `ht` toms, `cr` crash, `rd` ride, `cb` cowbell. `:0.4` sets the velocity (`hh:0.4`). Play each drum as its own pattern with the sound you want; the pitch only says which drum it is.
+
+## Scales
+
+A scale is text too, and so are its degrees: `Scale.Parse("c3 minor").Notes("0 2 <4 7> ~")` is the same as `Scale.Minor(Pitch.C3).Notes(Mini.Integers("0 2 <4 7> ~"))`.
 
 ## Examples
 
@@ -41,7 +49,7 @@ Mini.Notes("[c3 e3 g3]*2 <f3 a3 c4> <g3 b3 d4>")
 
 ```csharp
 // Degrees in C major: 0 is the root, 4 the fifth above, and the group plays both.
-Scale.Major(Pitch.C3).Notes(Mini.Integers("0 [2 4]*2 <5 7>"))
+Scale.Parse("c3 major").Notes("0 [2 4]*2 <5 7>")
     .Play(v => Triangle(v.Frequency).Adsr(0.005, 0.1, 0.5, 0.2), bpm: 110) * 0.4
 ```
 

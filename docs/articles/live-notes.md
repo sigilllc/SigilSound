@@ -20,7 +20,7 @@ For a number, such as a MIDI note from a controller, `NoteOn(pitch)` and `NoteOf
 
 ## A note you can keep shaping
 
-When the player does more than press and release, start the note with `Start`. It returns a `PlayingNote`: the note is its own object, so two notes on the same pitch are two notes, and each has its own **bend**, **pressure** and **slide**. This is the model an MPE controller uses, one note per channel, without the library knowing anything about MIDI.
+When the player does more than press and release, start the note with `Start`. `Start(pitch)` returns a `PlayingNote`, and `Start("a3 a3")` takes the same note names as `NoteOn` and returns one per name: the note is its own object, so two notes on the same pitch are two notes, and each has its own **bend**, **pressure** and **slide**. This is the model an MPE controller uses, one note per channel, without the library knowing anything about MIDI.
 
 | On the note | In the voice | Meaning |
 | --- | --- | --- |
@@ -32,8 +32,8 @@ When the player does more than press and release, start the note with `Start`. I
 // Two notes at the same pitch, bent apart by a third of a semitone: they beat slowly, as two strings would.
 var keys = new NoteInput();
 var synth = keys.Play(v => Saw(v.Frequency).LowPass(1500).Adsr(0.01, 0.1, 0.8, 0.3), polyphony: 4);
-keys.Start(57);
-keys.Start(57).Bend = 0.33;
+var pair = keys.Start("a3 a3");
+pair[1].Bend = 0.33;
 synth * 0.3
 ```
 
@@ -46,7 +46,7 @@ A sound that only uses `v.Frequency` needs no change to answer to a bending play
 var keys = new NoteInput();
 var synth = keys.Play(v => (Saw(v.Frequency).LowPass(400 + v.Slide * 3600, q: 2) * (0.3 + v.Pressure * 0.7))
     .Adsr(0.01, 0.1, 0.9, 0.3));
-var note = keys.Start(52);
+var note = keys.Start("e3")[0];
 note.Slide = 0.7;
 note.Pressure = 0.8;
 synth * 0.3
@@ -63,8 +63,7 @@ Sound Fall(Sound pitch, double octaves, double seconds) =>
 
 var keys = new NoteInput();
 var synth = keys.Play(v => Sine(Fall(v.Frequency, octaves: 1, seconds: 1)).Adsr(0.005, 0.1, 0.8, 0.3), polyphony: 4);
-keys.Start(81);
-keys.Start(76);
+keys.Start("a5 e5");
 synth * 0.3
 ```
 

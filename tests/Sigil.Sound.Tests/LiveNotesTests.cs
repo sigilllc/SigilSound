@@ -435,4 +435,37 @@ public class LiveNotesTests
         Assert.False(keys.IsHeld(60));
         Assert.False(keys.IsHeld(64));
     }
+
+    [Fact]
+    public void Start_by_name_returns_one_playing_note_per_name_in_order()
+    {
+        var keys = new NoteInput();
+
+        var notes = keys.Start("c4 e4:0.5");
+
+        Assert.Equal([60, 64], notes.Select(n => n.Pitch));
+        Assert.Equal(0.5f, notes[1].Velocity);
+        Assert.True(keys.IsHeld(60));
+    }
+
+    [Fact]
+    public void Start_by_name_refuses_a_zero_velocity_and_starts_nothing()
+    {
+        var keys = new NoteInput();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => keys.Start("c4 e4:0"));
+
+        Assert.False(keys.IsHeld(60));
+    }
+
+    [Fact]
+    public void IsHeld_by_name_is_true_only_when_every_note_is_held()
+    {
+        var keys = new NoteInput();
+        keys.NoteOn("c4 e4");
+
+        Assert.True(keys.IsHeld("c4 e4"));
+        Assert.False(keys.IsHeld("c4 e4 g4"));
+        Assert.False(keys.IsHeld("~"));
+    }
 }

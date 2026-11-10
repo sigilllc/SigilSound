@@ -45,7 +45,7 @@ public static class Mini
     /// <exception cref="MiniNotationException">The text is not valid.</exception>
     public static Pattern<Note> Notes(string text) => Parse(text, ParseNote);
 
-    /// <summary>Whole numbers, such as scale degrees: <c>"0 2 &lt;4 -1&gt; ~"</c>. Pair with <see cref="Scale.Notes"/>.</summary>
+    /// <summary>Whole numbers, such as scale degrees: <c>"0 2 &lt;4 -1&gt; ~"</c>. Pair with <see cref="Scale.Notes(Pattern{int})"/>.</summary>
     /// <exception cref="MiniNotationException">The text is not valid, or a word is not a whole number.</exception>
     public static Pattern<int> Integers(string text) => Parse(text, ParseInteger);
 
@@ -69,17 +69,60 @@ public static class Mini
         return new MiniParser<T>(text, atom).ParseAll();
     }
 
-    private static Note ParseNote(string word)
+    /// <summary>
+    /// Drums by name, such as <c>"bd ~ sn ~"</c> or <c>"hh*8"</c>, as notes on the General MIDI drum map, so the same pattern
+    /// also drives a MIDI drum kit. Names are case-insensitive and <c>:0.6</c> sets the velocity (<c>hh:0.4</c>). Play each drum
+    /// as its own pattern, and give it the sound you want.
+    /// </summary>
+    /// <remarks>
+    /// <list type="table">
+    /// <item><term><c>bd</c></term><description>bass drum (36)</description></item>
+    /// <item><term><c>rim</c></term><description>side stick (37)</description></item>
+    /// <item><term><c>sn</c></term><description>snare (38)</description></item>
+    /// <item><term><c>cp</c></term><description>hand clap (39)</description></item>
+    /// <item><term><c>lt</c>, <c>mt</c>, <c>ht</c></term><description>low, mid and high tom (41, 47, 50)</description></item>
+    /// <item><term><c>hh</c>, <c>oh</c></term><description>closed and open hi-hat (42, 46)</description></item>
+    /// <item><term><c>cr</c>, <c>rd</c></term><description>crash and ride cymbal (49, 51)</description></item>
+    /// <item><term><c>cb</c></term><description>cowbell (56)</description></item>
+    /// </list>
+    /// </remarks>
+    /// <exception cref="MiniNotationException">The text is not valid, or a word is not a drum name.</exception>
+    /// <example>
+    /// <code>
+    /// var bpm = 110;
+    /// var kick = Mini.Drums("bd ~ ~ bd ~ bd ~ ~");
+    /// var hats = Mini.Drums("hh*8");
+    /// kick.Play(v =&gt; Sine(Fn(t =&gt; 48 + 110 * Exp(-t * 28))).Adsr(0.001, 0.25, 0, 0.02), bpm) * 0.9
+    ///     + hats.Play(v =&gt; Noise(4).HighPass(7000).Adsr(0.001, 0.04, 0, 0.01), bpm) * 0.25
+    /// </code>
+    /// </example>
+    public static Pattern<Note> Drums(string text) => Parse(text, word => ParseWord(word, DrumPitch));
+
+    private static readonly Dictionary<string, int> DrumPitches = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["bd"] = 36, ["rim"] = 37, ["sn"] = 38, ["cp"] = 39, ["lt"] = 41, ["hh"] = 42, ["oh"] = 46,
+        ["mt"] = 47, ["ht"] = 50, ["cr"] = 49, ["rd"] = 51, ["cb"] = 56,
+    };
+
+    private static int DrumPitch(string name) =>
+        DrumPitches.TryGetValue(name, out int pitch)
+            ? pitch
+            : throw new FormatException($"'{name}' is not a drum. Known: {string.Join(", ", DrumPitches.Keys.Order())}.");
+
+    // A name with no octave number means octave 3.
+    internal static Note ParseNote(string word) => ParseWord(word, name =>
+        global::Sigil.Sound.Notes.ParsePitch(char.IsDigit(name[^1]) ? name : name + "3"));
+
+    // "name" or "name:velocity"; pitchOf turns the name into a MIDI pitch.
+    private static Note ParseWord(string word, Func<string, int> pitchOf)
     {
         var parts = word.Split(':');
         if (parts.Length > 2) throw new FormatException($"'{word}' has more than one velocity.");
 
         string name = parts[0];
         if (name.Length == 0) throw new FormatException("A note needs a name.");
-        // A name with no octave number means octave 3.
-        if (!char.IsDigit(name[^1])) name += "3";
 
-        var note = new Note(global::Sigil.Sound.Notes.ParsePitch(name));
+        var note = new Note(pitchOf(name));
         if (parts.Length == 2)
         {
             if (!float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float velocity) || velocity is < 0 or > 1)

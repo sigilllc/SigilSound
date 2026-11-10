@@ -4,7 +4,7 @@ namespace Sigil.Sound;
 
 /// <summary>
 /// One note a player is holding, which the player can keep shaping while it sounds: bend its pitch, press harder, slide.
-/// Get one from <see cref="NoteInput.Start"/>. Two notes at the same pitch are two notes, each with its own bend,
+/// Get one from <see cref="NoteInput.Start(int, float)"/>. Two notes at the same pitch are two notes, each with its own bend,
 /// pressure and slide, which is how an MPE controller plays: one note per channel.
 /// </summary>
 /// <remarks>
@@ -54,7 +54,7 @@ public sealed class PlayingNote
     /// <summary>How hard the note was started, from 0 to 1.</summary>
     public float Velocity { get; }
 
-    /// <summary>True from <see cref="NoteInput.Start"/> until <see cref="Release"/> (or <see cref="NoteInput.AllNotesOff"/>).</summary>
+    /// <summary>True from <see cref="NoteInput.Start(int, float)"/> until <see cref="Release"/> (or <see cref="NoteInput.AllNotesOff"/>).</summary>
     public bool IsHeld => Volatile.Read(ref _held) == 1;
 
     /// <summary>

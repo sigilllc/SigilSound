@@ -142,6 +142,30 @@ public sealed class NoteInput
             NoteOff(note.Pitch);
     }
 
+    /// <summary>
+    /// Starts the notes written in <see cref="Mini"/> notation and returns them, one <see cref="PlayingNote"/> each, in the order
+    /// written: <c>keys.Start("c4 e4")</c>. See <see cref="Start(int, float)"/> for what a started note can do.
+    /// </summary>
+    /// <param name="notes">Mini-notation for notes, read as in <see cref="NoteOn(string)"/>. A velocity of 0 is not allowed here.</param>
+    /// <exception cref="MiniNotationException">The text is not valid. No note is started.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A velocity is 0.</exception>
+    public IReadOnlyList<PlayingNote> Start(string notes)
+    {
+        var parsed = ParseNotes(notes);
+        if (parsed.Any(n => n.Velocity <= 0f))
+            throw new ArgumentOutOfRangeException(nameof(notes), notes, "A started note needs a velocity above 0.");
+        return parsed.Select(n => Start(n.Pitch, n.Velocity)).ToArray();
+    }
+
+    /// <summary>True while every note written in <see cref="Mini"/> notation is held, as <see cref="IsHeld(int)"/> reports it. False for text with no notes.</summary>
+    /// <param name="notes">Mini-notation for notes, such as <c>"c4 e4 g4"</c>.</param>
+    /// <exception cref="MiniNotationException">The text is not valid.</exception>
+    public bool IsHeld(string notes)
+    {
+        var parsed = ParseNotes(notes);
+        return parsed.Count > 0 && parsed.All(n => IsHeld(n.Pitch));
+    }
+
     // The whole text is parsed before any note is touched, so a typo in the last note does not leave the first ones sounding.
     private static List<Note> ParseNotes(string notes)
     {
@@ -161,7 +185,7 @@ public sealed class NoteInput
         }
     }
 
-    /// <summary>Releases every held note, including the ones started with <see cref="Start"/>.</summary>
+    /// <summary>Releases every held note, including the ones started with <see cref="Start(int, float)"/>.</summary>
     public void AllNotesOff()
     {
         lock (_gate)
@@ -176,7 +200,7 @@ public sealed class NoteInput
 
     /// <summary>
     /// True while <paramref name="pitch"/> is held: between its <see cref="NoteOn(int, float)"/> and <see cref="NoteOff(int)"/>, or while a note
-    /// started on it with <see cref="Start"/> has not been released.
+    /// started on it with <see cref="Start(int, float)"/> has not been released.
     /// </summary>
     /// <param name="pitch">The MIDI pitch, 0 to 127.</param>
     public bool IsHeld(int pitch)
@@ -258,7 +282,7 @@ internal enum NoteEventKind : byte
     Off,
     AllOff,
 
-    /// <summary>A note started with <see cref="NoteInput.Start"/>; the event carries the note itself, whose state the voice reads.</summary>
+    /// <summary>A note started with <see cref="NoteInput.Start(int, float)"/>; the event carries the note itself, whose state the voice reads.</summary>
     OnNote,
 
     /// <summary>That note's release. Matches the voice by the note, not by pitch.</summary>

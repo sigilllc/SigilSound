@@ -241,3 +241,30 @@ public class ChordTests
         Assert.Throws<ArgumentException>(() => new Chord([]));
     }
 }
+
+public class ScaleTextTests
+{
+    [Fact]
+    public void Notes_reads_degrees_from_text_like_Mini_Integers()
+    {
+        var scale = Scale.Parse("c3 minor");
+
+        var fromText = scale.Notes("0 2 <4 7> ~").Cycle(1).Select(e => e.Value.Pitch);
+        var fromPattern = scale.Notes(Mini.Integers("0 2 <4 7> ~")).Cycle(1).Select(e => e.Value.Pitch);
+
+        Assert.Equal(fromPattern, fromText);
+        Assert.Equal([48, 51, 60], fromText);
+    }
+
+    [Fact]
+    public void Degrees_reads_whole_numbers_from_text()
+    {
+        Assert.Equal([48, 50, 51, 55], Scale.Parse("c3 minor").Degrees("0 1 2 4").Select(n => n.Pitch));
+    }
+
+    [Fact]
+    public void Degrees_rejects_text_that_is_not_whole_numbers()
+    {
+        Assert.Throws<MiniNotationException>(() => Scale.Parse("c3 minor").Degrees("0 two"));
+    }
+}
