@@ -92,6 +92,10 @@ dotnet build
 dotnet test
 ```
 
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first (it says what to open an issue for before writing code), and note the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately: see [SECURITY.md](SECURITY.md). For questions, use [Discussions](https://github.com/sigilllc/SigilSound/discussions).
+
 ## Heritage
 
 Sigil.Sound is a clean, modern rewrite of the engine powering Sigilgraph Audio Workbench (`AudioWorkbench.Core`), eliminating legacy singletons, per-sample abstractions, and desktop coupling in favor of a fluent, functional, allocation-free architecture.
