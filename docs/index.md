@@ -98,6 +98,7 @@ Saw(110).LowPass(cutoff: sweep, q: 4) * 0.4
       <ul>
         <li><a href="articles/mini-notation.md">Mini-notation</a></li>
         <li><a href="articles/live-notes.md">Live notes and expression</a></li>
+        <li><a href="articles/note-streams.md">Note streams</a></li>
         <li><a href="articles/samples.md">Samples</a></li>
         <li><a href="articles/rendering-and-live.md">Rendering and live playback</a></li>
         <li><a href="articles/hosting.md">Hosting</a></li>

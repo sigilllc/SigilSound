@@ -86,6 +86,12 @@ public sealed class InputApi
     /// <summary>A control signal arriving at the device. Zero until you move its slider on the page.</summary>
     /// <param name="index">Which control input, 0 to 3.</param>
     public Sound Control(int index) => _build.ControlInput(index);
+
+    /// <summary>
+    /// The notes arriving at the device's note input, as a <see cref="NoteStream"/>: live notes to shape on their way out. In the REPL
+    /// they come from the keyboard under the editor.
+    /// </summary>
+    public NoteStream Notes => _build.NotesInput;
 }
 
 /// <summary>The device's outputs, assigned from a snippet.</summary>
@@ -110,4 +116,11 @@ public sealed class OutputApi
     /// </summary>
     /// <param name="pattern">The notes to play.</param>
     public void Notes(Pattern<Note> pattern) => _build.SetLiveNotesOutput(pattern);
+
+    /// <summary>
+    /// Sends a stream of live notes out of the device's note output: the keyboard's notes after the operators you put them through.
+    /// In the REPL a plain voice plays them.
+    /// </summary>
+    /// <param name="stream">The notes to send, such as <c>In.Notes.Transpose(7)</c>.</param>
+    public void Notes(NoteStream stream) => _build.SetStreamNotesOutput(stream);
 }

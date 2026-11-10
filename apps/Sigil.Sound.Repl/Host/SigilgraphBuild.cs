@@ -60,6 +60,17 @@ internal sealed class SigilgraphBuild
 
     internal Pattern<Note>? LiveNotesOut { get; private set; }
 
+    internal NoteStream? StreamNotesOut { get; private set; }
+
+    internal NoteStream NotesInput
+    {
+        get
+        {
+            UsesNoteInput = true;
+            return _session.Keys.Stream;
+        }
+    }
+
     internal static SigilgraphBuild Require() =>
         _current ?? throw new SigilgraphException("This can only be used while a Sound Script runs; it is not available from other code.");
 
@@ -103,6 +114,15 @@ internal sealed class SigilgraphBuild
         ArgumentNullException.ThrowIfNull(pattern);
         NotesOut = pattern;
         LiveNotesOut = null; // only the last call counts
+        StreamNotesOut = null;
+    }
+
+    internal void SetStreamNotesOutput(NoteStream stream)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        StreamNotesOut = stream;
+        NotesOut = null; // only the last call counts
+        LiveNotesOut = null;
     }
 
     internal void SetLiveNotesOutput(Pattern<Note> pattern)
@@ -119,6 +139,7 @@ internal sealed class SigilgraphBuild
 
         LiveNotesOut = pattern;
         NotesOut = null;
+        StreamNotesOut = null;
     }
 
     internal Sound DeclarePoly(int polyphony, Func<Voice, Sound> voice)
@@ -298,6 +319,8 @@ internal sealed class SigilgraphSession
             result += pattern.Play(DefaultVoice);
         else if (build.LiveNotesOut is { } live)
             result += live.Play(DefaultVoice);
+        else if (build.StreamNotesOut is { } stream)
+            result += stream.Play(DefaultVoice);
 
         Declared = [.. build.Declared];
         Assets = [.. build.Assets];

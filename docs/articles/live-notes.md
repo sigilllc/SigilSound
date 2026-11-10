@@ -18,6 +18,8 @@ synth * 0.25
 
 For a number, such as a MIDI note from a controller, `NoteOn(pitch)` and `NoteOff(pitch)` take the pitch directly (`keys.NoteOn(45)` is `a2`). The voice reads the note from the `Voice` signals: `Frequency`, `Pitch`, `Velocity` and `Gate`.
 
+Keys can also be changed on their way to the sound: transposed, harmonized, filtered, echoed, or used to write a line against the chord that is played. That is [Note streams](note-streams.md).
+
 ## A note you can keep shaping
 
 When the player does more than press and release, start the note with `Start`. `Start(pitch)` returns a `PlayingNote`, and `Start("a3 a3")` takes the same note names as `NoteOn` and returns one per name: the note is its own object, so two notes on the same pitch are two notes, and each has its own **bend**, **pressure** and **slide**. This is the model an MPE controller uses, one note per channel, without the library knowing anything about MIDI.

@@ -41,12 +41,16 @@ public sealed class PlayingNote
     private float _slide;
     private int _held = 1;
 
-    internal PlayingNote(NoteInput owner, int pitch, float velocity)
+    internal PlayingNote(NoteInput owner, int pitch, float velocity, long id)
     {
         _owner = owner;
         Pitch = pitch;
         Velocity = velocity;
+        Id = id;
     }
+
+    /// <summary>The identity the note has in a <see cref="NoteStream"/>.</summary>
+    internal long Id { get; }
 
     /// <summary>The MIDI pitch the note was started on, 0 to 127.</summary>
     public int Pitch { get; }

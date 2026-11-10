@@ -1,7 +1,7 @@
 namespace Sigil.Sound;
 
 /// <summary>Working with patterns of notes.</summary>
-public static class NotePatterns
+public static partial class NotePatterns
 {
     /// <summary>Moves every note by <paramref name="semitones"/>.</summary>
     public static Pattern<Note> Transpose(this Pattern<Note> pattern, int semitones) =>
@@ -27,9 +27,12 @@ public static class NotePatterns
         ArgumentNullException.ThrowIfNull(pattern);
         if (cycles < 1) throw new ArgumentOutOfRangeException(nameof(cycles), cycles, "Write out at least one cycle.");
 
+        LiveQuery.Begin();
         pattern.Validate(cycles);
         var found = new List<PatternEvent<Note>>();
         pattern.Query(new Arc(Fraction.Zero, new Fraction(cycles)), found);
+        if (LiveQuery.Touched)
+            throw new InvalidOperationException("This pattern follows live notes (NoteStream.Chord or Fold), so it has no fixed cycles to write out. Play it, or send it out with Out.Notes.");
 
         var events = new List<TimedNote>();
         foreach (var e in found)

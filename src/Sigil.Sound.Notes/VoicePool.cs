@@ -72,7 +72,7 @@ internal sealed class VoicePool : IDisposable
     /// </summary>
     // A note started with a handle (source) follows that note's bend, pressure and slide for as long as it sounds, and a
     // release by pitch leaves it alone: only ReleaseNote ends it. A note with no handle is released by its pitch.
-    public VoiceSlot Start(double frequency, int pitch, float velocity, double holdSeconds, long position, PlayingNote? source = null)
+    public VoiceSlot Start(double frequency, int pitch, float velocity, double holdSeconds, long position, PlayingNote? source = null, long id = 0)
     {
         // At the polyphony limit one sounding voice is cut, with a very short fade so it doesn't click.
         VoiceSlot? victim = null;
@@ -92,6 +92,7 @@ internal sealed class VoicePool : IDisposable
         var slot = FreeSlot();
         slot.Control.Set(frequency, pitch, velocity, holdSeconds);
         slot.Source = source;
+        slot.Id = id;
         // Before the reset, so the voice starts where the player's hand already is instead of gliding there.
         CopyExpression(slot);
         slot.Operator.ResetState();
@@ -113,7 +114,17 @@ internal sealed class VoicePool : IDisposable
     {
         foreach (var voice in _voices)
         {
-            if (voice.Active && voice.NoteOffAt == Held && voice.Source is null && voice.Control.Pitch == pitch)
+            if (voice.Active && voice.NoteOffAt == Held && voice.Source is null && voice.Id == 0 && voice.Control.Pitch == pitch)
+                ReleaseSlot(voice, position);
+        }
+    }
+
+    /// <summary>Ends the voice started for the stream note <paramref name="id"/>, and only that one.</summary>
+    public void ReleaseId(long id, long position)
+    {
+        foreach (var voice in _voices)
+        {
+            if (voice.Active && voice.NoteOffAt == Held && voice.Id == id && id != 0)
                 ReleaseSlot(voice, position);
         }
     }
@@ -262,6 +273,9 @@ internal sealed class VoicePool : IDisposable
 
         /// <summary>The note whose bend, pressure and slide this voice follows; null for a note without a handle.</summary>
         public PlayingNote? Source { get; set; }
+
+        /// <summary>The id of the stream note this voice plays, or 0 for a note that is released by pitch or by its handle.</summary>
+        public long Id { get; set; }
 
         /// <summary>Frames left of the fade-out after the voice was cut; zero while it sounds normally.</summary>
         public int FadeRemaining { get; set; }

@@ -16,6 +16,8 @@
   href: notes-and-patterns.md
 - name: Live notes and expression
   href: live-notes.md
+- name: Note streams
+  href: note-streams.md
 - name: Hosting
   href: hosting.md
 - name: Mini-notation

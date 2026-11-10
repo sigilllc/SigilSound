@@ -9,13 +9,13 @@ namespace Sigil.Sound;
 /// default 256-frame block that is under 6 ms at 48 kHz. The operator's time is its own frame counter: voices compare
 /// positions with it, and it has no relation to a host clock (voices keep their own time by design).
 /// </remarks>
-internal sealed class LiveVoiceOperator : IOperator, IResettable, IDisposable
+internal sealed class LiveVoiceOperator : IOperator, IResettable, IDisposable, IKeyListener
 {
     private const int QueueSize = 4096; // a power of two
 
     private readonly NoteInput _input;
     private readonly VoicePool _voices;
-    private readonly NoteEvent[] _queue = new NoteEvent[QueueSize];
+    private readonly KeyEvent[] _queue = new KeyEvent[QueueSize];
 
     // Single producer (NoteInput, under its lock) and single consumer (the audio thread).
     private int _head;
@@ -34,7 +34,7 @@ internal sealed class LiveVoiceOperator : IOperator, IResettable, IDisposable
     public int Dropped { get; private set; }
 
     /// <summary>Queues an event for the next block. Callers must be serialized, which <see cref="NoteInput"/> does.</summary>
-    public void Post(NoteEvent noteEvent)
+    public void Post(KeyEvent noteEvent)
     {
         int tail = _tail;
         int next = (tail + 1) & (QueueSize - 1);
@@ -70,6 +70,10 @@ internal sealed class LiveVoiceOperator : IOperator, IResettable, IDisposable
         _position += block.Length;
     }
 
+    // A note a little off its pitch (cents) sounds at that frequency; the voice still reports the MIDI pitch it was named by.
+    private static double Frequency(KeyEvent keyEvent) =>
+        keyEvent.Cents == 0f ? new Note(keyEvent.Pitch).Frequency : 440.0 * Math.Pow(2.0, (keyEvent.Pitch - 69 + keyEvent.Cents / 100.0) / 12.0);
+
     private void Drain()
     {
         int head = _head;
@@ -80,16 +84,16 @@ internal sealed class LiveVoiceOperator : IOperator, IResettable, IDisposable
             head = (head + 1) & (QueueSize - 1);
             switch (noteEvent.Kind)
             {
-                case NoteEventKind.On:
-                    _voices.Start(new Note(noteEvent.Pitch).Frequency, noteEvent.Pitch, noteEvent.Velocity, double.PositiveInfinity, _position);
+                case KeyEventKind.On:
+                    _voices.Start(Frequency(noteEvent), noteEvent.Pitch, noteEvent.Velocity, double.PositiveInfinity, _position);
                     break;
-                case NoteEventKind.Off:
+                case KeyEventKind.Off:
                     _voices.Release(noteEvent.Pitch, _position);
                     break;
-                case NoteEventKind.OnNote:
-                    _voices.Start(new Note(noteEvent.Pitch).Frequency, noteEvent.Pitch, noteEvent.Velocity, double.PositiveInfinity, _position, noteEvent.Note);
+                case KeyEventKind.OnNote:
+                    _voices.Start(Frequency(noteEvent), noteEvent.Pitch, noteEvent.Velocity, double.PositiveInfinity, _position, noteEvent.Note);
                     break;
-                case NoteEventKind.OffNote:
+                case KeyEventKind.OffNote:
                     _voices.ReleaseNote(noteEvent.Note!, _position);
                     break;
                 default:

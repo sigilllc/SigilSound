@@ -2,7 +2,7 @@ namespace Sigil.Sound;
 
 /// <summary>
 /// Notes played live, from a keyboard, a game or a UI, as opposed to a <see cref="Pattern"/> written in advance.
-/// Create one, build a sound from it with <see cref="Play"/>, and call <see cref="NoteOn(int, float)"/> and <see cref="NoteOff(int)"/>
+/// Create one, build a sound from it with <see cref="Play"/>, and call <see cref="NoteOn(int, float, double)"/> and <see cref="NoteOff(int)"/>
 /// from any thread while that sound renders.
 /// </summary>
 /// <remarks>
@@ -31,12 +31,28 @@ namespace Sigil.Sound;
 public sealed class NoteInput
 {
     private readonly object _gate = new();
-    private readonly List<WeakReference<LiveVoiceOperator>> _listeners = [];
-    private readonly Dictionary<int, float> _held = [];
+    private readonly List<WeakReference<IKeyListener>> _listeners = [];
+    private readonly Dictionary<int, HeldKey> _held = [];
     private readonly List<PlayingNote> _notes = [];
+    private NoteStream? _stream;
+    private long _nextId;
 
     /// <summary>
-    /// Starts a note you can keep shaping while it sounds, and returns it. Unlike <see cref="NoteOn(int, float)"/>, which names a note by
+    /// The clock these notes are played against, or null. Note streams measure time with it: the delay of an echo, the boundary a
+    /// chord changes on. A host sets it to the clock it advances for its sounds. Without one, streams count from when they start,
+    /// at 120 bpm, like a pattern played without a host clock.
+    /// </summary>
+    public HostClock? Clock { get; set; }
+
+    /// <summary>
+    /// The notes pressed into this input, as a <see cref="NoteStream"/> to shape and send on: transpose it, harmonize it, filter it,
+    /// follow its chord with a pattern, and play it or send it out. <c>keys.Play(voice)</c> plays the notes as they are; this is the
+    /// way to do something to them first.
+    /// </summary>
+    public NoteStream Stream => _stream ??= NoteStream.FromInput(this);
+
+    /// <summary>
+    /// Starts a note you can keep shaping while it sounds, and returns it. Unlike <see cref="NoteOn(int, float, double)"/>, which names a note by
     /// its pitch, the note is its own object: two started on the same pitch are two notes, and ending or bending one leaves the
     /// other alone. This is the entry for a player with per-note expression, such as an MPE controller.
     /// </summary>
@@ -64,14 +80,13 @@ public sealed class NoteInput
         if (!(velocity is > 0f and <= 1f))
             throw new ArgumentOutOfRangeException(nameof(velocity), velocity, "Velocity must be above 0 and at most 1.");
 
-        var note = new PlayingNote(this, pitch, velocity);
         lock (_gate)
         {
+            var note = new PlayingNote(this, pitch, velocity, ++_nextId);
             _notes.Add(note);
-            Post(new NoteEvent(NoteEventKind.OnNote, pitch, velocity, note));
+            Post(new KeyEvent(KeyEventKind.OnNote, pitch, velocity, note, note.Id));
+            return note;
         }
-
-        return note;
     }
 
     // The note's own Release lands here.
@@ -80,18 +95,26 @@ public sealed class NoteInput
         lock (_gate)
         {
             if (_notes.Remove(note) && note.MarkReleased())
-                Post(new NoteEvent(NoteEventKind.OffNote, note.Pitch, 0f, note));
+                Post(new KeyEvent(KeyEventKind.OffNote, note.Pitch, 0f, note, note.Id));
         }
     }
 
     /// <summary>Starts a note. A velocity of 0 ends it instead, as in MIDI.</summary>
     /// <param name="pitch">The MIDI pitch, 0 to 127; 60 is middle C.</param>
     /// <param name="velocity">How hard the note is played, from 0 to 1. Defaults to 0.8.</param>
-    public void NoteOn(int pitch, float velocity = 0.8f)
+    /// <param name="cents">
+    /// How far the note is from <paramref name="pitch"/>, in hundredths of a semitone, from -100 to 100. This is how a source with another
+    /// tuning enters (a Tonnetz in 19 steps to the octave names the nearest MIDI pitch and the cents off it); the cents travel with the
+    /// note through every <see cref="NoteStream"/> operator and sound in <see cref="Play"/>.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">The pitch, velocity or cents are out of range.</exception>
+    public void NoteOn(int pitch, float velocity = 0.8f, double cents = 0.0)
     {
         ValidatePitch(pitch);
         if (!(velocity is >= 0f and <= 1f))
             throw new ArgumentOutOfRangeException(nameof(velocity), velocity, "Velocity must be between 0 and 1.");
+        if (!(cents is >= -100 and <= 100))
+            throw new ArgumentOutOfRangeException(nameof(cents), cents, "Cents must be between -100 and 100.");
         if (velocity == 0f)
         {
             NoteOff(pitch);
@@ -100,14 +123,15 @@ public sealed class NoteInput
 
         lock (_gate)
         {
-            _held[pitch] = velocity;
-            Post(new NoteEvent(NoteEventKind.On, pitch, velocity));
+            var key = new HeldKey(velocity, ++_nextId, (float)cents);
+            _held[pitch] = key;
+            Post(new KeyEvent(KeyEventKind.On, pitch, velocity, null, key.Id, key.Cents));
         }
     }
 
     /// <summary>
     /// Starts the notes written in <see cref="Mini"/> notation, all at once: <c>"a2 g3 e4"</c> is the same as three calls to
-    /// <see cref="NoteOn(int, float)"/>. This is the way to name notes in a score's own terms (<c>c4</c>, <c>eb3</c>) instead of
+    /// <see cref="NoteOn(int, float, double)"/>. This is the way to name notes in a score's own terms (<c>c4</c>, <c>eb3</c>) instead of
     /// MIDI numbers, and a chord can be written as <c>"[c3,e3,g3]"</c> or <c>"c3,e3,g3"</c>.
     /// </summary>
     /// <param name="notes">
@@ -180,8 +204,8 @@ public sealed class NoteInput
         ValidatePitch(pitch);
         lock (_gate)
         {
-            if (_held.Remove(pitch))
-                Post(new NoteEvent(NoteEventKind.Off, pitch, 0f));
+            if (_held.Remove(pitch, out var key))
+                Post(new KeyEvent(KeyEventKind.Off, pitch, 0f, null, key.Id));
         }
     }
 
@@ -194,12 +218,12 @@ public sealed class NoteInput
             foreach (var note in _notes)
                 note.MarkReleased();
             _notes.Clear();
-            Post(new NoteEvent(NoteEventKind.AllOff, 0, 0f));
+            Post(new KeyEvent(KeyEventKind.AllOff, 0, 0f));
         }
     }
 
     /// <summary>
-    /// True while <paramref name="pitch"/> is held: between its <see cref="NoteOn(int, float)"/> and <see cref="NoteOff(int)"/>, or while a note
+    /// True while <paramref name="pitch"/> is held: between its <see cref="NoteOn(int, float, double)"/> and <see cref="NoteOff(int)"/>, or while a note
     /// started on it with <see cref="Start(int, float)"/> has not been released.
     /// </summary>
     /// <param name="pitch">The MIDI pitch, 0 to 127.</param>
@@ -240,27 +264,36 @@ public sealed class NoteInput
     }
 
     // Called while a sound is compiled. The keys already down start sounding in it straight away.
-    internal void Attach(LiveVoiceOperator listener)
+    internal void Attach(IKeyListener listener)
     {
         lock (_gate)
         {
             _listeners.RemoveAll(static l => !l.TryGetTarget(out _));
-            _listeners.Add(new WeakReference<LiveVoiceOperator>(listener));
-            foreach (var (pitch, velocity) in _held)
-                listener.Post(new NoteEvent(NoteEventKind.On, pitch, velocity));
-            foreach (var note in _notes)
-                listener.Post(new NoteEvent(NoteEventKind.OnNote, note.Pitch, note.Velocity, note));
+            _listeners.Add(new WeakReference<IKeyListener>(listener));
+            ReplayHeld(listener);
         }
     }
 
-    internal void Detach(LiveVoiceOperator listener)
+    // The keys down right now, posted to one listener as if they had just been pressed.
+    internal void ReplayHeld(IKeyListener listener)
+    {
+        lock (_gate)
+        {
+            foreach (var (pitch, key) in _held)
+                listener.Post(new KeyEvent(KeyEventKind.On, pitch, key.Velocity, null, key.Id, key.Cents));
+            foreach (var note in _notes)
+                listener.Post(new KeyEvent(KeyEventKind.OnNote, note.Pitch, note.Velocity, note, note.Id));
+        }
+    }
+
+    internal void Detach(IKeyListener listener)
     {
         lock (_gate)
             _listeners.RemoveAll(l => !l.TryGetTarget(out var target) || ReferenceEquals(target, listener));
     }
 
     // Always called with the gate held, which keeps the queues single-producer.
-    private void Post(NoteEvent noteEvent)
+    private void Post(KeyEvent noteEvent)
     {
         foreach (var listener in _listeners)
         {
@@ -276,7 +309,16 @@ public sealed class NoteInput
     }
 }
 
-internal enum NoteEventKind : byte
+/// <summary>Something that wants the key events of a <see cref="NoteInput"/>; called with the input's lock held, so it must only queue.</summary>
+internal interface IKeyListener
+{
+    void Post(KeyEvent keyEvent);
+}
+
+/// <summary>A key that is down: its velocity, its identity and how far off its pitch it is.</summary>
+internal readonly record struct HeldKey(float Velocity, long Id, float Cents);
+
+internal enum KeyEventKind : byte
 {
     On,
     Off,
@@ -289,4 +331,4 @@ internal enum NoteEventKind : byte
     OffNote,
 }
 
-internal readonly record struct NoteEvent(NoteEventKind Kind, int Pitch, float Velocity, PlayingNote? Note = null);
+internal readonly record struct KeyEvent(KeyEventKind Kind, int Pitch, float Velocity, PlayingNote? Note = null, long Id = 0, float Cents = 0f);

@@ -51,7 +51,7 @@ public static class Mini
 
     /// <summary>
     /// Chords by name, such as <c>"c3:min7 f3:7 [g3:sus4 g3]"</c>; see <see cref="Chord.Parse"/> for the names. Turn them into notes with
-    /// <see cref="ChordPatterns.Notes"/> or <see cref="ChordPatterns.Arp"/>.
+    /// <see cref="ChordPatterns.Notes(Pattern{Chord})"/> or <see cref="ChordPatterns.Arp"/>.
     /// </summary>
     /// <exception cref="MiniNotationException">The text is not valid.</exception>
     public static Pattern<Chord> Chords(string text) => Parse(text, Chord.Parse);

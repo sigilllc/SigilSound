@@ -338,6 +338,36 @@ public sealed class Chord
     /// <summary>All the notes at once, filling the cycle.</summary>
     public Pattern<Note> ToPattern() => Pat.Pure(this).Notes();
 
+    /// <summary>
+    /// Plays steps of this chord: step 0 is its lowest tone, 1 the next one up, and so on; past the top it climbs into the next octave, and
+    /// below 0 it goes down below the lowest tone. <c>Chord.Major(60).Steps("0 1 2 3")</c> is C E G and the C above.
+    /// A step whose note would leave the MIDI range is left out.
+    /// </summary>
+    /// <param name="steps">The steps, such as <c>Mini.Integers("7 6 5 4 3 2 1 0")</c>, a fall through two octaves of a triad.</param>
+    public Pattern<Note> Steps(Pattern<int> steps)
+    {
+        ArgumentNullException.ThrowIfNull(steps);
+        var pitches = Pitches;
+        return steps.Select(step => new Note(StepPitch(pitches, step))).Where(note => note.Pitch is >= 0 and <= 127);
+    }
+
+    /// <summary>Plays steps of this chord written in <see cref="Mini"/> notation; see <see cref="Steps(Pattern{int})"/>.</summary>
+    /// <param name="steps">The steps, such as <c>"0 2 4 [7 5]"</c>.</param>
+    /// <exception cref="MiniNotationException">The text is not valid.</exception>
+    public Pattern<Note> Steps(string steps)
+    {
+        ArgumentNullException.ThrowIfNull(steps);
+        return Steps(Mini.Integers(steps));
+    }
+
+    // The pitch of a step of a chord: wraps up an octave per chord size, and down for negative steps.
+    internal static int StepPitch(IReadOnlyList<int> pitches, int step)
+    {
+        int count = pitches.Count;
+        int octaves = (int)Math.Floor(step / (double)count);
+        return pitches[step - octaves * count] + 12 * octaves;
+    }
+
     /// <summary>The chord as text: its pitches and its quality.</summary>
     public override string ToString() => $"{string.Join(" ", Pitches.Select(Sigil.Sound.Notes.NameOf))} ({Name})";
 
@@ -367,6 +397,86 @@ public sealed class Chord
 /// <summary>Patterns of chords: playing them as block chords, or as arpeggios.</summary>
 public static class ChordPatterns
 {
+    /// <summary>
+    /// Plays steps of whatever chord is in force at each step: step 0 is the chord's lowest tone, 1 the next one up, past the top it climbs
+    /// into the next octave, below 0 it goes down. The rhythm is the steps' own; the chords only say which notes they are, so the same
+    /// text follows the harmony, whether it is written (<c>Mini.Chords("&lt;c3:min7 f3:7&gt;")</c>) or played
+    /// (<see cref="NoteStream.Chord"/>). A step with no chord, or a note outside the MIDI range, is left out.
+    /// </summary>
+    /// <param name="chords">The chords.</param>
+    /// <param name="steps">The steps, such as <c>Mini.Integers("7 6 5 4 3 2 1 0")</c>.</param>
+    /// <example>
+    /// <code>
+    /// Mini.Chords("&lt;c3:min7 f3:7&gt;").Notes(Mini.Integers("[7 6 5 4 3 2 1 0] ~ [4 2 0] ~")).Play(v => Saw(v.Frequency).Adsr(0.003, 0.2, 0, 0.2))
+    /// </code>
+    /// </example>
+    public static Pattern<Note> Notes(this Pattern<Chord> chords, Pattern<int> steps)
+    {
+        ArgumentNullException.ThrowIfNull(chords);
+        ArgumentNullException.ThrowIfNull(steps);
+        var stepCache = new List<PatternEvent<int>>();
+        var chordCache = new List<PatternEvent<Chord>>();
+        return new((arc, output) =>
+        {
+            var stepBuffer = Interlocked.Exchange(ref stepCache, null!) ?? new List<PatternEvent<int>>();
+            var chordBuffer = Interlocked.Exchange(ref chordCache, null!) ?? new List<PatternEvent<Chord>>();
+            steps.QueryInto(arc, stepBuffer);
+            foreach (var step in stepBuffer)
+            {
+                chordBuffer.Clear();
+                chords.QueryInto(new Arc(step.Whole.Begin, step.Whole.End), chordBuffer);
+
+                // The chord whose event holds the step's start.
+                Chord? chord = null;
+                foreach (var candidate in chordBuffer)
+                {
+                    if (candidate.Whole.Begin <= step.Whole.Begin && step.Whole.Begin < candidate.Whole.End)
+                    {
+                        chord = candidate.Value;
+                        break;
+                    }
+                }
+
+                if (chord is null)
+                    continue;
+                int pitch = Chord.StepPitch(chord.Pitches, step.Value);
+                if (pitch is >= 0 and <= 127)
+                    output.Add(new PatternEvent<Note>(step.Whole, step.Part, new Note(pitch)));
+            }
+
+            stepBuffer.Clear();
+            chordBuffer.Clear();
+            stepCache = stepBuffer;
+            chordCache = chordBuffer;
+        });
+    }
+
+    /// <summary>Plays steps of the chords written in <see cref="Mini"/> notation; see <see cref="Notes(Pattern{Chord}, Pattern{int})"/>.</summary>
+    /// <param name="chords">The chords.</param>
+    /// <param name="steps">The steps, such as <c>"0 2 4 [7 5]"</c>.</param>
+    /// <exception cref="MiniNotationException">The text is not valid.</exception>
+    public static Pattern<Note> Notes(this Pattern<Chord> chords, string steps)
+    {
+        ArgumentNullException.ThrowIfNull(steps);
+        return chords.Notes(Mini.Integers(steps));
+    }
+
+    /// <summary>The lowest tone of each chord, as a pattern of pitches: the bass line of a progression, or of the chord being played.</summary>
+    /// <param name="chords">The chords.</param>
+    public static Pattern<int> Lowest(this Pattern<Chord> chords)
+    {
+        ArgumentNullException.ThrowIfNull(chords);
+        return chords.Select(chord => chord.Pitches[0]);
+    }
+
+    /// <summary>The highest tone of each chord, as a pattern of pitches.</summary>
+    /// <param name="chords">The chords.</param>
+    public static Pattern<int> Highest(this Pattern<Chord> chords)
+    {
+        ArgumentNullException.ThrowIfNull(chords);
+        return chords.Select(chord => chord.Pitches[^1]);
+    }
+
     /// <summary>Every chord as its notes, all sounding together for the chord's whole event.</summary>
     public static Pattern<Note> Notes(this Pattern<Chord> chords)
     {
