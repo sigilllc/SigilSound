@@ -55,7 +55,7 @@ mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 | `Sigil.Sound` | `Sound`, `Param`, `RenderContext`, `IOperator`, oscillators, envelopes, TP-SVF filters, effects, samples, offline render, WAV reading and writing. Zero dependencies, browser-wasm clean. | 0.1.0 |
 | `Sigil.Sound.Notes` | Notes, pitch parsing, note sequences, timing patterns, polyphonic voice engine. | 0.1.0 |
 | `Sigil.Sound.Testing` | `SignalAnalysis` and `AudioAssert` for tolerance-based audio assertions | 0.1.0 |
-| `Sigil.Sound.Repl.Core` | The snippet compiler behind the browser REPL: Roslyn compiles Sigil.Sound C# behind a security validator, with completion, signatures and diagnostics. For apps that let users run Sigil.Sound scripts. .NET 10 only; the API may change before 1.0. | 0.1.0 |
+| `Sigil.Sound.Repl.Core` | The snippet compiler behind the browser REPL: Roslyn compiles Sigil.Sound C# behind a security validator, with completion, signatures and diagnostics. For apps that let users run Sigil.Sound scripts. The validator is a strong filter, not a sandbox: a host that runs scripts it does not trust should also isolate them (see [SECURITY.md](SECURITY.md)). .NET 10 only; the API may change before 1.0. | 0.1.0 |
 | `Sigil.Sound.SoundFont` | SoundFont playback | Planned |
 | `Sigil.Sound.Playback` | Real-time audio driver integrations | Planned |
 
