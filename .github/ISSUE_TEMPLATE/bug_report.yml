@@ -1,0 +1,40 @@
+name: Bug report
+description: Something sounds wrong, throws, or does not match the documentation.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If this is a **security problem** (a way around the REPL's restrictions), do not file it here: see [SECURITY.md](https://github.com/sigilllc/SigilSound/blob/main/SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: The smallest code that shows it
+      description: A snippet you can paste into the REPL is ideal. Say if it only happens in a project.
+      render: csharp
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The package version, or the version in the REPL's footer.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      options: [Browser REPL, .NET project, Both, Not sure]
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Browser or .NET version and operating system

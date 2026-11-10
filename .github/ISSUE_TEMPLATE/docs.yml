@@ -1,0 +1,22 @@
+name: Documentation problem
+description: A page is wrong, unclear or missing, or an example does not play.
+labels: [documentation]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Which page or member?
+      description: A link, or the name of the method.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: What would you change?
+      description: Optional. You can also send a pull request; see CONTRIBUTING.md.

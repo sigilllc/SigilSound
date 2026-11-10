@@ -1,0 +1,25 @@
+name: Feature request
+description: An operator, option or improvement you would like. Please start in Discussions if it is only an idea.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New operators and public API changes are decided before code is written, so please describe the need first. A pull request without an agreed issue may be declined. See [CONTRIBUTING.md](https://github.com/sigilllc/SigilSound/blob/main/CONTRIBUTING.md).
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to make or do?
+      description: The sound or workflow, not the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do today, and what is missing?
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea for the API or behaviour
+      description: Optional. A few lines of code showing how you would like to write it help most.
+      render: csharp

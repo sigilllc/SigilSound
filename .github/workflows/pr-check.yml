@@ -1,0 +1,59 @@
+name: PR check
+
+# Builds the solution and runs the tests for every pull request, so a contribution is checked before a maintainer reads it.
+# Release checks and the full blessing stay local (project convention); this is the one narrow exception, because a contributor's
+# local run cannot be seen.
+#
+# Safe for outside contributions: it uses the pull_request trigger only (never pull_request_target), has no secrets, and its
+# token is read-only. Actions are pinned to a commit hash; Dependabot keeps them current (.github/dependabot.yml).
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      # Contributors sign off each commit (git commit -s). People who own or belong to the organization are exempt.
+      - name: Commits are signed off
+        if: ${{ !contains(fromJSON('["OWNER","MEMBER"]'), github.event.pull_request.author_association) }}
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for sha in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            if ! git show -s --format=%B "$sha" | grep -q -E '^Signed-off-by: .+ <.+>$'; then
+              echo "::error::Commit ${sha:0:7} has no Signed-off-by line. Amend with: git commit --amend -s (or: git rebase --signoff main)"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Test
+        run: dotnet test -c Release --no-build
