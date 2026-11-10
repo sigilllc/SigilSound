@@ -68,11 +68,17 @@ public class HostSequenceTests
     }
 
     [Fact]
-    public async Task An_observer_only_hears_the_thread_it_was_set_on()
+    public void An_observer_only_hears_the_thread_it_was_set_on()
     {
         var reports = 0;
         using (HostSequence.Observe(() => Interlocked.Increment(ref reports)))
-            await Task.Run(() => Written().Play(Gate));
+        {
+            // A thread of its own, so it cannot be the one the observer was set on. A pool task could be: after an await
+            // the pool may run the lambda on the very thread that is still waiting here, and the test would hear itself.
+            var other = new Thread(() => Written().Play(Gate));
+            other.Start();
+            other.Join();
+        }
 
         Assert.Equal(0, reports);
     }
