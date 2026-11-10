@@ -1,8 +1,1 @@
 #nullable enable
-Sigil.Sound.NoteInput.NoteOff(string! notes) -> void
-Sigil.Sound.NoteInput.NoteOn(string! notes) -> void
-Sigil.Sound.NoteInput.IsHeld(string! notes) -> bool
-Sigil.Sound.NoteInput.Start(string! notes) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.PlayingNote!>!
-Sigil.Sound.Scale.Degrees(string! degrees) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
-Sigil.Sound.Scale.Notes(string! degrees) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
-static Sigil.Sound.Mini.Drums(string! text) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!

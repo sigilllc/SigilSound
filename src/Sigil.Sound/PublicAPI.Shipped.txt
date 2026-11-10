@@ -143,9 +143,9 @@ Sigil.Sound.Sound.Peak(Sigil.Sound.Param? frequency = null, Sigil.Sound.Param? q
 Sigil.Sound.Sound.Phaser(Sigil.Sound.Param? rate = null, Sigil.Sound.Param? feedback = null, Sigil.Sound.Param? mix = null, int stages = 4, double minFrequency = 400, double maxFrequency = 1500) -> Sigil.Sound.Sound!
 Sigil.Sound.Sound.PitchShift(Sigil.Sound.Param? semitones = null, Sigil.Sound.Param? mix = null) -> Sigil.Sound.Sound!
 Sigil.Sound.Sound.Range(double min = 0, double max = 1) -> Sigil.Sound.Sound!
-Sigil.Sound.Sound.Render(double seconds, int sampleRate = 48000, int blockSize = 256) -> Sigil.Sound.AudioBuffer!
-Sigil.Sound.Sound.RenderToWav(System.IO.Stream! stream, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16) -> void
-Sigil.Sound.Sound.RenderToWav(string! path, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16) -> void
+Sigil.Sound.Sound.Render(double seconds, int sampleRate = 48000, int blockSize = 256, double startSeconds = 0) -> Sigil.Sound.AudioBuffer!
+Sigil.Sound.Sound.RenderToWav(System.IO.Stream! stream, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16, double startSeconds = 0) -> void
+Sigil.Sound.Sound.RenderToWav(string! path, double seconds, int sampleRate = 48000, Sigil.Sound.Wav.WavFormat format = Sigil.Sound.Wav.WavFormat.Pcm16, double startSeconds = 0) -> void
 Sigil.Sound.Sound.Reverb(double size = 1, double decay = 2.5, double damping = 0.4, Sigil.Sound.Param? mix = null) -> Sigil.Sound.Sound!
 Sigil.Sound.Sound.Spread(Sigil.Sound.Param? width = null) -> Sigil.Sound.Sound!
 Sigil.Sound.Sound.TapeDelay(Sigil.Sound.Param? time = null, Sigil.Sound.Param? feedback = null, Sigil.Sound.Param? damping = null, Sigil.Sound.Param? drive = null, Sigil.Sound.Param? mix = null, double maxTime = 2, bool pingPong = false) -> Sigil.Sound.Sound!
