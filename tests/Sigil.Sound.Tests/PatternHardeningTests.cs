@@ -34,8 +34,19 @@ public class PatternHardeningTests
     {
         var pattern = Deep(Mini.Notes("c3"), 30_000);
 
-        var error = Assert.Throws<InvalidOperationException>(() => pattern.Validate());
+        // The guard trips when the stack runs low, so how deep is "too deep" depends on the thread. A runner with a roomy
+        // test thread can fit all 30,000 links and nothing throws (it did once on CI). A thread with a small fixed stack
+        // makes the result the same everywhere.
+        InvalidOperationException? error = null;
+        var thread = new Thread(() =>
+        {
+            try { pattern.Validate(); }
+            catch (InvalidOperationException e) { error = e; }
+        }, maxStackSize: 256 * 1024);
+        thread.Start();
+        thread.Join();
 
+        Assert.NotNull(error);
         Assert.Contains("nested too deeply", error.Message);
     }
 
