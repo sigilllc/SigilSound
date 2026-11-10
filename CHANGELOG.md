@@ -19,6 +19,7 @@ The first public release of `Sigil.Sound`, `Sigil.Sound.Notes`, `Sigil.Sound.Tes
 - **Samples and files.** `AudioBuffer.FromWav` and `WavReader` decode 8, 16, 24 and 32-bit PCM and 32-bit float WAV; `RenderToWav` and `WavWriter` write 16-bit, 24-bit and 32-bit float. `SampleLibrary` resolves `Samples.Load("name.wav")` over any `ISampleSource`.
 - **Rendering and live playback.** `Render` to memory, `RenderToWav`, `SoundContext` for a running output with crossfaded `Play`, and `Slot` for a swappable place in a graph.
 - **Render from an offset.** `Render` and both `RenderToWav` overloads take a trailing `startSeconds` (default 0). The skipped part is still run and discarded, so oscillators, envelopes, delay lines and filters are in the state they would have reached by then, and the result matches that stretch of a longer render from zero.
+- **Limits that stop an absurd request, and nothing more.** A script that asks for a delay line or a room of gigabytes, or for a tail that never dies, gets an `ArgumentOutOfRangeException` when the call is made. `Delay` and `TapeDelay` take a `maxTime` above 0 and up to 60 seconds (23 MB at 48 kHz), `Reverb` a `size` up to 100 (about 6 MB), and `Reverb` and `FdnReverb` a `decay` up to 120 seconds; `NaN` and infinity are refused as well. A delay of a minute, a hall a hundred times a medium room and a two minute tail all work. `FdnReverb` keeps its size limit of 4, and a host can set stricter limits for untrusted code (the Workbench's Graph mode allows 10).
 
 ### Sigil.Sound.Notes
 

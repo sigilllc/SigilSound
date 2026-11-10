@@ -20,18 +20,26 @@ public enum DistortionMode
 
 public sealed partial class Sound
 {
+    // Limits that keep a script from asking for gigabytes or for a tail that never dies. Generous on purpose: a delay line of a
+    // minute, a room 100 times the medium one and a two minute tail all fit. A delay line costs 8 bytes per frame (two channels),
+    // 0.38 MB per second at 48 kHz, so 60 seconds is 23 MB; a reverb of size 100 is about 6 MB.
+    private const double MaxDelayTime = 60;
+    private const double MaxReverbSize = 100;
+    private const double MaxReverbDecay = 120;
+
     /// <summary>
     /// An echo: repeats the sound after <paramref name="time"/> seconds, and repeats the repeats.
     /// </summary>
     /// <param name="time">Seconds between repeats, up to <paramref name="maxTime"/>. A number, or a sound or <c>Fn(t => ...)</c> to bend the pitch of the echoes. Defaults to 0.375, a dotted eighth at 120 bpm.</param>
     /// <param name="feedback">How much of each echo feeds the next, from 0 (one echo) to 0.99 (nearly endless). Defaults to 0.4.</param>
     /// <param name="mix">0 is only the original, 1 only the echoes. Defaults to 0.5.</param>
-    /// <param name="maxTime">The longest delay time in seconds; it sizes the buffer. Defaults to 2.</param>
+    /// <param name="maxTime">The longest delay time in seconds, above 0 and at most 60; it sizes the buffer. Defaults to 2.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The maximum time is not above 0 or is over 60 seconds.</exception>
     /// <example><code>Saw(220).Adsr(0.01, 0.1, 0, 0.1).Delay(0.375, feedback: 0.5)</code></example>
     public Sound Delay(Param? time = null, Param? feedback = null, Param? mix = null, double maxTime = 2)
     {
         var gap = time ?? 0.375f;
-        if (maxTime <= 0) throw new ArgumentOutOfRangeException(nameof(maxTime), maxTime, "The maximum delay must be positive.");
+        if (!(maxTime > 0 && maxTime <= MaxDelayTime)) throw new ArgumentOutOfRangeException(nameof(maxTime), maxTime, $"The maximum delay must be above 0 and at most {MaxDelayTime} seconds.");
         var fb = feedback ?? 0.4f;
         var wet = mix ?? 0.5f;
         return new(ctx => new DelayOperator(Compile(ctx), gap.Compile(ctx), fb.Compile(ctx), wet.Compile(ctx), maxTime, ctx),
@@ -42,16 +50,17 @@ public sealed partial class Sound
     /// A reverb: the sound as if played in a room. Built from parallel comb filters and all-pass filters
     /// (a Schroeder design), with a slightly different room for each ear.
     /// </summary>
-    /// <param name="size">Scales the room: below 1 is smaller, above 1 larger. Defaults to 1.</param>
-    /// <param name="decay">Seconds for the tail to fade by 60 dB. Defaults to 2.5.</param>
+    /// <param name="size">Scales the room: below 1 is smaller, above 1 larger, up to 100. Defaults to 1.</param>
+    /// <param name="decay">Seconds for the tail to fade by 60 dB, above 0 and at most 120. Defaults to 2.5.</param>
     /// <param name="damping">How fast high frequencies die in the tail, from 0 (bright) to 1 (dark). Defaults to 0.4.</param>
     /// <param name="mix">0 is only the dry sound, 1 only the reverb. Defaults to 0.3.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The size is not above 0 or is over 100, the decay is not above 0 or is over 120 seconds, or the damping is outside 0 to 1.</exception>
     /// <example><code>Sine(440).Adsr(0.005, 0.2, 0, 0.1).Reverb(decay: 4, mix: 0.4)</code></example>
     public Sound Reverb(double size = 1, double decay = 2.5, double damping = 0.4, Param? mix = null)
     {
-        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size), size, "Size must be positive.");
-        if (decay <= 0) throw new ArgumentOutOfRangeException(nameof(decay), decay, "Decay must be positive.");
-        if (damping is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(damping), damping, "Damping must be between 0 and 1.");
+        if (!(size > 0 && size <= MaxReverbSize)) throw new ArgumentOutOfRangeException(nameof(size), size, $"Size must be above 0 and at most {MaxReverbSize}.");
+        if (!(decay > 0 && decay <= MaxReverbDecay)) throw new ArgumentOutOfRangeException(nameof(decay), decay, $"Decay must be above 0 and at most {MaxReverbDecay} seconds.");
+        if (!(damping >= 0 && damping <= 1)) throw new ArgumentOutOfRangeException(nameof(damping), damping, "Damping must be between 0 and 1.");
         var wet = mix ?? 0.3f;
         return new(ctx => new ReverbOperator(Compile(ctx), wet.Compile(ctx), size, decay, damping, ctx),
             $"{this}.Reverb({size}, {decay})");
@@ -258,9 +267,9 @@ public sealed partial class Sound
     /// <param name="damping">The cutoff in Hz of the low-pass in the feedback loop. Lower values make each repeat darker. Defaults to 3000.</param>
     /// <param name="drive">How hard each repeat is pushed into the tape saturation: 1 or more. 1 is gentle; 3 or more is heavy. Defaults to 1.</param>
     /// <param name="mix">0 is only the original, 1 only the echoes. Defaults to 0.35.</param>
-    /// <param name="maxTime">The longest delay time in seconds; it sizes the buffer. Defaults to 2.</param>
+    /// <param name="maxTime">The longest delay time in seconds, above 0 and at most 60; it sizes the buffer. Defaults to 2.</param>
     /// <param name="pingPong">When true, the repeats bounce between the left and right channels, so each echo lands on the opposite side. Defaults to false.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The maximum time is not positive, or a constant drive is below 1.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The maximum time is not above 0 or is over 60 seconds, or a constant drive is below 1.</exception>
     /// <example>
     /// <code>
     /// // Each repeat is darker and more saturated, and the wobbling delay time bends their pitch like a tape head.
@@ -281,7 +290,7 @@ public sealed partial class Sound
         double maxTime = 2, bool pingPong = false)
     {
         var gap = time ?? 0.375f;
-        if (maxTime <= 0) throw new ArgumentOutOfRangeException(nameof(maxTime), maxTime, "The maximum delay must be positive.");
+        if (!(maxTime > 0 && maxTime <= MaxDelayTime)) throw new ArgumentOutOfRangeException(nameof(maxTime), maxTime, $"The maximum delay must be above 0 and at most {MaxDelayTime} seconds.");
         var fb = feedback ?? 0.5f;
         var cutoff = damping ?? 3000f;
         var push = drive ?? 1f;
@@ -297,7 +306,7 @@ public sealed partial class Sound
     /// A large algorithmic reverb built from eight feedback delay lines that mix into one another. It gives a denser, smoother
     /// tail than <see cref="Reverb"/>, and with <paramref name="sheen"/> it can shimmer upward like a cathedral.
     /// </summary>
-    /// <param name="decay">Seconds for the tail to fade by 60 dB. Defaults to 3.</param>
+    /// <param name="decay">Seconds for the tail to fade by 60 dB, above 0 and at most 120. Defaults to 3.</param>
     /// <param name="size">Scales the room: 0.5 is a small room, 1 a medium one, 4 a hall. Defaults to 1.</param>
     /// <param name="damping">How fast the high frequencies die in the tail, from 0 (bright) to 0.99 (dark). Defaults to 0.35.</param>
     /// <param name="predelay">Seconds between the dry sound and the first reflection, from 0 to 0.5. A longer predelay separates the sound from its room. Defaults to 0.01.</param>
@@ -315,7 +324,7 @@ public sealed partial class Sound
     public Sound FdnReverb(double decay = 3, double size = 1, double damping = 0.35, double predelay = 0.01,
         Param? sheen = null, Param? mix = null)
     {
-        if (decay <= 0) throw new ArgumentOutOfRangeException(nameof(decay), decay, "Decay must be positive.");
+        if (!(decay > 0 && decay <= MaxReverbDecay)) throw new ArgumentOutOfRangeException(nameof(decay), decay, $"Decay must be above 0 and at most {MaxReverbDecay} seconds.");
         if (size is <= 0 or > 4 || double.IsNaN(size)) throw new ArgumentOutOfRangeException(nameof(size), size, "Size must be above 0 and at most 4.");
         if (damping is < 0 or >= 1 || double.IsNaN(damping)) throw new ArgumentOutOfRangeException(nameof(damping), damping, "Damping must be from 0 up to, but not including, 1.");
         if (predelay is < 0 or > 0.5 || double.IsNaN(predelay)) throw new ArgumentOutOfRangeException(nameof(predelay), predelay, "Predelay must be from 0 to 0.5 seconds.");

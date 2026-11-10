@@ -293,6 +293,53 @@ public class EffectsTests
         Assert.Throws<ArgumentOutOfRangeException>(() => Saw(110).Limit(ceiling: 0));
     }
 
+    // A script must not be able to ask for gigabytes (a delay line is 0.38 MB per second at 48 kHz, a reverb room grows with its
+    // size) or for a tail that never dies, and a long but real setting must still work: a delay line of a minute, a hall 100
+    // times a medium room, a two minute tail.
+    [Theory]
+    [InlineData(60.01)]
+    [InlineData(40000)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NaN)]
+    [InlineData(-1)]
+    public void Delay_lines_reject_a_buffer_that_is_absurd(double maxTime)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Saw(110).Delay(0.1, maxTime: maxTime));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Saw(110).TapeDelay(0.1, maxTime: maxTime));
+    }
+
+    [Theory]
+    [InlineData(101, 2.5)]
+    [InlineData(100000, 2.5)]
+    [InlineData(double.NaN, 2.5)]
+    [InlineData(double.PositiveInfinity, 2.5)]
+    [InlineData(1, 120.01)]
+    [InlineData(1, 1e9)]
+    [InlineData(1, double.NaN)]
+    [InlineData(1, double.PositiveInfinity)]
+    public void Reverbs_reject_a_room_or_a_tail_that_is_absurd(double size, double decay)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Saw(110).Reverb(size: size, decay: decay));
+        if (size == 1) Assert.Throws<ArgumentOutOfRangeException>(() => Saw(110).FdnReverb(decay: decay));
+    }
+
+    [Fact]
+    public void Reverb_damping_rejects_NaN()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Saw(110).Reverb(damping: double.NaN));
+    }
+
+    [Fact]
+    public void Long_but_real_delays_and_reverbs_are_still_allowed()
+    {
+        var sound = Saw(110).Delay(0.5, maxTime: 60).TapeDelay(0.5, maxTime: 60).Reverb(size: 100, decay: 120).FdnReverb(decay: 120);
+        Assert.NotNull(sound);
+
+        // A minute-long tail compiles and renders; a size-100 room is a few MB.
+        var rendered = Saw(110).Adsr(0.005, 0.1, 0, 0.1).Reverb(size: 100, decay: 60).Render(0.25);
+        Assert.False(SignalAnalysis.HasNonFinite(rendered.Left()));
+    }
+
     [Fact]
     public void A_full_chain_renders_finite_audio_and_can_be_reused()
     {
