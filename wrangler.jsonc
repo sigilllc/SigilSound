@@ -13,7 +13,7 @@
   "workers_dev": false,
   "preview_urls": false
 
-  // GO LIVE (launch plan D3): attach the domain here, or in the dashboard under the Worker's Domains & Routes. The zone must be on
+  // GO LIVE: attach the domain here, or in the dashboard under the Worker's Domains & Routes. The zone must be on
   // this Cloudflare account. Add a comma after "preview_urls": false and uncomment:
   // "routes": [{ "pattern": "sound.sigilaud.io", "custom_domain": true }]
 }

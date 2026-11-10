@@ -12,7 +12,7 @@ name: Release Sigil.Sound
 # here: run them locally before releasing (project convention). The checks run locally too:
 #   bash scripts/release-check.sh 0.1.0 artifacts/nuget
 #
-# Go-live setup (launch plan C3). Do it on the day you first publish, not before:
+# Go-live setup. Do it on the day you first publish, not before:
 #   1. nuget.org > your username > Trusted Publishing > add a policy, owned by the SigilLLC org (or by your user if you
 #      are a member):  repository owner sigilllc, repository SigilSound, workflow file release.yml, environment nuget.
 #      A policy on a private repo stays active only until the first successful publish, which is 7 days. Create it on go day.

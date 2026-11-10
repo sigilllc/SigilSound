@@ -1,0 +1,5 @@
+# Line endings are fixed for files that must not change shape on a contributor's machine.
+# A shell script with CRLF endings fails on the Linux runners.
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

@@ -5,7 +5,7 @@ name: Docs
 # describe. release.yml calls this after a successful NuGet push; it can also be dispatched alone to redeploy the docs.
 #
 # Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (a token allowed to edit Workers).
-# The custom domain is attached to the Worker in the Cloudflare dashboard (launch plan D3).
+# The custom domain is attached to the Worker in the Cloudflare dashboard.
 #
 # The example test runs locally before a deploy:
 #   dotnet test tests/Sigil.Sound.Repl.Tests --filter DocExampleTests

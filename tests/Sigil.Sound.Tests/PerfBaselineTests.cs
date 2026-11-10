@@ -5,7 +5,7 @@ using static Sigil.Sound.Sounds;
 namespace Sigil.Sound.Tests;
 
 /// <summary>
-/// Timing baseline for the engine, recorded by hand in the Workbench notes (Plans/Perf Baselines/Sigil.Sound Engine Baseline.md). Does nothing unless SIGIL_PERF=1, and only means
+/// Timing baseline for the engine, recorded by hand in the maintainers' notes. Does nothing unless SIGIL_PERF=1, and only means
 /// something in a Release build: <c>SIGIL_PERF=1 dotnet test -c Release --filter PerfBaselineTests --logger "console;verbosity=detailed"</c>.
 /// </summary>
 public class PerfBaselineTests(ITestOutputHelper output)

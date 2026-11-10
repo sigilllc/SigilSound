@@ -25,7 +25,7 @@ fi
 prefix=$(tr -d '\r' < Directory.Build.props | sed -n 's:.*<VersionPrefix>\([^<]*\)</VersionPrefix>.*:\1:p')
 [[ "$base" == "$prefix" ]] || fail "$version has base $base, but Directory.Build.props VersionPrefix is $prefix"
 
-# A release ships the whole public API. Anything still in Unshipped must move to Shipped first (launch plan C2).
+# A release ships the whole public API. Anything still in Unshipped must move to Shipped first.
 for file in src/*/PublicAPI.Unshipped.txt apps/Sigil.Sound.Repl.Core/PublicAPI.Unshipped.txt; do
     extra=$(tr -d '\r' < "$file" | grep -vE '^(#nullable enable)?[[:space:]]*$' || true)
     if [[ -n "$extra" ]]; then
