@@ -53,11 +53,11 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: |
             8.0.x
@@ -127,7 +127,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: bash scripts/release-check.sh "$VERSION" artifacts/nuget
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sigil-sound-${{ steps.version.outputs.version }}
           path: artifacts/nuget/
@@ -144,14 +144,14 @@ jobs:
       contents: read
       id-token: write # trusted publishing: GitHub's OIDC token is exchanged for a short-lived NuGet key
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sigil-sound-${{ needs.pack.outputs.version }}
           path: artifacts/nuget
 
       - name: NuGet login (short-lived key)
         id: login
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         with:
           user: ${{ secrets.NUGET_USER }}
 
@@ -175,7 +175,10 @@ jobs:
     uses: ./.github/workflows/docs.yml
     with:
       version: ${{ needs.pack.outputs.version }}
-    secrets: inherit
+    # Only the two secrets the docs job declares, not every secret of the repository.
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   github-release:
     name: GitHub Release
@@ -185,9 +188,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sigil-sound-${{ needs.pack.outputs.version }}
           path: artifacts/nuget
