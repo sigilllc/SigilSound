@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report privately by email to **security@sigilaud.io**, and do not open a public issue. Include what you found, the smallest snippet or steps that show it, and the version. We aim to acknowledge a report within a week. Please give us **90 days** to fix it before you publish details. We credit reporters in the changelog unless they prefer not to be named.
+Please report privately, and do not open a public issue: either use GitHub's [private vulnerability reporting](https://github.com/sigilllc/SigilSound/security/advisories/new) (the **Security** tab, then **Report a vulnerability**) or email **security@sigilaud.io**. Include what you found, the smallest snippet or steps that show it, and the version. We aim to acknowledge a report within a week. Please give us **90 days** to fix it before you publish details. We credit reporters in the changelog unless they prefer not to be named.
 
 Only the latest version is supported. Sigil.Sound is pre-1.0, so a fix may arrive as a new minor version.
 
