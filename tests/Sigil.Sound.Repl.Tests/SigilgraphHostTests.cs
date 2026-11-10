@@ -8,6 +8,9 @@ namespace Sigil.Sound.Repl.Tests;
 /// The REPL's Sigilgraph mode as snippets see it: the device API reaches them through the mode's own <see cref="SnippetProfile"/>,
 /// the controls a snippet declares are library <see cref="Control"/>s the page shows, and plain mode stays unaware of it all.
 /// </summary>
+// ReplApi.Keys is one instance for the whole process and each of these classes releases every key in its setup and cleanup.
+// Test classes run in parallel, so without a shared collection one class can silence the other's held note mid-test.
+[Collection("ReplApi.Keys")]
 public sealed class SigilgraphHostTests : IDisposable
 {
     private const int SampleRate = 48_000;

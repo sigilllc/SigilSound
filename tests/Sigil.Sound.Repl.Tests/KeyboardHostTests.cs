@@ -10,6 +10,9 @@ namespace Sigil.Sound.Repl.Tests;
 /// <remarks>
 /// <c>ReplApi.Keys</c> is one instance for the whole process, like the page's, so every test releases its keys.
 /// </remarks>
+// ReplApi.Keys is one instance for the whole process and each of these classes releases every key in its setup and cleanup.
+// Test classes run in parallel, so without a shared collection one class can silence the other's held note mid-test.
+[Collection("ReplApi.Keys")]
 public sealed class KeyboardHostTests : IDisposable
 {
     private const int SampleRate = 48_000;
