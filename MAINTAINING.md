@@ -4,7 +4,7 @@ Notes for the people who run the project. They are public so contributors know w
 
 ## Who decides
 
-Sigil.Sound has one maintainer, who reviews and merges every pull request and has the final say on direction and on the public API. That keeps decisions quick and accountable. It also means the pace is set by one person's time, not by process, which is why [CONTRIBUTING.md](CONTRIBUTING.md) asks for an issue before large work. If the project outgrows one person, this page changes first.
+Sigil.Sound is maintained by Sigil LLC, reachable at dev@sigilaud.io. The maintainers review and merge every pull request and have the final say on direction and on the public API. That keeps decisions quick and accountable. It also means the pace is set by the maintainers' time, not by process, which is why [CONTRIBUTING.md](CONTRIBUTING.md) asks for an issue before large work. This page changes as the project does.
 
 ## Triage
 
@@ -16,7 +16,7 @@ New issues get a label within about a week. Issues that need more information ar
 | `needs-info` | Waiting for the reporter |
 | `accepted` | We agree it should be done; a pull request is welcome |
 | `good first issue` | Small, clear, and safe to start with |
-| `api` | Touches the public API; needs the maintainer's decision before code |
+| `api` | Touches the public API; needs the maintainers' decision before code |
 | `security` | Never used on public issues. Real reports arrive privately (see below) |
 | `wontfix`, `duplicate` | Closed with an explanation |
 
@@ -53,7 +53,7 @@ Reports arrive through GitHub's private vulnerability reporting, or at the secur
 
 ## Conduct reports
 
-Reports arrive at the conduct address in the [Code of Conduct](CODE_OF_CONDUCT.md). Acknowledge it, handle it privately, and decide the outcome (a warning, removal of content, or a ban). If the report is about the maintainer, there is nobody else inside the project to handle it, which is why the Code of Conduct also points reporters to GitHub.
+Reports arrive at the conduct address in the [Code of Conduct](CODE_OF_CONDUCT.md). Acknowledge it, handle it privately, and decide the outcome (a warning, removal of content, or a ban). If the report is about a maintainer, that maintainer takes no part in handling it. If nobody else is left to handle it, the reporter can go to GitHub directly, as the Code of Conduct says.
 
 ## Bad pull requests
 

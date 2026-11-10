@@ -1,6 +1,6 @@
 # Contributing to Sigil.Sound
 
-Thank you for wanting to help. This page says what we welcome, how to set up, what a good change looks like, and what happens after you open a pull request. Sigil.Sound has a single maintainer, who reviews and merges every pull request and makes the final call, so a clear process helps both sides.
+Thank you for wanting to help. This page says what we welcome, how to set up, what a good change looks like, and what happens after you open a pull request. Sigil.Sound is maintained by Sigil LLC with limited time, so a clear process helps both sides.
 
 By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). Security problems are reported privately, never as issues: see [SECURITY.md](SECURITY.md). Questions belong in [Discussions](https://github.com/sigilllc/SigilSound/discussions); see [SUPPORT.md](SUPPORT.md).
 
@@ -69,7 +69,7 @@ pwsh scripts/docs.ps1 -Serve        # or: bash scripts/build-site.sh
 4. **Sign off every commit** with `git commit -s`. That adds a `Signed-off-by:` line, which says you wrote the change or have the right to submit it under this project's licence (the [Developer Certificate of Origin](https://developercertificate.org/)). There is no contributor licence agreement to sign.
 5. Open the pull request against `main`, link the issue, and fill in the template. A check builds the solution and runs the tests; it must pass.
 
-Pull requests are squash-merged, so the subject line of the pull request becomes the commit. The maintainer reviews as time allows; expect a first answer within a week or two. A pull request that waits is not a rejection. If it needs changes we will ask, and one that has been quiet for a long time after our questions may be closed, and you are welcome to reopen it.
+Pull requests are squash-merged, so the subject line of the pull request becomes the commit. Maintainers review as time allows; expect a first answer within a week or two. A pull request that waits is not a rejection. If it needs changes we will ask, and one that has been quiet for a long time after our questions may be closed, and you are welcome to reopen it.
 
 ## Using AI tools
 

@@ -11,4 +11,4 @@
 
 Before you ask, try the documentation and the browser REPL (both linked from the [README](README.md)): most questions about what a method does are answered by its example.
 
-Sigil.Sound is looked after by one maintainer. We read everything, but we answer as time allows, usually within a week or two. This page covers the open-source library. Help for the Sigilgraph Audio Workbench app is separate and is found with the app.
+Sigil.Sound is maintained by Sigil LLC. We read everything, but we answer as time allows, usually within a week or two. This page covers the open-source library. Help for the Sigilgraph Audio Workbench app is separate and is found with the app.

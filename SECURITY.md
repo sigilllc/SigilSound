@@ -4,7 +4,7 @@
 
 Please report privately and do not open a public issue.
 
-- **Preferred:** on GitHub, open the **Security** tab and choose **Report a vulnerability**. Only the maintainer sees it.
+- **Preferred:** on GitHub, open the **Security** tab and choose **Report a vulnerability**. Only the maintainers see it.
 - **Or email:** security@sigilaud.io
 
 Include what you found, the smallest snippet or steps that show it, and the version (package version or the REPL's footer). We aim to acknowledge a report within a week, and we will tell you what we decide. Please give us **90 days** from your report to fix it before you publish details; we will credit you in the changelog unless you prefer not to be named.
