@@ -23,9 +23,18 @@ Sigil.Sound.Chord.Inversion(int count) -> Sigil.Sound.Chord!
 Sigil.Sound.Chord.Name.get -> string!
 Sigil.Sound.Chord.Notes.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
 Sigil.Sound.Chord.Pitches.get -> System.Collections.Generic.IReadOnlyList<int>!
+Sigil.Sound.Chord.Steps(Sigil.Sound.Pattern<int>! steps) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+Sigil.Sound.Chord.Steps(string! steps) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
 Sigil.Sound.Chord.ToPattern() -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
 Sigil.Sound.Chord.Transpose(int semitones) -> Sigil.Sound.Chord!
+Sigil.Sound.ChordLatch
+Sigil.Sound.ChordLatch.Gated = 1 -> Sigil.Sound.ChordLatch
+Sigil.Sound.ChordLatch.Infinite = 0 -> Sigil.Sound.ChordLatch
 Sigil.Sound.ChordPatterns
+Sigil.Sound.ChordSwitch
+Sigil.Sound.ChordSwitch.Beat = 1 -> Sigil.Sound.ChordSwitch
+Sigil.Sound.ChordSwitch.Cycle = 2 -> Sigil.Sound.ChordSwitch
+Sigil.Sound.ChordSwitch.Instant = 0 -> Sigil.Sound.ChordSwitch
 Sigil.Sound.CycleSplitter
 Sigil.Sound.CycleSplitter.Current.get -> Sigil.Sound.Arc
 Sigil.Sound.CycleSplitter.CycleSplitter() -> void
@@ -58,8 +67,41 @@ Sigil.Sound.Note.Pitch.init -> void
 Sigil.Sound.Note.Transpose(int semitones) -> Sigil.Sound.Note
 Sigil.Sound.Note.Velocity.get -> float
 Sigil.Sound.Note.Velocity.init -> void
+Sigil.Sound.NoteEmitter
+Sigil.Sound.NoteEmitter.Add(Sigil.Sound.NoteEvent note) -> void
+Sigil.Sound.NoteEmitter.Add(int pitch, float velocity = 0.8, float cents = 0, int channel = 0) -> void
+Sigil.Sound.NoteEmitter.NoteEmitter() -> void
+Sigil.Sound.NoteEvent
+Sigil.Sound.NoteEvent.Cents.get -> float
+Sigil.Sound.NoteEvent.Cents.init -> void
+Sigil.Sound.NoteEvent.Chance(double probability, int seed = 0) -> bool
+Sigil.Sound.NoteEvent.Channel.get -> int
+Sigil.Sound.NoteEvent.Channel.init -> void
+Sigil.Sound.NoteEvent.Detune(double cents) -> Sigil.Sound.NoteEvent
+Sigil.Sound.NoteEvent.Frequency.get -> double
+Sigil.Sound.NoteEvent.Id.get -> long
+Sigil.Sound.NoteEvent.Id.init -> void
+Sigil.Sound.NoteEvent.InScale(Sigil.Sound.Scale! scale) -> bool
+Sigil.Sound.NoteEvent.IsOn.get -> bool
+Sigil.Sound.NoteEvent.Kind.get -> Sigil.Sound.NoteEventKind
+Sigil.Sound.NoteEvent.Kind.init -> void
+Sigil.Sound.NoteEvent.NoteEvent() -> void
+Sigil.Sound.NoteEvent.NoteEvent(Sigil.Sound.NoteEventKind Kind, long Id, int Pitch, float Velocity = 0.8, float Cents = 0, int Channel = 0) -> void
+Sigil.Sound.NoteEvent.Pitch.get -> int
+Sigil.Sound.NoteEvent.Pitch.init -> void
+Sigil.Sound.NoteEvent.PitchWithCents.get -> double
+Sigil.Sound.NoteEvent.Snap(Sigil.Sound.Scale! scale, Sigil.Sound.QuantizeMode mode = Sigil.Sound.QuantizeMode.Nearest) -> Sigil.Sound.NoteEvent
+Sigil.Sound.NoteEvent.Transpose(int semitones) -> Sigil.Sound.NoteEvent
+Sigil.Sound.NoteEvent.Velocity.get -> float
+Sigil.Sound.NoteEvent.Velocity.init -> void
+Sigil.Sound.NoteEventKind
+Sigil.Sound.NoteEventKind.Off = 1 -> Sigil.Sound.NoteEventKind
+Sigil.Sound.NoteEventKind.On = 0 -> Sigil.Sound.NoteEventKind
+Sigil.Sound.NoteExpander
 Sigil.Sound.NoteInput
 Sigil.Sound.NoteInput.AllNotesOff() -> void
+Sigil.Sound.NoteInput.Clock.get -> Sigil.Sound.HostClock?
+Sigil.Sound.NoteInput.Clock.set -> void
 Sigil.Sound.NoteInput.IsHeld(int pitch) -> bool
 Sigil.Sound.NoteInput.IsHeld(string! notes) -> bool
 Sigil.Sound.NoteInput.NoteInput() -> void
@@ -70,7 +112,42 @@ Sigil.Sound.NoteInput.NoteOn(string! notes) -> void
 Sigil.Sound.NoteInput.Play(System.Func<Sigil.Sound.Voice!, Sigil.Sound.Sound!>! voice, int polyphony = 8) -> Sigil.Sound.Sound!
 Sigil.Sound.NoteInput.Start(int pitch, float velocity = 0.8) -> Sigil.Sound.PlayingNote!
 Sigil.Sound.NoteInput.Start(string! notes) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.PlayingNote!>!
+Sigil.Sound.NoteInput.Stream.get -> Sigil.Sound.NoteStream!
 Sigil.Sound.NotePatterns
+Sigil.Sound.NotePriority
+Sigil.Sound.NotePriority.Highest = 2 -> Sigil.Sound.NotePriority
+Sigil.Sound.NotePriority.Last = 0 -> Sigil.Sound.NotePriority
+Sigil.Sound.NotePriority.Lowest = 1 -> Sigil.Sound.NotePriority
+Sigil.Sound.NoteStream
+Sigil.Sound.NoteStream.Chord(double settle = 0.035, Sigil.Sound.ChordLatch latch = Sigil.Sound.ChordLatch.Infinite, Sigil.Sound.ChordSwitch switchOn = Sigil.Sound.ChordSwitch.Beat) -> Sigil.Sound.Pattern<Sigil.Sound.Chord!>!
+Sigil.Sound.NoteStream.Compile(Sigil.Sound.HostClock? clock = null, int sampleRate = 48000) -> Sigil.Sound.NoteStreamRunner!
+Sigil.Sound.NoteStream.Delay(double beats) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Echo(int repeats, double beats, double decay = 0.6) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Fold<TState>(TState seed, System.Func<TState, Sigil.Sound.NoteEvent, TState>! step) -> Sigil.Sound.Pattern<TState>!
+Sigil.Sound.NoteStream.Gate() -> Sigil.Sound.Sound!
+Sigil.Sound.NoteStream.Harmonize(Sigil.Sound.Scale! scale, params int[]! degrees) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Harmonize(params int[]! semitones) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Humanize(double timing, double velocity = 0.1, int seed = 0) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Latch() -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Length(double beats) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Merge(params Sigil.Sound.NoteStream![]! others) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Mono(Sigil.Sound.NotePriority priority = Sigil.Sound.NotePriority.Last) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Play(System.Func<Sigil.Sound.Voice!, Sigil.Sound.Sound!>! voice, int polyphony = 8) -> Sigil.Sound.Sound!
+Sigil.Sound.NoteStream.Scan<TState>(TState seed, System.Func<TState, Sigil.Sound.NoteEvent, Sigil.Sound.NoteEmitter!, TState>! step) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Select(System.Func<Sigil.Sound.NoteEvent, Sigil.Sound.NoteEvent>! map) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.SelectMany(Sigil.Sound.NoteExpander! expand) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Strum(double beats) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Transpose(int semitones) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Velocity(double velocity) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStream.Where(System.Func<Sigil.Sound.NoteEvent, bool>! keep) -> Sigil.Sound.NoteStream!
+Sigil.Sound.NoteStreamRunner
+Sigil.Sound.NoteStreamRunner.Dispose() -> void
+Sigil.Sound.NoteStreamRunner.Dropped.get -> int
+Sigil.Sound.NoteStreamRunner.Poll() -> System.ReadOnlySpan<Sigil.Sound.NoteEvent>
+Sigil.Sound.NoteStreamRunner.Process(int frames) -> System.ReadOnlySpan<Sigil.Sound.NoteEvent>
+Sigil.Sound.NoteStreamRunner.Reset() -> System.ReadOnlySpan<Sigil.Sound.NoteEvent>
+Sigil.Sound.NoteStreamRunner.Seconds.get -> double
+Sigil.Sound.NoteStreamRunner.Sounding.get -> int
 Sigil.Sound.Notes
 Sigil.Sound.Pat
 Sigil.Sound.Pattern
@@ -109,7 +186,12 @@ Sigil.Sound.PlayingNote.Release() -> void
 Sigil.Sound.PlayingNote.Slide.get -> double
 Sigil.Sound.PlayingNote.Slide.set -> void
 Sigil.Sound.PlayingNote.Velocity.get -> float
+Sigil.Sound.QuantizeMode
+Sigil.Sound.QuantizeMode.Down = 2 -> Sigil.Sound.QuantizeMode
+Sigil.Sound.QuantizeMode.Nearest = 0 -> Sigil.Sound.QuantizeMode
+Sigil.Sound.QuantizeMode.Up = 1 -> Sigil.Sound.QuantizeMode
 Sigil.Sound.Scale
+Sigil.Sound.Scale.Contains(int pitch) -> bool
 Sigil.Sound.Scale.Count.get -> int
 Sigil.Sound.Scale.Degrees(params int[]! degrees) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
 Sigil.Sound.Scale.Degrees(string! degrees) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
@@ -141,6 +223,7 @@ const Sigil.Sound.Beats.Half = 2 -> double
 const Sigil.Sound.Beats.Quarter = 1 -> double
 const Sigil.Sound.Beats.Sixteenth = 0.25 -> double
 const Sigil.Sound.Beats.Whole = 4 -> double
+const Sigil.Sound.NoteEmitter.Capacity = 16 -> int
 const Sigil.Sound.Pat.BeatsPerCycle = 4 -> double
 const Sigil.Sound.Pat.MaxEvents = 100000 -> int
 const Sigil.Sound.Pitch.A0 = 21 -> int
@@ -317,7 +400,11 @@ static Sigil.Sound.Chord.Parse(string! text) -> Sigil.Sound.Chord!
 static Sigil.Sound.Chord.Sus2(int root) -> Sigil.Sound.Chord!
 static Sigil.Sound.Chord.Sus4(int root) -> Sigil.Sound.Chord!
 static Sigil.Sound.ChordPatterns.Arp(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords, Sigil.Sound.ArpMode mode = Sigil.Sound.ArpMode.Up, int octaves = 1) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.ChordPatterns.Highest(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords) -> Sigil.Sound.Pattern<int>!
+static Sigil.Sound.ChordPatterns.Lowest(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords) -> Sigil.Sound.Pattern<int>!
 static Sigil.Sound.ChordPatterns.Notes(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.ChordPatterns.Steps(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords, Sigil.Sound.Pattern<int>! steps) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.ChordPatterns.Steps(this Sigil.Sound.Pattern<Sigil.Sound.Chord!>! chords, string! steps) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
 static Sigil.Sound.Fraction.FromDouble(double value) -> Sigil.Sound.Fraction
 static Sigil.Sound.Fraction.Max(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
 static Sigil.Sound.Fraction.Min(Sigil.Sound.Fraction a, Sigil.Sound.Fraction b) -> Sigil.Sound.Fraction
@@ -345,9 +432,14 @@ static Sigil.Sound.Mini.Integers(string! text) -> Sigil.Sound.Pattern<int>!
 static Sigil.Sound.Mini.Notes(string! text) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
 static Sigil.Sound.Mini.Numbers(string! text) -> Sigil.Sound.Pattern<double>!
 static Sigil.Sound.Mini.Parse<T>(string! text, System.Func<string!, T>! atom) -> Sigil.Sound.Pattern<T>!
+static Sigil.Sound.NoteEvent.Start(long id, int pitch, float velocity = 0.8, float cents = 0, int channel = 0) -> Sigil.Sound.NoteEvent
+static Sigil.Sound.NoteEvent.Stop(long id, int pitch, float cents = 0, int channel = 0) -> Sigil.Sound.NoteEvent
 static Sigil.Sound.NotePatterns.ToPattern(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, int cycles = 1) -> Sigil.Sound.Pattern!
+static Sigil.Sound.NotePatterns.ToStream(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern) -> Sigil.Sound.NoteStream!
 static Sigil.Sound.NotePatterns.Transpose(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, int semitones) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
 static Sigil.Sound.NotePatterns.Velocity(this Sigil.Sound.Pattern<Sigil.Sound.Note>! pattern, double velocity) -> Sigil.Sound.Pattern<Sigil.Sound.Note>!
+static Sigil.Sound.NoteStream.Silence.get -> Sigil.Sound.NoteStream!
+static Sigil.Sound.NoteStream.operator +(Sigil.Sound.NoteStream! a, Sigil.Sound.NoteStream! b) -> Sigil.Sound.NoteStream!
 static Sigil.Sound.Notes.NameOf(int pitch) -> string!
 static Sigil.Sound.Notes.Parse(string! text) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Note>!
 static Sigil.Sound.Notes.ParsePitch(string! name) -> int
