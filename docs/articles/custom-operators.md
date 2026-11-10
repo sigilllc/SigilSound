@@ -12,38 +12,42 @@ Everything in the fluent API is built from one small interface, `IOperator`. You
 
 ## Wrapping a sound
 
-`Through` puts an operator between a sound and whatever uses it. The wrapped operator receives the input's block and changes it. This one is a beat-repeat stutter, which the engine does not have: each 200 ms the sound plays live for 50 ms while it records that slice, then repeats the slice for the rest of the beat. The recording buffer and the position in the beat are captured state, kept between blocks.
+`Through` puts an operator between a sound and whatever uses it. The wrapped operator receives the input's block and changes it. This one is a tube fuzz, which the engine does not have: it pushes a bass riff hard into a lopsided curve, so the positive swing flattens sooner than the negative one and a warm, even-harmonic growl comes out, the way a triode stage overdrives. The curve leaves a DC offset, so a one-pole blocker takes it out. The blocker's previous values are captured state, kept between blocks.
 
 ```csharp
-// Not part of the engine: a beat-repeat stutter, written in place with Through. Each 200 ms the sound
-// plays live for 50 ms while it records that slice, then repeats the slice for the rest of the beat.
-// The recording buffer and the position in the beat are captured state, kept between blocks.
-(Saw(110) + Saw(165) * 0.5).Through(input =>
-{
-    const int slice = 2400;             // 50 ms at 48 kHz: the part that gets repeated
-    const int beat = 9600;              // 200 ms: one live slice, then repeats of the recorded one
-    var buffer = new StereoFrame[slice];
-    var position = 0;                   // where we are in the beat, in samples
+// Not part of the engine: a triode tube stage, written in place with Through. Crank the signal into a curve that
+// squashes the positive swing harder than the negative one, and an even-harmonic growl appears that a plain clipper
+// does not have. That lopsidedness leaves a DC offset, so a one-pole blocker removes it. The previous sample's
+// values are captured state.
+var riff = Notes.Parse("E2 E2 G2 E2 A2 E2 B2 A2")
+    .Every(Beats.Eighth, gate: 0.8)
+    .Loop();
 
-    return Operator.From(block =>
+riff.Play(v => Saw(v.Frequency).Adsr(attack: 0.002, decay: 0.2, sustain: 0.8, release: 0.05), bpm: 100, polyphony: 1)
+    .Through(input =>
     {
-        input.RenderBlock(block);       // pull the input, then rework it in place
-        for (int i = 0; i != block.Length; i++)
+        const double drive = 18;                        // how hard the signal is pushed into the tube
+        const double bias = 0.3;                        // the grid bias: shifts the curve so one side clips earlier
+        double lastIn = 0, lastOut = 0;                 // for the DC blocker
+        return Operator.From(block =>
         {
-            var phase = position;
-            position = (position + 1) % beat;
-            if (phase < slice)
-                buffer[phase] = block[i];                       // live: record and pass through
-            else
-                block[i] = buffer[(phase - slice) % slice];     // stutter: play the recording again
-        }
-    });
-})
-.LowPass(2500, q: 1.5)
-* 0.4
+            input.RenderBlock(block);
+            for (int i = 0; i != block.Length; i++)
+            {
+                var x = (block[i].Left + block[i].Right) * 0.5 * drive + bias;
+                var y = x > 0 ? Tanh(x) : Tanh(x * 0.5) * 2;    // the positive half squashes, the negative half stays open
+                var clean = y - lastIn + 0.995 * lastOut;       // remove the offset the lopsided curve leaves
+                lastIn = y;
+                lastOut = clean;
+                block[i] = StereoFrame.Mono((float)clean);
+            }
+        });
+    })
+    .LowPass(3500)                                      // a guitar cabinet rolls off the fizz
+    * 0.25
 ```
 
-Open it in the REPL under **Beat repeat** and change `slice`: a shorter slice gives a faster, more granular glitch. Change `beat` to set how often the stutter starts.
+Open it in the REPL under **Tube fuzz** and change `drive`: at 2 it is a warm crunch, at 18 a full fuzz. Move `bias` toward 0 and the curve turns symmetric, which loses the even harmonics and sounds harder and thinner; push it up for a gated, spitty edge.
 
 `Operator.From` builds an operator from a block function. Its state lives in the variables it captures, which is fine for a sound that is built once. Keep state in a class that implements `IOperator` and `IResettable` when a voice has to be reused.
 

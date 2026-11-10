@@ -28,7 +28,10 @@ mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 To capture a stretch from well into a sound, pass `startSeconds`. The skipped part is still run and thrown away, so oscillators, envelopes, delay lines and filters are in the state they would have reached by then, and the result matches that stretch of a longer render from zero. `Render` takes it too:
 
 ```csharp
+using static Sigil.Sound.Sounds;
+
 // Eight seconds of the mix, beginning two minutes in.
+var mix = (Saw(110).LowPass(900) * 0.4).Limit();
 mix.RenderToWav("demo-later.wav", seconds: 8, sampleRate: 48_000, startSeconds: 120);
 ```
 
