@@ -60,3 +60,6 @@ big=$(find "$site" -type f -size +25M | head -3)
 (( fail == 0 )) || exit 1
 
 echo "[site] ok: $count files, $(du -sh "$site" | cut -f1) in $site"
+if grep -q '^[[:space:]]*X-Robots-Tag:[[:space:]]*noindex' "$site/_headers"; then
+  echo "[site] NOTE: _headers still sends X-Robots-Tag: noindex (pre-launch). Remove that line before the public launch."
+fi
