@@ -151,7 +151,7 @@ line.Play(v => Organ(v.Frequency).Adsr(attack: 0.06, decay: 0.1, sustain: 0.9, r
     * 0.9
 ```
 
-Open it in the REPL under **Church organ**. What to look at:
+Open it in the REPL under **Church organ (custom operator)**. What to look at:
 
 - **Ranks.** The bank is the harmonics of the 16' pipe, an octave under the note. An organ stop (rank) is a pipe sounding at some multiple of that: 16' is the first harmonic, 8' (the note itself) the second, 4' the fourth, the mutations 2⅔', 1⅗' and 1⅓' the sixth, tenth and twelfth, 2' and 1' the eighth and sixteenth. `rankLevel` is how far each stop is drawn. Every rank brings its own overtones, which is how 8 stops fill 64 partials.
 - **The loop order.** Partials are the outer loop and samples the inner one, so a phasor lives in the locals `c` and `s` for the whole block and is written back once. The partials add into `mix`, a buffer allocated in the factory.

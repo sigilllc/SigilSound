@@ -74,6 +74,33 @@ public class PatternAlgebraTests
         Assert.Equal(["a", "b", "c", "a", "b"], Enumerable.Range(0, 5).Select(c => pattern.Cycle(c)[0].Value));
     }
 
+    // Strudel: a weight, an underscore or a repeat inside <> stretches or repeats that step over whole cycles.
+    [Theory]
+    [InlineData("<a@3 b>", "a a a b a a a b")]
+    [InlineData("<a _ _ b>", "a a a b a a a b")]
+    [InlineData("<a _ b>", "a a b a a b a a")]
+    [InlineData("<a!2 b>", "a a b a a b a a")]
+    [InlineData("<a! b>", "a a b a a b a a")]
+    [InlineData("<a b!3>", "a b b b a b b b")]
+    [InlineData("<a@2 b, c d e>", "a,c a,d b,e a,c a,d b,e a,c a,d")]
+    public void Weights_and_repeats_inside_angle_brackets_last_whole_cycles(string text, string expected)
+    {
+        var pattern = P(text);
+
+        var played = Enumerable.Range(0, expected.Split(' ').Length)
+            .Select(c => string.Join(",", pattern.Cycle(c).Where(e => e.HasOnset).Select(e => e.Value)));
+        Assert.Equal(expected.Split(' '), played);
+    }
+
+    [Fact]
+    public void A_weight_in_angle_brackets_must_be_a_whole_number_of_cycles()
+    {
+        var error = Assert.Throws<MiniNotationException>(() => P("x <a@1.5 b>"));
+
+        Assert.Equal(3, error.Position);
+        Assert.Throws<MiniNotationException>(() => P("<a@1025 b>"));
+    }
+
     [Fact]
     public void Alternation_inside_a_sequence_keeps_its_own_count()
     {

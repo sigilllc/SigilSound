@@ -3,7 +3,7 @@ using Sigil.Sound.Testing;
 namespace Sigil.Sound.Repl.Tests;
 
 /// <summary>
-/// The "Church organ" example claims 64 sines from rotating phasors: on pitch, stable for as long as it plays,
+/// The "Church organ (custom operator)" example claims 64 sines from rotating phasors: on pitch, stable for as long as it plays,
 /// silent above Nyquist and restartable. Its own definition is reused here, only the final expression is swapped.
 /// </summary>
 public class PhasorOrganTests
@@ -13,7 +13,7 @@ public class PhasorOrganTests
     // Everything of the example up to the tune: the Organ function, ending where `var line` begins.
     private static string OrganDefinition()
     {
-        var code = Examples.All.Single(e => e.Name == "Church organ").Code;
+        var code = Examples.All.Single(e => e.Name == "Church organ (custom operator)").Code;
         var end = code.IndexOf("var line =", StringComparison.Ordinal);
         Assert.True(end > 0, "the example no longer has a `var line =` after the Organ function");
         return code[..end];

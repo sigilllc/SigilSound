@@ -69,7 +69,7 @@ dotnet run --project apps/Sigil.Sound.Repl
 
 For production builds: `dotnet publish apps/Sigil.Sound.Repl -c Release -o artifacts/repl`.
 
-Start with **Church organ** in the examples menu: sixty-four sine partials in eight ranks, kept in tune by rotating phasors instead of 64 calls to `Sin` per sample, written as a single custom operator. It shows what the library lets you build; [Custom operators](docs/articles/custom-operators.md) explains how it works.
+Start with **Church organ (custom operator)** in the examples menu: sixty-four sine partials in eight ranks, kept in tune by rotating phasors instead of 64 calls to `Sin` per sample, written as a single custom operator. It shows what the library lets you build; [Custom operators](docs/articles/custom-operators.md) explains how it works.
 
 ## Versioning
 
