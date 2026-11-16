@@ -27,7 +27,9 @@ public sealed class Slot
     /// <summary>The default crossfade length: 20 ms.</summary>
     public const double DefaultFadeSeconds = 0.02;
 
+    // _gate guards the fields below and is only ever held briefly; _swapGate orders the swaps and is held while one compiles.
     private readonly object _gate = new();
+    private readonly object _swapGate = new();
     private readonly List<WeakReference<SlotOperator>> _instances = [];
     private Sound _current;
 
@@ -70,23 +72,33 @@ public sealed class Slot
         double fade = fadeSeconds ?? FadeSeconds;
         ValidateFade(fade);
 
-        lock (_gate)
+        // One swap at a time, so two swaps from two threads land in the order they took their turn. This lock is held while
+        // compiling; the gate below never is, so asking the slot what it plays does not wait for a long compile.
+        lock (_swapGate)
         {
-            _current = next;
-            for (int i = _instances.Count - 1; i >= 0; i--)
+            List<SlotOperator> running = [];
+            lock (_gate)
             {
-                if (!_instances[i].TryGetTarget(out var instance))
+                // A sound attached from here on compiles the new sound itself, and one attached before is in the list.
+                _current = next;
+                for (int i = _instances.Count - 1; i >= 0; i--)
                 {
-                    _instances.RemoveAt(i);
-                    continue;
+                    if (_instances[i].TryGetTarget(out var instance))
+                        running.Add(instance);
+                    else
+                        _instances.RemoveAt(i);
                 }
+            }
 
+            foreach (var instance in running)
+            {
                 instance.DisposeRetired();
                 var op = next.Compile(instance.Context);
                 instance.Post(op, (int)Math.Round(fade * instance.Context.SampleRate));
             }
 
-            ScheduleCleanup(fade);
+            lock (_gate)
+                ScheduleCleanup(fade);
         }
     }
 

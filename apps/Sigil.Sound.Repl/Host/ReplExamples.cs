@@ -7,13 +7,13 @@ namespace Sigil.Sound.Repl;
 /// </summary>
 internal static class ReplExamples
 {
-    // Next to the Sampler that builds its audio in code, so the two read as a pair: the same sound, computed and loaded.
+    // Follows Room from an IR, so the two examples that load a .wav file sit together.
     private static readonly Examples.Example SamplerFromFile = new("Sampler (file)",
         """
         // Samples.Load gives the audio of a .wav file. "pluck.wav" comes with the page; drop your own .wav files on
         // this page and they join the Samples list, and the editor suggests their names when you type the quotes.
         //
-        // The audio is the same kind of thing as the Sampler example builds in code: frames held in memory.
+        // The audio is just frames held in memory, which you could also build in code with new AudioBuffer(frames, rate).
         // Sample(pluck, frequency, root) plays it at a pitch. The root is the pitch it was recorded at (C3 = 130.81 Hz).
         const double root = 130.81;
         var pluck = Samples.Load("pluck.wav");
@@ -26,7 +26,7 @@ internal static class ReplExamples
         tune.Play(v => Sample(pluck, v.Frequency, root) * v.Velocity, polyphony: 8) * 0.5
         """);
 
-    // A drum groove in a recorded room: what Convolve is for, so this loads a real room rather than synthesising a tail. Placed after the Cabinet (IR) example.
+    // A drum groove in a recorded room: what Convolve is for, so this loads a real room rather than synthesising a tail. Placed after the Tube fuzz example.
     private static readonly Examples.Example RoomFromIr = new("Room from an IR",
         """
         // A drum groove played through a recorded room: IR_Speakers_Living_Room.wav comes with the page
@@ -126,10 +126,9 @@ internal static class ReplExamples
     private static List<Examples.Example> Build()
     {
         var all = Examples.All.ToList();
-        int sampler = all.FindIndex(e => e.Name == "Sampler");
-        all.Insert(sampler < 0 ? all.Count : sampler + 1, SamplerFromFile);
-        int cabinet = all.FindIndex(e => e.Name == "Cabinet (IR)");
-        all.Insert(cabinet < 0 ? all.Count : cabinet + 1, RoomFromIr);
+        int fuzz = all.FindIndex(e => e.Name == "Tube fuzz");
+        all.Insert(fuzz < 0 ? all.Count : fuzz + 1, RoomFromIr);
+        all.Insert(all.IndexOf(RoomFromIr) + 1, SamplerFromFile);
         all.Add(Keyboard);
         all.Add(FallingNotes);
         all.Add(NoteStreamKeys);

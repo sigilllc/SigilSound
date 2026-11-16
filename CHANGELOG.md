@@ -2,6 +2,24 @@
 
 All notable changes to the Sigil.Sound packages. The format follows [Keep a Changelog](https://keepachangelog.com/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0 a minor version may change the public API; [Versioning](docs/articles/versioning.md) says what each number promises.
 
+## 0.1.1
+
+A patch release for 0.1.0: five fixes, no change to the public API.
+
+### Fixed
+
+- **A sound used both inside a `Feedback` loop and outside it was rendered wrong.** `src.Feedback(loop => loop * 0) + src` should be the source twice, and was the source followed by gaps, because a sound used in several places assumed that every place asked for the same number of frames at the same time. `Feedback` asks its input in chunks of its own. Every user of a shared sound now reads it from its first frame, in order, whatever sizes it asks for; the same holds for a custom operator that pulls its input in pieces. A sound used once costs nothing extra, and one used several times keeps a history of four blocks.
+- **`ToString` on a sound could run a host out of memory.** A description contained the whole text of the sound it wrapped, so a sound used twice doubled its text: `s = s + s` twenty times was 14.7 million characters, and a few more lines were gigabytes. A description is now written when it is asked for, and a sound made of itself many times over is cut short with `...` after 200 sounds. Ordinary descriptions are unchanged.
+- **Descriptions followed the machine's culture.** `Sine(0.25).Range(0.5, 2000.5)` described itself as `Range(0,5, 2000,5)` under a culture that writes a comma for the decimal point. They are now the same everywhere.
+- **`Slot.Swap` held the slot's lock while it compiled**, so asking a slot what it plays (`Slot.Current`) waited for a long compile, such as a ten second impulse response. Swaps still happen one at a time, in order; reading the slot no longer waits.
+- **Mini-notation: a weight, an underscore or a repeat inside `<>` was ignored.** `<c3@3 e3>` and `<c3 _ _ e3>` now hold `c3` for three cycles, as in Strudel; they alternated one cycle each before, so a script that used them plays differently now. A weight inside `<>` that is not a whole number (`<a@1.5 b>`) is now an error that points at the step, where it used to be accepted and ignored.
+
+### Documentation
+
+- **Mini-notation:** the weight rule for `<>` and a list of what differs from Strudel.
+- **Custom operators:** the rule for pulling an input in pieces.
+- **REPL:** new chord, arpeggio and "Twang" examples; the organ example is now **Church organ (custom operator)**. The examples menu is reordered with the fuller pieces first, starting with **Phaser sweep**. The plain filter sweep, the cabinet impulse response and a few one-line demos (pulse width, ring modulation, wind, plucked string, pitch from a function, notes by name, the generated sampler) are gone, since others cover them better.
+
 ## 0.1.0
 
 The first public release of `Sigil.Sound`, `Sigil.Sound.Notes`, `Sigil.Sound.Testing` and `Sigil.Sound.Repl.Core`. The first three target .NET 8.0 and .NET 10.0, are trimmable and AOT-compatible, and `Sigil.Sound` has no dependencies and runs in the browser (WebAssembly). `Sigil.Sound.Repl.Core` targets .NET 10.0 only.

@@ -34,7 +34,7 @@
 
   <PropertyGroup Condition="'$(IsPackagedLibrary)' == 'true'">
     <!-- The version of every package. A release candidate adds a suffix at pack time: dotnet pack /p:VersionSuffix=rc.1 -->
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.1.1</VersionPrefix>
 
     <!-- NuGet package metadata, symbols and source link, so debugging into the package works. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

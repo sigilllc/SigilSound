@@ -34,7 +34,7 @@ mix.RenderToWav("demo.wav", seconds: 8, sampleRate: 48_000);
 - **Tone:** `Peak` (bell), `LowShelf`, `HighShelf` (RBJ biquads), `Equalize` (three-band tone control), `Vowel` (four formants, morphs A to U), `Fold` (West Coast wavefolder).
 - **Dynamics:** `Compress` (soft knee, sidechain, lookahead), `FollowEnvelope` (loudness as a control signal), `Spread` (mid/side stereo width).
 - **Impulse responses:** `Convolve` runs a sound through an `AudioBuffer`, such as a guitar cabinet or a concert hall recorded as a WAV file. Zero latency, mono or stereo, up to 10 seconds, any sample rate.
-- **Effects:** `Delay`, `TapeDelay` (slewed read head, saturating and damped feedback), `Reverb` (Schroeder stereo decorrelated), `FdnReverb` (eight-line feedback network, optional shimmer), `Comb` (tuned resonator; Karplus-Strong string), `Distort` (soft, hard, fold, fuzz), `BitCrush`, `Chorus`, `Phaser`. Each takes `mix` where applicable, and continuous parameters accept numbers, sounds, or `Fn(t => ...)`.
+- **Effects:** `Delay`, `TapeDelay` (slewed read head, saturating and damped feedback), `Reverb` (Schroeder stereo decorrelated), `FdnReverb` (eight-line feedback network, optional shimmer), `Comb` (tuned resonator; Karplus-Strong string), `Distort` (soft, hard, fold, fuzz), `BitCrush`, `Chorus`, `Phaser`, `PitchShift` (spectral, up to two octaves either way) and `Feedback` (feeds a chain back into itself: echoes that change on every repeat, resonances that grow from what came before). Each takes `mix` where applicable, and continuous parameters accept numbers, sounds, or `Fn(t => ...)`.
 - **Parameters:** Every `Param` accepts a number, another `Sound` (audio-rate modulation), or a `Func<double, float>` of time. Constant parameters are evaluated with zero per-block overhead.
 - **Sequences & Notes:** `Notes.Parse("C4 Eb4 G4")`, LINQ transformations (`Where`, `Select`, `Transpose`), timing (`Every`, `Beats`), and zero-allocation polyphonic playback (`Play`).
 - **Rendering:** `Render(seconds)` returns an in-memory `AudioBuffer`; `RenderToWav` writes 16-bit, 24-bit, or 32-bit float WAV to a path or a `Stream`.
@@ -69,7 +69,7 @@ dotnet run --project apps/Sigil.Sound.Repl
 
 For production builds: `dotnet publish apps/Sigil.Sound.Repl -c Release -o artifacts/repl`.
 
-Start with **Church organ** in the examples menu: sixty-four sine partials in eight ranks, kept in tune by rotating phasors instead of 64 calls to `Sin` per sample, written as a single custom operator. It shows what the library lets you build; [Custom operators](docs/articles/custom-operators.md) explains how it works.
+Start with **Church organ (custom operator)** in the examples menu: sixty-four sine partials in eight ranks, kept in tune by rotating phasors instead of 64 calls to `Sin` per sample, written as a single custom operator. It shows what the library lets you build; [Custom operators](docs/articles/custom-operators.md) explains how it works.
 
 ## Versioning
 

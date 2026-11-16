@@ -143,13 +143,27 @@ Mini.Notes("c4 d4 e4 g4 a4 ~ g4 e4")
 
 ## Feedback loops
 
-`Feedback` feeds the output of a chain back into its input. Keep the loop gain below 1 or it grows without bound. A distortion in the loop has a gain of its drive at low levels, so its `level` brings that back: here 4 × 0.25 × 0.7 is below 1.
+`Feedback(loop)` feeds a sound's own output back into itself through a chain you write. The result is the sound plus `loop` applied to that result, a moment late. The `loop` function gets a stand-in for the delayed output, which you use like any sound: put effects on it, scale it, use it more than once. What it returns is what goes back in.
 
 ```csharp
 // Echoes fed back through a distortion: each repeat comes back fuzzier and darker than the one before.
 Sine(330).Adsr(0.002, 0.05, 0, 0.02)
     .Feedback(echo => echo.Delay(0.3, mix: 1).Distort(drive: 4, level: 0.25).LowPass(3000) * 0.7) * 0.6
 ```
+
+```csharp
+// A dub echo: every repeat loses its lows and its highs, so the tune thins out into the background.
+Mini.Notes("c4 ~ e4 g4 ~ ~ c5 ~")
+    .Play(v => Saw(v.Frequency).LowPass(2500).Adsr(0.005, 0.15, 0.3, 0.1), bpm: 110)
+    .Feedback(echo => echo.Delay(0.3409, mix: 1).HighPass(300).LowPass(2200) * 0.6) * 0.4
+```
+
+Four things to know:
+
+- **Keep the loop gain below 1**, or each repeat is louder than the last. A distortion in the loop has a gain of its drive at low levels, so its `level` brings that back: in the first example 4 × 0.25 × 0.7 is below 1. If you get it wrong the result is loud, not broken: anything past full scale is eased toward a ceiling of 2, and a value that is not a number is dropped, so a mistake never fills the output with silence or noise.
+- **The loop hears the output one chunk late**, 1 ms by default (`latencySeconds`, from 0.0001 to 0.05). A loop with a 0.3 s delay repeats every 0.3 s plus that chunk, and the chunk is the same whatever block size the host renders in, so the sound does not change from one host to another. Loops shorter than the chunk, such as a plucked string, cannot be built this way: use `Comb`.
+- **`loop` runs each time the sound is compiled**, not while it plays. Build a sound from the stand-in; do not try to read audio from it.
+- **The sound you feed back can be used outside the loop too.** `source.Feedback(...) + source` is the source twice. (Before 0.1.1 this rendered wrongly, and a custom operator that pulls its input in pieces did too; see [Custom operators](custom-operators.md).)
 
 ## Stereo and dynamics
 
