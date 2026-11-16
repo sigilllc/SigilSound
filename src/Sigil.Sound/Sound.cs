@@ -12,9 +12,16 @@ namespace Sigil.Sound;
 public sealed partial class Sound
 {
     private readonly Func<RenderContext, IOperator> _factory;
-    private readonly string _description;
+    private readonly SoundText _description;
 
-    private Sound(Func<RenderContext, IOperator> factory, string description)
+    // Describing a sound that was built from itself (a + a, over and over) would write it out once for every path through the graph,
+    // which is exponential in the depth. A description visits at most this many sounds; past that it says "..." and carries on.
+    private const int MaxDescribedSounds = 200;
+
+    [ThreadStatic] private static int t_describing;
+    [ThreadStatic] private static int t_budget;
+
+    private Sound(Func<RenderContext, IOperator> factory, SoundText description)
     {
         _factory = factory;
         _description = description;
@@ -27,7 +34,7 @@ public sealed partial class Sound
     internal Param? BackingParam { get; private init; }
 
     internal static Sound FromBackingParam(Param param, Func<RenderContext, IOperator> factory) =>
-        new(factory, param.ToString()) { BackingParam = param };
+        new(factory, $"{param}") { BackingParam = param };
 
     /// <summary>
     /// Wraps a custom operator. The factory is called once per <see cref="Compile"/>
@@ -39,6 +46,13 @@ public sealed partial class Sound
     {
         ArgumentNullException.ThrowIfNull(factory);
         return new Sound(factory, description ?? "Custom");
+    }
+
+    // The same, for the library's own sounds: an interpolated description is kept as parts and written only when asked for.
+    internal static Sound FromOperator(Func<RenderContext, IOperator> factory, SoundText description)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        return new Sound(factory, description);
     }
 
     /// <summary>
@@ -81,14 +95,16 @@ public sealed partial class Sound
     public Sound Through(Func<IOperator, IOperator> wrap, string? description = null)
     {
         ArgumentNullException.ThrowIfNull(wrap);
-        return new Sound(ctx =>
+        Func<RenderContext, IOperator> factory = ctx =>
         {
             var input = Compile(ctx);
             var output = wrap(input);
             ctx.Scope?.Track(output);
             // Reset reaches the input and your operator without you wiring it up.
             return new ThroughOperator(input, output);
-        }, description ?? $"{this}.Through(...)");
+        };
+
+        return description is null ? new Sound(factory, $"{this}.Through(...)") : new Sound(factory, description);
     }
 
     /// <summary>Scales the amplitude.</summary>
@@ -358,5 +374,27 @@ public sealed partial class Sound
         WavWriter.Write(stream, Render(seconds, sampleRate, startSeconds: startSeconds), format);
 
     /// <summary>A description of how the sound is built, such as <c>Saw(110).LowPass(800)</c>.</summary>
-    public override string ToString() => _description;
+    /// <remarks>
+    /// Numbers are written the same way on every machine. The text is put together when it is asked for, not when the sound is built, and
+    /// a sound made of itself many times over is cut short with <c>...</c> instead of being written out in full.
+    /// </remarks>
+    public override string ToString()
+    {
+        // The outermost call starts the count; the sounds inside its text are described under it.
+        if (t_describing == 0)
+            t_budget = MaxDescribedSounds;
+        else if (t_budget <= 0)
+            return "...";
+
+        t_budget--;
+        t_describing++;
+        try
+        {
+            return _description.ToString();
+        }
+        finally
+        {
+            t_describing--;
+        }
+    }
 }

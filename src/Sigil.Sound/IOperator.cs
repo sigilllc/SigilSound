@@ -45,7 +45,7 @@ public delegate void BlockRenderer(Span<StereoFrame> block);
 public static class Operator
 {
     /// <summary>
-    /// Wraps a lambda as an operator, for use with <see cref="Sound.Through"/> and <see cref="Sound.FromOperator"/>.
+    /// Wraps a lambda as an operator, for use with <see cref="Sound.Through"/> and <see cref="Sound.FromOperator(Func{RenderContext, IOperator}, string)"/>.
     /// State lives in variables the lambda captures; declare them where the operator is created, so every
     /// compile of the sound starts fresh. The same real-time rules as <see cref="IOperator.RenderBlock"/> apply.
     /// </summary>

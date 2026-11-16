@@ -59,7 +59,7 @@ Saw(110).LowPass(cutoff: sweep, q: 4) * 0.4
   </a>
   <a class="lp-card" href="articles/effects.md">
     <h2>Effects</h2>
-    <p>Filters, envelopes, delay, reverb, modulation, distortion, pitch and stereo.</p>
+    <p>Filters, envelopes, delay, reverb, feedback loops, modulation, distortion, pitch and stereo.</p>
   </a>
   <a class="lp-card" href="articles/notes-and-patterns.md">
     <h2>Notes and patterns</h2>

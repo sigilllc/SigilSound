@@ -159,10 +159,13 @@ internal sealed class MiniParser<T>(string text, Func<string, T> atom)
     private int _position;
     private int _seed;
 
-    private sealed class Step(Pattern<T> pattern, Fraction weight)
+    private sealed class Step(Pattern<T> pattern, Fraction weight, int at)
     {
         public Pattern<T> Pattern { get; set; } = pattern;
         public Fraction Weight { get; set; } = weight;
+
+        // Where the step starts in the text, for an error that points at it.
+        public int At { get; } = at;
     }
 
     public Pattern<T> ParseAll()
@@ -212,7 +215,7 @@ internal sealed class MiniParser<T>(string text, Func<string, T> atom)
             else if (c == '!')
             {
                 if (steps.Count == 0) throw Error("'!' needs a step before it to repeat");
-                steps.Add(new Step(steps[^1].Pattern, steps[^1].Weight));
+                steps.Add(new Step(steps[^1].Pattern, steps[^1].Weight, steps[^1].At));
                 _position++;
             }
             else
@@ -222,12 +225,30 @@ internal sealed class MiniParser<T>(string text, Func<string, T> atom)
         }
 
         if (alternate)
-            return Pat.Cat(steps.Select(s => s.Pattern).ToArray());
+            return Pat.Cat(StepsPerCycle(steps).ToArray());
         return Pat.Weighted(steps.Select(s => (s.Pattern, s.Weight)).ToArray());
+    }
+
+    // In <...> a step lasts as many cycles as its weight, as in Strudel: "<a@3 b>" and "<a _ _ b>" hold a for three cycles.
+    // A weight that is not a whole number cannot line up with cycles, so it is refused rather than quietly ignored.
+    private List<Pattern<T>> StepsPerCycle(List<Step> steps)
+    {
+        var cycles = new List<Pattern<T>>();
+        foreach (var step in steps)
+        {
+            if (step.Weight.Denominator != 1)
+                throw Error("A step in <> lasts a whole number of cycles, so its weight must be a whole number", step.At);
+            if (step.Weight.Numerator > MaxCount - cycles.Count)
+                throw Error($"A <> can last at most {MaxCount} cycles", step.At);
+            for (long i = 0; i < step.Weight.Numerator; i++)
+                cycles.Add(step.Pattern);
+        }
+        return cycles;
     }
 
     private List<Step> ParseStep()
     {
+        int stepStart = _position;
         var pattern = ParseTerm();
         var weight = Fraction.One;
         int copies = 1;
@@ -289,7 +310,7 @@ internal sealed class MiniParser<T>(string text, Func<string, T> atom)
 
         var steps2 = new List<Step>(copies);
         for (int i = 0; i < copies; i++)
-            steps2.Add(new Step(pattern, weight));
+            steps2.Add(new Step(pattern, weight, stepStart));
         return steps2;
     }
 

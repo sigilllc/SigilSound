@@ -151,7 +151,7 @@ line.Play(v => Organ(v.Frequency).Adsr(attack: 0.06, decay: 0.1, sustain: 0.9, r
     * 0.9
 ```
 
-Open it in the REPL under **Church organ**. What to look at:
+Open it in the REPL under **Church organ (custom operator)**. What to look at:
 
 - **Ranks.** The bank is the harmonics of the 16' pipe, an octave under the note. An organ stop (rank) is a pipe sounding at some multiple of that: 16' is the first harmonic, 8' (the note itself) the second, 4' the fourth, the mutations 2⅔', 1⅗' and 1⅓' the sixth, tenth and twelfth, 2' and 1' the eighth and sixteenth. `rankLevel` is how far each stop is drawn. Every rank brings its own overtones, which is how 8 stops fill 64 partials.
 - **The loop order.** Partials are the outer loop and samples the inner one, so a phasor lives in the locals `c` and `s` for the whole block and is written back once. The partials add into `mix`, a buffer allocated in the factory.
@@ -182,5 +182,6 @@ var ramp = Sound.FromOperator(context => Operator.From(block =>
 - Read frames as stereo: `StereoFrame` has `Left` and `Right`.
 - Reset the state in `Reset`, so a reused voice starts clean.
 - Give a description, so `ToString` shows what the sound is.
+- Pull your input in whatever sizes you like, as long as no call is longer than the block you were given. An operator that works in chunks of its own (a feedback loop, a block-based transform) may ask its input for 48 frames while another user of the same sound asks for 256. The engine keeps every user of a shared sound in step: each one sees the sound from its first frame, in order. A user that runs ahead by more than a few blocks of the others would find the frames it needs gone from the engine's short history, so keep any lookahead to a block or two.
 
 The built-in operators are in `src/Sigil.Sound/Operators` and are the best reference for the patterns above.

@@ -34,51 +34,80 @@ internal sealed class CompileScope
 
 /// <summary>
 /// The operator one <see cref="Sound"/> compiled to. With a single reader (the usual case) it is a pass-through;
-/// with several, the source renders once per block and every reader gets a copy.
+/// with several, the source renders once and every reader is served from a short history of what it rendered.
 /// </summary>
+/// <remarks>
+/// Readers are not in lockstep. A <c>Feedback</c> loop pulls its input in chunks of its own, and a custom operator may pull in any
+/// size, so the readers of one sound can ask for different amounts at different moments. Each reader therefore counts the frames it
+/// has taken and reads that stretch of the source's output; the source runs forward only when a reader needs frames it has not made yet.
+/// The history is a few blocks long, which covers a reader that runs ahead of the others by a chunk or a block. A reader that falls
+/// further behind than that gets silence for the frames that are gone, and nothing else is disturbed.
+/// </remarks>
 internal sealed class SharedSource(IOperator source, int blockSize)
 {
-    private readonly StereoFrame[] _cache = new StereoFrame[blockSize];
-    private int _cached;
+    // Blocks of history. A reader that makes its input in a chunk is ahead of the others by at most that chunk (never more than a
+    // block), and the slowest reader is at most a block behind the host: two blocks cover it, four leave room.
+    private const int HistoryBlocks = 4;
+
+    // Only a sound with several readers needs the history, so a sound used once costs nothing here.
+    private StereoFrame[] _history = [];
+    private long _produced;
 
     public IOperator Source { get; } = source;
 
     public int Readers { get; private set; }
 
-    public int Epoch { get; private set; }
+    /// <summary>Changes whenever the source is reset, so a reader can tell that its position no longer means anything.</summary>
+    public int Generation { get; private set; }
 
     public SharedReader NewReader()
     {
         Readers++;
+        if (Readers == 2)
+            _history = new StereoFrame[blockSize * HistoryBlocks];
         return new SharedReader(this);
     }
 
-    public void Advance(int length)
+    /// <summary>Fills <paramref name="block"/> with the source's frames from <paramref name="position"/> on, rendering more of it if needed.</summary>
+    public void Read(long position, Span<StereoFrame> block)
     {
-        Source.RenderBlock(_cache.AsSpan(0, length));
-        _cached = length;
-        Epoch++;
-    }
+        long end = position + block.Length;
+        while (_produced < end)
+        {
+            int slot = (int)(_produced % _history.Length);
+            // Never more than a block at once, and never across the end of the history, so the source sees ordinary block sizes.
+            int count = (int)Math.Min(Math.Min(end - _produced, blockSize), _history.Length - slot);
+            Source.RenderBlock(_history.AsSpan(slot, count));
+            _produced += count;
+        }
 
-    public void CopyTo(Span<StereoFrame> block)
-    {
-        int count = Math.Min(block.Length, _cached);
-        _cache.AsSpan(0, count).CopyTo(block);
-        block[count..].Clear();
+        // Frames older than the history have been written over.
+        int gone = (int)Math.Clamp(_produced - _history.Length - position, 0, block.Length);
+        block[..gone].Clear();
+
+        int done = gone;
+        while (done < block.Length)
+        {
+            int slot = (int)((position + done) % _history.Length);
+            int count = Math.Min(block.Length - done, _history.Length - slot);
+            _history.AsSpan(slot, count).CopyTo(block.Slice(done, count));
+            done += count;
+        }
     }
 
     public void Reset()
     {
         Source.ResetState();
-        Epoch = 0;
-        _cached = 0;
+        _produced = 0;
+        Generation++;
     }
 }
 
-/// <summary>One use of a shared sound. Readers rendered in lockstep each see the same block.</summary>
+/// <summary>One use of a shared sound. It reads the source's frames in order, from the first, at its own pace.</summary>
 internal sealed class SharedReader(SharedSource core) : IOperator, IResettable
 {
-    private int _seen;
+    private long _position;
+    private int _generation;
 
     public void RenderBlock(Span<StereoFrame> block)
     {
@@ -88,17 +117,22 @@ internal sealed class SharedReader(SharedSource core) : IOperator, IResettable
             return;
         }
 
-        // A reader that has already taken the current block is asking for the next one.
-        if (_seen == core.Epoch)
-            core.Advance(block.Length);
-        _seen = core.Epoch;
-        core.CopyTo(block);
+        // The source was reset, perhaps by another reader: start again from its first frame.
+        if (_generation != core.Generation)
+        {
+            _generation = core.Generation;
+            _position = 0;
+        }
+
+        core.Read(_position, block);
+        _position += block.Length;
     }
 
     public void Reset()
     {
         core.Reset();
-        _seen = 0;
+        _generation = core.Generation;
+        _position = 0;
     }
 }
 

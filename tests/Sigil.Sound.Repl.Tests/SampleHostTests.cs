@@ -635,10 +635,10 @@ namespace Sigil.Sound.Repl.Tests
         }
 
         [Fact]
-        public void The_file_example_sits_next_to_the_generated_one_and_is_heard_under_the_page_profile()
+        public void The_file_example_sits_after_the_room_example_and_is_heard_under_the_page_profile()
         {
             var names = ReplExamples.All.Select(e => e.Name).ToList();
-            Assert.Equal(names.IndexOf("Sampler") + 1, names.IndexOf("Sampler (file)"));
+            Assert.Equal(names.IndexOf("Room from an IR") + 1, names.IndexOf("Sampler (file)"));
 
             var result = SnippetCompiler.Compile(ReplExamples.All.Single(e => e.Name == "Sampler (file)").Code, ReplProfile.Instance);
             Assert.True(result.Success, string.Join("\n", result.Diagnostics));
