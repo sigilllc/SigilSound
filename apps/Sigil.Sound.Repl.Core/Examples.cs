@@ -247,13 +247,18 @@ public static class Examples
             var bpm = 96;
             var beat = 60.0 / bpm;
 
-            // The bass follows the lead's chords (A minor, G, F, E minor), with an octave jump in each bar that it glides
-            // up to (Slew on the pitch). Its level is an on/off pattern in sixteenths, slewed fast up and slower down:
-            // two numbers that make a plucked envelope on every eighth note.
-            var bassPitch = Mini.Numbers("<[55 55 110 55] [49 49 98 49] [43.65 43.65 87.31 43.65] [41.2 41.2 82.41 49]>")
-                .ToSignal(bpm: bpm, initial: 55).Slew(0.03);
-            var pluck = Mini.Numbers("[1 0]*8").ToSignal(bpm: bpm).Slew(rise: 0.003, fall: 0.07);
-            var bass = Saw(bassPitch).LowPass(380, q: 1.2) * pluck * 0.22;
+            // A funk bass on the lead's chords (A minor, G, F, E minor), in swung sixteenths: in each beat "x@2 y x@2 y" gives
+            // the on-beat sixteenths twice the time of the off-beat ones. Ghost notes (:0.4) are played softer, and each bar has an
+            // octave pop and a run that leads into the next chord. Slew on the cutoff gives every note a quick wah.
+            var funk = Mini.Notes(
+                "<[[a1@2 ~ ~@2 a1:0.4] [~@2 a2 ~@2 a1] [a1@2 ~ c2@2 ~] [~@2 d2 e2@2 g1]]" +
+                " [[g1@2 ~ ~@2 g1:0.4] [~@2 g2 ~@2 g1] [g1@2 ~ b1@2 ~] [~@2 d2 ~@2 f1]]" +
+                " [[f1@2 ~ ~@2 f1:0.4] [~@2 f2 ~@2 f1] [f1@2 ~ a1@2 ~] [~@2 c2 d2@2 e1]]" +
+                " [[e1@2 ~ ~@2 e1:0.4] [~@2 e2 ~@2 e1] [e1@2 ~ g1@2 ~] [~@2 b1 d2@2 g#1]]>");
+            var bass = funk.Play(v => Saw(v.Frequency)
+                    .LowPass(Fn(t => t < 0.02 ? 1800 : 450).Slew(0.04), q: 4)   // opens on the attack, glides shut
+                    .Adsr(0.002, 0.12, 0.35, 0.04), bpm, polyphony: 2)
+                * 0.3;
 
             // A narrow pulse lead. A 12% pulse sits far below zero on average; DcBlock re-centres it.
             // Its filter jumps to a new random place every eighth note (Hold) and glides there (Slew).
@@ -265,8 +270,11 @@ public static class Examples
             // Mix: the lead fades between dry and its echo, slowly, back and forth.
             var echoed = lead.Mix(lead.Delay(beat * 0.75, feedback: 0.4, mix: 1), Sine(0.08).Range(0.2, 0.7));
 
-            // Hats: pink noise under a falling ramp (1 minus a rising saw), and a gate that cuts each tail short.
-            var hats = (PinkNoise().HighPass(7000) * (1 - Saw(bpm / 60.0 * 4).Range(0, 1))).Gate(-24, release: 0.01) * 0.6;
+            // Hats, swung like the bass: an accent pattern (loud on the beat sixteenths, soft between) slewed into short
+            // ticks. The noise is high-passed by subtraction (the noise minus its own low-passed copy), and a gate cuts the tails.
+            var noise = PinkNoise();
+            var ticks = Mini.Numbers("[[1 0]@2 [0.35 0] [0.7 0]@2 [0.35 0]]*4").ToSignal(bpm: bpm).Slew(rise: 0.001, fall: 0.03);
+            var hats = ((noise - noise.LowPass(6000)) * ticks).Gate(-30, release: 0.01) * 0.6;
 
             // Weather: pink wind that rises and falls, brown rumble underneath.
             var wind = PinkNoise(seed: 2).BandPass(Sine(0.05).Range(400, 1400), q: 1.5) * 0.12;
