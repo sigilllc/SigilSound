@@ -240,53 +240,56 @@ public static class Examples
                 .Limit()                                    // the overlapping chords add up: keep them under full scale
                 * 0.9
             """),
-        new("Night drive (signal tools)",
+        new("Night drive",
             """
-            // Built from the signal tools: Slew (glide), Hold (sample and hold), Gate, Mix, DcBlock,
-            // pink and brown noise, and subtraction. Each line says which one it uses.
+            // A sparse groove on four chords (A minor, G, F, E minor), built with the newer tools: subtraction, Mix, Slew,
+            // Hold, Gate, DcBlock, and pink and brown noise. Each part says which one it uses.
             var bpm = 96;
             var beat = 60.0 / bpm;
 
-            // A funk bass on the lead's chords (A minor, G, F, E minor), in swung sixteenths: in each beat "x@2 y x@2 y" gives
-            // the on-beat sixteenths twice the time of the off-beat ones. Ghost notes (:0.4) are played softer, and each bar has an
-            // octave pop and a run that leads into the next chord. Slew on the cutoff gives every note a quick wah.
-            var funk = Mini.Notes(
-                "<[[a1@2 ~ ~@2 a1:0.4] [~@2 a2 ~@2 a1] [a1@2 ~ c2@2 ~] [~@2 d2 e2@2 g1]]" +
-                " [[g1@2 ~ ~@2 g1:0.4] [~@2 g2 ~@2 g1] [g1@2 ~ b1@2 ~] [~@2 d2 ~@2 f1]]" +
-                " [[f1@2 ~ ~@2 f1:0.4] [~@2 f2 ~@2 f1] [f1@2 ~ a1@2 ~] [~@2 c2 d2@2 e1]]" +
-                " [[e1@2 ~ ~@2 e1:0.4] [~@2 e2 ~@2 e1] [e1@2 ~ g1@2 ~] [~@2 b1 d2@2 g#1]]>");
-            var bass = funk.Play(v => Saw(v.Frequency)
-                    .LowPass(Fn(t => t < 0.02 ? 1800 : 450).Slew(0.04), q: 4)   // opens on the attack, glides shut
-                    .Adsr(0.002, 0.12, 0.35, 0.04), bpm, polyphony: 2)
-                * 0.3;
+            // Kick on 1 and 3: a sine that drops in pitch, with a puff of brown noise for weight.
+            var kick = Mini.Drums("bd ~ bd ~").Play(v =>
+                (Sine(48 + 110 * (1 - Fn(t => Math.Min(1, t * 30)))) + BrownNoise().LowPass(300) * 0.6)
+                    .Adsr(0.001, 0.28, 0, 0.05), bpm);
 
-            // A narrow pulse lead. A 12% pulse sits far below zero on average; DcBlock re-centres it.
-            // Its filter jumps to a new random place every eighth note (Hold) and glides there (Slew).
-            var cutoff = Noise(seed: 5).Hold(bpm / 60.0 * 2).Slew(0.05).Range(700, 3800);
-            var lead = Mini.Notes("<[a3 c4 e4 ~] [g3 b3 d4 ~] [f3 a3 c4 e4] [e3 g3 b3 ~]>")
-                .Play(v => Square(v.Frequency, width: 0.12).DcBlock().LowPass(cutoff, q: 3).Adsr(0.005, 0.2, 0.3, 0.2), bpm)
-                * 0.25;
+            // Snare on 2 and 4, through a big room that a gate chops off short: a gated reverb.
+            var snare = Mini.Drums("~ sn ~ sn").Play(v =>
+                (PinkNoise().BandPass(1800, q: 0.7) + Sine(185) * 0.5).Adsr(0.001, 0.12, 0, 0.05), bpm);
+            var gatedSnare = snare.Reverb(size: 1.5, decay: 2, mix: 0.45).Gate(-26, release: 0.02);
 
-            // A pad made by subtraction: one saw minus another a hair sharper is a pulse whose width slowly turns, the hollow,
-            // moving sound of pulse-width modulation, with no LFO. A low-pass and a slow envelope keep it behind everything else.
+            // Hats on the swung offbeats ("[x@2 y]" makes the second half of each beat land late). The noise is made bright
+            // by subtraction, the noise minus its own low-passed copy, and Slew turns each on/off step into a short tick.
+            var noise = PinkNoise(seed: 4);
+            var ticks = Mini.Numbers("[0@2 [1 0]]*4").ToSignal(bpm: bpm).Slew(rise: 0.001, fall: 0.025);
+            var hats = (noise - noise.LowPass(6000)) * ticks * 0.5;
+
+            // A funk bass: the root on the one, a ghost note (:0.4) and an octave pop, swung like the hats. Slew on the cutoff
+            // opens it on each attack and closes it over 40 ms, a quick wah.
+            var bass = Mini.Notes(
+                    "<[a1 ~ [~@2 a1:0.4] [~@2 a2]] [g1 ~ [~@2 g1:0.4] [~@2 g2]] [f1 ~ [~@2 f1:0.4] [~@2 f2]] [e1 ~ [~@2 e1:0.4] [~@2 g#1]]>")
+                .Play(v => Saw(v.Frequency)
+                    .LowPass(Fn(t => t < 0.02 ? 1600 : 400).Slew(0.04), q: 4)
+                    .Adsr(0.001, 0.15, 0.2, 0.04), bpm, polyphony: 2)
+                * 0.35;
+
+            // A pad made by subtraction: one saw minus another a hair sharper is a pulse whose width slowly turns,
+            // the hollow sound of pulse-width modulation, with no LFO.
             var pad = Mini.Notes("<[a2,c3,e3] [g2,b2,d3] [f2,a2,c3] [e2,g2,b2]>")
-                .Play(v => (Saw(v.Frequency) - Saw(v.Frequency * 1.004)).LowPass(1400).Adsr(0.6, 0.5, 0.8, 1.2), bpm, polyphony: 6)
-                * 0.05;
+                .Play(v => (Saw(v.Frequency) - Saw(v.Frequency * 1.004)).LowPass(1400).Adsr(0.4, 0.5, 0.8, 1), bpm, polyphony: 6)
+                * 0.06;
 
-            // Mix: the lead fades between dry and its echo, slowly, back and forth.
-            var echoed = lead.Mix(lead.Delay(beat * 0.75, feedback: 0.4, mix: 1), Sine(0.08).Range(0.2, 0.7));
+            // Two notes of lead per bar. A 12% pulse sits far below zero on average, so DcBlock re-centres it. Its cutoff
+            // jumps to a new random place on every beat (Hold) and glides there (Slew), and Mix fades it into its echo and back.
+            var cutoff = Noise(seed: 5).Hold(bpm / 60.0).Slew(0.08).Range(900, 3200);
+            var lead = Mini.Notes("<[~ e4 ~ c4] [~ d4 ~ b3] [~ c4 ~ a3] [~ b3 ~ g#3]>")
+                .Play(v => Square(v.Frequency, width: 0.12).DcBlock().LowPass(cutoff, q: 2).Adsr(0.003, 0.25, 0.2, 0.2), bpm)
+                * 0.22;
+            var echoed = lead.Mix(lead.Delay(beat * 0.75, feedback: 0.35, mix: 1), Sine(0.1).Range(0.15, 0.5));
 
-            // Hats, swung like the bass: an accent pattern (loud on the beat sixteenths, soft between) slewed into short
-            // ticks. The noise is high-passed by subtraction (the noise minus its own low-passed copy), and a gate cuts the tails.
-            var noise = PinkNoise();
-            var ticks = Mini.Numbers("[[1 0]@2 [0.35 0] [0.7 0]@2 [0.35 0]]*4").ToSignal(bpm: bpm).Slew(rise: 0.001, fall: 0.03);
-            var hats = ((noise - noise.LowPass(6000)) * ticks).Gate(-30, release: 0.01) * 0.6;
+            // The kick pushes the pad and the bass down on every hit (a sidechain), which is where the punch comes from.
+            var bed = (pad + bass).Compress(thresholdDb: -24, ratio: 6, attack: 0.002, release: 0.15, sidechain: kick);
 
-            // Weather: pink wind that rises and falls, brown rumble underneath.
-            var wind = PinkNoise(seed: 2).BandPass(Sine(0.05).Range(400, 1400), q: 1.5) * 0.12;
-            var rumble = BrownNoise(seed: 3).LowPass(120) * 0.12;   // kept low, under the bass
-
-            (bass + pad + echoed + hats + wind + rumble).Reverb(decay: 2.5, mix: 0.2).Limit()
+            (kick * 0.9 + gatedSnare * 0.5 + hats + bed + echoed).Limit()
             """),
         new("Edit me while it plays",
             """
