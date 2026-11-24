@@ -247,9 +247,13 @@ public static class Examples
             var bpm = 96;
             var beat = 60.0 / bpm;
 
-            // A bass that glides between its notes: a stepped line of frequencies, slewed.
-            var bassPitch = Mini.Numbers("55 55 65.41 49 55 73.42 65.41 49").ToSignal(bpm: bpm).Slew(0.06);
-            var bass = Saw(bassPitch).LowPass(500, q: 2) * 0.35;
+            // The bass follows the lead's chords (A minor, G, F, E minor), with an octave jump in each bar that it glides
+            // up to (Slew on the pitch). Its level is an on/off pattern in sixteenths, slewed fast up and slower down:
+            // two numbers that make a plucked envelope on every eighth note.
+            var bassPitch = Mini.Numbers("<[55 55 110 55] [49 49 98 49] [43.65 43.65 87.31 43.65] [41.2 41.2 82.41 49]>")
+                .ToSignal(bpm: bpm, initial: 55).Slew(0.03);
+            var pluck = Mini.Numbers("[1 0]*8").ToSignal(bpm: bpm).Slew(rise: 0.003, fall: 0.07);
+            var bass = Saw(bassPitch).LowPass(380, q: 1.2) * pluck * 0.22;
 
             // A narrow pulse lead. A 12% pulse sits far below zero on average; DcBlock re-centres it.
             // Its filter jumps to a new random place every eighth note (Hold) and glides there (Slew).
@@ -262,11 +266,11 @@ public static class Examples
             var echoed = lead.Mix(lead.Delay(beat * 0.75, feedback: 0.4, mix: 1), Sine(0.08).Range(0.2, 0.7));
 
             // Hats: pink noise under a falling ramp (1 minus a rising saw), and a gate that cuts each tail short.
-            var hats = (PinkNoise().HighPass(7000) * (1 - Saw(bpm / 60.0 * 4).Range(0, 1))).Gate(-24, release: 0.01) * 0.3;
+            var hats = (PinkNoise().HighPass(7000) * (1 - Saw(bpm / 60.0 * 4).Range(0, 1))).Gate(-24, release: 0.01) * 0.6;
 
             // Weather: pink wind that rises and falls, brown rumble underneath.
             var wind = PinkNoise(seed: 2).BandPass(Sine(0.05).Range(400, 1400), q: 1.5) * 0.12;
-            var rumble = BrownNoise(seed: 3).LowPass(150) * 0.25;
+            var rumble = BrownNoise(seed: 3).LowPass(120) * 0.12;   // kept low, under the bass
 
             (bass + echoed + hats + wind + rumble).Reverb(decay: 2.5, mix: 0.2).Limit()
             """),
