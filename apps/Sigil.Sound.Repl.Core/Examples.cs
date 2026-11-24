@@ -267,6 +267,12 @@ public static class Examples
                 .Play(v => Square(v.Frequency, width: 0.12).DcBlock().LowPass(cutoff, q: 3).Adsr(0.005, 0.2, 0.3, 0.2), bpm)
                 * 0.25;
 
+            // A pad made by subtraction: one saw minus another a hair sharper is a pulse whose width slowly turns, the hollow,
+            // moving sound of pulse-width modulation, with no LFO. A low-pass and a slow envelope keep it behind everything else.
+            var pad = Mini.Notes("<[a2,c3,e3] [g2,b2,d3] [f2,a2,c3] [e2,g2,b2]>")
+                .Play(v => (Saw(v.Frequency) - Saw(v.Frequency * 1.004)).LowPass(1400).Adsr(0.6, 0.5, 0.8, 1.2), bpm, polyphony: 6)
+                * 0.05;
+
             // Mix: the lead fades between dry and its echo, slowly, back and forth.
             var echoed = lead.Mix(lead.Delay(beat * 0.75, feedback: 0.4, mix: 1), Sine(0.08).Range(0.2, 0.7));
 
@@ -280,7 +286,7 @@ public static class Examples
             var wind = PinkNoise(seed: 2).BandPass(Sine(0.05).Range(400, 1400), q: 1.5) * 0.12;
             var rumble = BrownNoise(seed: 3).LowPass(120) * 0.12;   // kept low, under the bass
 
-            (bass + echoed + hats + wind + rumble).Reverb(decay: 2.5, mix: 0.2).Limit()
+            (bass + pad + echoed + hats + wind + rumble).Reverb(decay: 2.5, mix: 0.2).Limit()
             """),
         new("Edit me while it plays",
             """
