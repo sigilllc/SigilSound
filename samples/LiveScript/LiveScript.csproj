@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A sample, not a package: a Windows console app that plays a Sigil.Sound script file and swaps it in on every save.
+       NAudio is this sample's dependency only; the library has none. Not part of SigilSound.sln, so the solution build and
+       its CI stay free of it: run it with dotnet run and the project path (see README.md). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.WinMM" Version="2.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Sigil.Sound\Sigil.Sound.csproj" />
+    <ProjectReference Include="..\..\src\Sigil.Sound.Notes\Sigil.Sound.Notes.csproj" />
+    <ProjectReference Include="..\..\apps\Sigil.Sound.Repl.Core\Sigil.Sound.Repl.Core.csproj" />
+  </ItemGroup>
+
+  <!-- The script is played, not compiled into the program. -->
+  <ItemGroup>
+    <Compile Remove="script.cs" />
+    <None Include="script.cs" />
+  </ItemGroup>
+</Project>

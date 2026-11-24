@@ -2,6 +2,44 @@
 
 All notable changes to the Sigil.Sound packages. The format follows [Keep a Changelog](https://keepachangelog.com/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0 a minor version may change the public API; [Versioning](docs/articles/versioning.md) says what each number promises.
 
+## Unreleased
+
+Planned as 0.2.0: safe to edit while it plays. Hot swaps that follow each other no longer click, five fixes, twelve new members for signal arithmetic and modulation, and faster rendering that leaves every sample as it was. Nothing is removed or renamed, and a 0.1.x script compiles and sounds the same unless it ran into one of the fixes below.
+
+### Added
+
+- **Subtraction.** `a - b` subtracts one sound from another, sample by sample on each channel; `a - 0.5` and `1 - a` work with a number, a function or a `Control`; `-a` flips the polarity. A sound used on both sides is rendered once. Only an effect that adds no delay cancels this way: `x - x.LowPass(500)` leaves what the filter removed, but `PitchShift` and `Compress` with its lookahead are late.
+- **`Range(min, max)` with parameters for its ends**, so a knob, a function or another sound can set how far an LFO reaches: `Sine(0.25).Range(200, top)`. Plain numbers still choose the existing overload.
+- **`Mix(other, amount)`**: an equal-power crossfade from one sound to another by a parameter (0.5 by default).
+- **`Slew(rise, fall)`**: a glide toward each new value, for portamento, smoothing a stepped control or rounding a square LFO (0.05 s by default; `fall` defaults to `rise`).
+- **`Hold(rate)`**: sample and hold, 8 steps a second by default. With a host clock the steps follow the host's time.
+- **`Gate(thresholdDb, attack, release, sidechain)`**: a noise gate with 4 dB of hysteresis, -40 dB by default, and a sidechain like `Compress`'s.
+- **`DcBlock(cutoff)`**: removes the offset that leaves a wave off centre, such as a narrow pulse's, with a gentle high-pass at 20 Hz.
+- **`PinkNoise(seed)` and `BrownNoise(seed)`**: noise with equal energy per octave, and noise that is mostly lows. Seeded, independent per channel, with peaks near full scale.
+- **`FadeCurve`** on `Slot` and `SoundContext`: `EqualPower` (the default) or `Linear`. A slot that carries a control signal should fade linearly, since two versions of the same signal rise by 3 dB halfway through an equal-power fade.
+
+### Fixed
+
+- **A swap during a crossfade cut off the sound that was fading out**, a click. It happened when Run was pressed twice in quick succession in the REPL, when Play followed Stop within its fade, and when a host swapped twice within one fade. A slot now keeps every sound that is still fading and fades each from the level it had reached; a burst of more than four swaps hurries the quietest out over 2 ms.
+- **`Feedback` changed with the host's block size below 48 frames.** Its loop was a block late instead of the 1 ms its documentation promises, so a host rendering in small blocks heard a different sound. It is now equally late at every block size, so **a host with blocks under 48 frames hears a different (the documented) sound than in 0.1.x**. Hosts with larger blocks, the REPL and the Workbench device among them, hear no change.
+- **`Slot` compiled under its lock when a render first attached to it**, so `Slot.Current` and a swap waited for the whole compile. A swap made during that compile is no longer lost.
+- **A `mix` that was not a number reached the output** in `Delay`, `TapeDelay`, `Reverb`, `FdnReverb`, `Phaser` and `Fold`. It now plays dry.
+- **An empty block threw** `IndexOutOfRangeException` in the filters, `Sample`, and `Sine`, `Saw` and `Square` under a host clock.
+
+### Performance
+
+The output is unchanged to the bit: every example in the API docs, the guides and the REPL was rendered and hashed before and after.
+
+- A `Control` at rest now costs a filter, an EQ band or a vowel filter what a constant does: the coefficients are worked out once per block. A saw through a low-pass on a settled knob went from about 45 to about 31 ns per frame on the development machine (same session, Release). Every knob on a Workbench Sound Script device is such a control.
+- `+`, `*` between sounds, a constant `Gain`, `Range` and the voice pool's mix use vector instructions where the machine has them. A low-pass swept by `Sine(...).Range(...)` went from about 109 to 100 ns per frame and the 16-voice pool from about 460 to 444. In the browser, where the .NET interpreter has no vector instructions, the plain loops run as before.
+
+### Documentation and examples
+
+- Guides for every new member, and a new **Integrations** page: the Sound Script device in Sigilgraph Audio Workbench, the REPL and its Sigilgraph mode, a small live host, and offline rendering.
+- REPL: **Night drive (signal tools)**, which uses all of the new members; **Edit me while it plays** and **Edit me: the beat keeps its place**, written to be changed while they play; and two Sigilgraph examples, **Random steps with glide** and **Noise gate**.
+- `samples/LiveScript`: a Windows console app (NAudio) that plays a script file and swaps it in on every save, with the computer keyboard as a `NoteInput`.
+- A feature request form, a pull request checklist and `CODEOWNERS`.
+
 ## 0.1.1
 
 A patch release for 0.1.0: five fixes, no change to the public API.
