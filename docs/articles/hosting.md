@@ -8,6 +8,8 @@ Sigil.Sound describes sound; an app (a DAW-style host, a game, a notebook) decid
 | "these notes are played live" | notes from a keyboard, MIDI or a game, each with bend, pressure and slide | [Live notes and expression](live-notes.md) |
 | "this sequence follows your clock" | play, pause and stop for it, and a tempo | below |
 
+For the hosts that already run Sigil.Sound (the Sound Script device in Sigilgraph Audio Workbench and the browser REPL), and a small live host to start from, see [Integrations](integrations.md).
+
 ## Controls
 
 A `Control` is a named value a host can change while the sound plays. It also carries what a host needs to draw it: its range, taper, polarity and style. See [Controls](controls.md).

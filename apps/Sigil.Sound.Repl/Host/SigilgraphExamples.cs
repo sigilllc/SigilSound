@@ -37,6 +37,29 @@ internal static class SigilgraphExamples
 
             (In.Audio * gain)   // parentheses: a bare "In.Audio * gain" line reads to C# as a pointer declaration
             """),
+        new("Random steps with glide",
+            """
+            // Sigilgraph: a filter that jumps to a new random cutoff a few times a second (Hold) and glides there (Slew).
+            // Steps sets how often, Glide how smoothly (0 jumps), and Top how high the steps may reach: Range takes a knob
+            // for either end.
+            var steps = Knob("Steps", 4, 0.5, 16, Curve.Log);
+            var glide = Knob("Glide", 0.05, 0, 0.5);
+            var top = Knob("Top", 3000, 400, 12000, Curve.Log);
+
+            var cutoff = Noise().Hold(steps).Slew(glide).Range(200, top);
+            In.Audio.LowPass(cutoff, q: 4) * 0.8
+            """),
+        new("Noise gate",
+            """
+            // Sigilgraph: a gate silences the input while it is quieter than the threshold, which cuts hiss between notes or
+            // chops a reverb tail short. Here a pink noise bed is mixed under the input so you can hear the gate open and close
+            // as the threshold knob moves past the noise's level.
+            var threshold = Knob("Threshold", -30, -60, 0);
+            var release = Knob("Release", 0.05, 0.005, 0.5, Curve.Log);
+
+            var source = In.Audio * 0.6 + PinkNoise() * 0.05;
+            source.Gate(threshold, release: release)
+            """),
         new("Keyboard",
             """
             // Sigilgraph: Poly is the device's note input, so this script copies straight into a Sound Script device.

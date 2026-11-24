@@ -41,6 +41,18 @@ Triangle(165, 0.5).LowPass(2000) * 0.5
 Noise(seed: 7).HighPass(4000) * 0.2
 ```
 
+White noise has the same energy at every frequency, which sounds bright and hissy. Two darker colours sit beside it. `PinkNoise` has the same energy in every octave, so it sounds fuller and softer: the start of wind, surf and rain. `BrownNoise` falls off more steeply still and is mostly lows: rumble, distant thunder, an engine. All three are seeded, and independent on each channel.
+
+```csharp
+// Wind: pink noise through a filter whose cutoff rises and falls every ten seconds.
+PinkNoise().LowPass(Sine(0.1).Range(300, 1500), q: 1.5) * 0.4
+```
+
+```csharp
+// A low rumble.
+BrownNoise() * 0.5
+```
+
 ```csharp
 // A flat level of a quarter of full scale. Any sound can be offset by a constant.
 Constant(0.25)

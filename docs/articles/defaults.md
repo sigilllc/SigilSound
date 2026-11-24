@@ -31,13 +31,17 @@ Saw(110).LowPass(q: 4).Delay(feedback: 0.6) * 0.3
 | Method | Default |
 | --- | --- |
 | `Sine`, `Saw`, `Square`, `Triangle` | `frequency` 440 Hz (A4). `Square` `width` 0.5, `Triangle` `skew` 0.5 |
-| `Noise` | `seed` 1 |
+| `Noise`, `PinkNoise`, `BrownNoise` | `seed` 1 |
 
 ### Shaping, filters and tone
 
 | Method | Default |
 | --- | --- |
 | `Range` | `min` 0, `max` 1: a bipolar LFO becomes a 0 to 1 control |
+| `Mix` | `amount` 0.5, both sounds at once (equal-power) |
+| `Slew` | `rise` 0.05 s, `fall` the same as `rise` |
+| `Hold` | `rate` 8 steps a second |
+| `DcBlock` | `cutoff` 20 Hz |
 | `Adsr` | `attack` 0.01, `decay` 0.1, `sustain` 0.7, `release` 0.3, no `hold` (it follows the note, or sustains) |
 | `LowPass` | `cutoff` 1000 Hz, `q` 0.7071 |
 | `HighPass` | `cutoff` 100 Hz, `q` 0.7071 |
@@ -75,6 +79,7 @@ Peak and the shelves default to a boost so that calling them with nothing change
 | `Compress` | `thresholdDb` -18, `ratio` 4, `attack` 0.01 s, `release` 0.1 s, `kneeDb` 6, no makeup gain, lookahead 3 ms, keyed by itself |
 | `Limit` | `ceiling` 0.95, `release` 0.08 s |
 | `FollowEnvelope` | `attack` 0.01 s, `release` 0.1 s |
+| `Gate` | `thresholdDb` -40, `attack` 0.001 s, `release` 0.05 s, keyed by itself |
 
 ### Notes
 
@@ -89,6 +94,7 @@ A few parameters have no default because there is nothing sensible to default to
 
 - **What the sound is made from:** `Fn(function)`, `Constant(value)`, `Sample(buffer)`, `Convolve(impulse)`, `Through(wrap)`, `Feedback(loop)` and `Sound.FromOperator(factory)`.
 - **A level or a side:** `Gain(gain)`, `Pan(position)` and `Balance(position)`. The neutral value does nothing, and any other is a guess.
+- **The other sound:** `Mix(other)` fades to a sound you name. `Range(min, max)` with parameters for its ends has no defaults either; `Range()` with no arguments picks the overload that takes numbers, which does.
 
 A test lists these. Adding a method that forces a parameter on the user, without a documented reason, fails the build.
 

@@ -240,6 +240,57 @@ public static class Examples
                 .Limit()                                    // the overlapping chords add up: keep them under full scale
                 * 0.9
             """),
+        new("Night drive (signal tools)",
+            """
+            // Built from the signal tools: Slew (glide), Hold (sample and hold), Gate, Mix, DcBlock,
+            // pink and brown noise, and subtraction. Each line says which one it uses.
+            var bpm = 96;
+            var beat = 60.0 / bpm;
+
+            // A bass that glides between its notes: a stepped line of frequencies, slewed.
+            var bassPitch = Mini.Numbers("55 55 65.41 49 55 73.42 65.41 49").ToSignal(bpm: bpm).Slew(0.06);
+            var bass = Saw(bassPitch).LowPass(500, q: 2) * 0.35;
+
+            // A narrow pulse lead. A 12% pulse sits far below zero on average; DcBlock re-centres it.
+            // Its filter jumps to a new random place every eighth note (Hold) and glides there (Slew).
+            var cutoff = Noise(seed: 5).Hold(bpm / 60.0 * 2).Slew(0.05).Range(700, 3800);
+            var lead = Mini.Notes("<[a3 c4 e4 ~] [g3 b3 d4 ~] [f3 a3 c4 e4] [e3 g3 b3 ~]>")
+                .Play(v => Square(v.Frequency, width: 0.12).DcBlock().LowPass(cutoff, q: 3).Adsr(0.005, 0.2, 0.3, 0.2), bpm)
+                * 0.25;
+
+            // Mix: the lead fades between dry and its echo, slowly, back and forth.
+            var echoed = lead.Mix(lead.Delay(beat * 0.75, feedback: 0.4, mix: 1), Sine(0.08).Range(0.2, 0.7));
+
+            // Hats: pink noise under a falling ramp (1 minus a rising saw), and a gate that cuts each tail short.
+            var hats = (PinkNoise().HighPass(7000) * (1 - Saw(bpm / 60.0 * 4).Range(0, 1))).Gate(-24, release: 0.01) * 0.3;
+
+            // Weather: pink wind that rises and falls, brown rumble underneath.
+            var wind = PinkNoise(seed: 2).BandPass(Sine(0.05).Range(400, 1400), q: 1.5) * 0.12;
+            var rumble = BrownNoise(seed: 3).LowPass(150) * 0.25;
+
+            (bass + echoed + hats + wind + rumble).Reverb(decay: 2.5, mix: 0.2).Limit()
+            """),
+        new("Edit me while it plays",
+            """
+            // Press Ctrl+Enter, then change a number and press it again while it plays: the new version fades in
+            // over the old one. Press it as fast as you like; a swap during a fade starts from where the fade got to.
+            //
+            // Try: 110 to 82.4, q: 6 to 12, 0.25 (the sweep's speed) to 2, or Saw to Square.
+            Saw(110).LowPass(Sine(0.25).Range(300, 2400), q: 6) * 0.3
+            """),
+        new("Edit me: the beat keeps its place",
+            """
+            // A pattern without its own tempo follows the page's clock, so editing it keeps it on the beat:
+            // change the notes, the filter or the drums and press Ctrl+Enter, and the new version carries on
+            // from the same step instead of starting again.
+            //
+            // Try: "c3 eb3 g3 bb3" to "c3 f3 ab3 c4", or LowPass(1800) to LowPass(900).
+            var line = Mini.Notes("c3 eb3 g3 bb3 g3 eb3")
+                .Play(v => Saw(v.Frequency).LowPass(1800).Adsr(0.005, 0.15, 0.2, 0.1));
+            var kick = Mini.Drums("bd ~ bd ~")
+                .Play(v => Sine(55 + 90 * (1 - Fn(t => Math.Min(1, t * 25)))).Adsr(0.001, 0.25, 0, 0.05));   // a pitch drop, 90 Hz in 40 ms
+            (line * 0.25 + kick * 0.5).Limit()
+            """),
         new("Pattern groove",
             """
             // Patterns written as text. One cycle is 4 beats; the steps of a sequence share it equally:

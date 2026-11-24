@@ -29,6 +29,23 @@ Two sounds multiply sample by sample, which is ring modulation. The result has s
 Sine(220) * Sine(33) * 0.6
 ```
 
+`-` subtracts one sound from another, sample by sample, and `-x` turns a sound upside down. Subtracting a filtered copy leaves what the filter took away. A sound used on both sides is rendered once.
+
+```csharp
+// The saw minus its own lows: what is left is the top end the low-pass removed.
+var saw = Saw(110);
+(saw - saw.LowPass(500)) * 0.4
+```
+
+Only an effect that adds no delay cancels this way. `PitchShift` and `Compress` with its lookahead come out a little late, so subtracting them gives a comb filter rather than silence.
+
+`Mix(other, amount)` crossfades from one sound to another, keeping the loudness steady: 0 is this sound, 1 is the other, and the amount can be a knob or an LFO.
+
+```csharp
+// Fades between a saw and a square an octave up, once every two seconds.
+Saw(110).Mix(Square(220), Sine(0.5).Range(0, 1)) * 0.3
+```
+
 ## Envelopes
 
 `Adsr(attack, decay, sustain, release, hold)` shapes a sound's level over time. `hold` sets how long the note stays open when no note is playing. Times are in seconds.
@@ -75,6 +92,13 @@ Saw(110).Peak(1000, q: 3, gainDb: 9) * 0.3
 ```csharp
 // Two loud saws, mixed and kept under the ceiling.
 (Saw(110) + Saw(111.5)).Limit() * 0.8
+```
+
+`DcBlock()` removes a constant offset (DC) that leaves a wave off centre. A narrow pulse, a wavefolder, asymmetric distortion or a subtraction can all leave one, and it wastes headroom and makes a click when the sound stops. It is a gentle high-pass at 20 Hz, so nothing you can hear changes.
+
+```csharp
+// A pulse with a 10% duty cycle averages -0.8, far below zero. DcBlock re-centres it, so it has room to be louder.
+Square(110, width: 0.1).DcBlock() * 0.4
 ```
 
 `Range(min, max)` also maps a sound's -1 to 1 into a new span, which is how controls and LFOs are scaled. See [Parameters](parameters.md).

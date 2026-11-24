@@ -191,3 +191,18 @@ var pad = (Triangle(110) + Triangle(165) + Triangle(220)).LowPass(900);
 
 (pad.Compress(thresholdDb: -20, ratio: 8, attack: 0.002, release: 0.25, sidechain: kick) * 0.3 + kick * 0.6)
 ```
+
+`Gate(thresholdDb)` silences a sound while it is quieter than the threshold: it cuts the noise between hits, the hiss under a held note, or the tail of a reverb for the gated-reverb sound of the 1980s. It closes 4 dB below the threshold, so a level that hovers there does not chatter. Like `Compress` it can be keyed by another sound.
+
+```csharp
+// A gated reverb: a big room on a snare-like burst, chopped off short by the gate.
+var hit = (Noise() * Fn(t => Exp(-(t % 0.5) * 30))).BandPass(1800, q: 0.8);
+hit.Reverb(size: 1.5, decay: 3, mix: 0.5).Gate(-30, release: 0.03) * 0.5
+```
+
+```csharp
+// A pad chopped into a rhythm by a sidechain: the gate opens only while the key pattern is up.
+var pad = (Triangle(110) + Triangle(165) + Triangle(220)).LowPass(1200) * 0.3;
+var key = Square(4).Range(0, 1) * Sine(1000);
+pad.Gate(-20, sidechain: key)
+```

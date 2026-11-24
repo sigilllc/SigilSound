@@ -74,3 +74,19 @@ slot.Swap(Saw(165) * 0.4, fadeSeconds: 0.2);
 ```
 
 Use a slot when a graph is built once but its contents should change while it runs, for example a live-coding host.
+
+Swaps can follow each other as fast as you like. A swap made while an earlier one is still fading starts a new fade from wherever the sounds have got to, so nothing is cut off part of the way out, and pressing Run twice in quick succession, or Play just after Stop, does not click.
+
+The crossfade is equal-power by default, which keeps the loudness steady when the old and the new sound are unrelated, as a freshly compiled sound usually is. A slot that carries a control signal (a filter sweep, a level) should fade linearly instead, because two versions of the same signal would rise by 3 dB halfway through an equal-power fade:
+
+```csharp
+using static Sigil.Sound.Sounds;
+using Sigil.Sound;
+
+var sweep = new Slot(Sine(0.25).Range(400, 2000)) { FadeCurve = FadeCurve.Linear };
+var patch = Saw(110).LowPass(sweep.Sound) * 0.4;
+
+sweep.Swap(Sine(0.5).Range(300, 3000));   // the cutoff moves to the new sweep without a bump
+```
+
+`SoundContext` has the same `FadeCurve` property, for an output that carries a control signal.
