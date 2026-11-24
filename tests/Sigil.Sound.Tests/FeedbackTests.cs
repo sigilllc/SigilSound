@@ -143,12 +143,46 @@ public class FeedbackTests
     }
 
     [Fact]
-    public void It_works_in_a_context_with_a_small_block_size()
+    public void A_small_block_size_does_not_shorten_the_loop()
     {
-        var audio = Impulse().Feedback(loop => loop * 0.5).Render(0.01, Rate, blockSize: 16);
+        // 1 ms at 48 kHz is 48 frames, whatever the host's block: the echo lands at frame 48 even with 16-frame blocks.
+        var samples = Impulse().Feedback(loop => loop * 0.5).Render(0.01, Rate, blockSize: 16).ToMono();
 
-        AudioAssert.IsFinite(audio);
-        Assert.Equal(0.5f, audio.ToMono()[16], 4); // the chunk cannot exceed the block, so it is 16 frames here
+        Assert.Equal(0f, samples[16], 4);
+        Assert.Equal(0.5f, samples[48], 4);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(7)]
+    [InlineData(37)]
+    [InlineData(48)]
+    [InlineData(100)]
+    public void The_sound_is_the_same_at_every_block_size(int blockSize)
+    {
+        var source = Saw(110) * Square(2).Range(0, 1);
+        Sound Patch() => source.Feedback(loop => loop.Delay(0.01, mix: 1).LowPass(3000) * 0.5);
+
+        var reference = Patch().Render(0.5, Rate, blockSize: 256).ToMono();
+        var other = Patch().Render(0.5, Rate, blockSize).ToMono();
+
+        for (int i = 0; i < reference.Length; i++)
+            Assert.Equal(reference[i], other[i], 5);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(37)]
+    public void A_sound_shared_with_the_loop_is_the_same_at_small_block_sizes(int blockSize)
+    {
+        var source = Saw(110) * Square(2).Range(0, 1);
+        Sound Patch() => source.Feedback(loop => loop * 0.3) + source;
+
+        var reference = Patch().Render(0.5, Rate, blockSize: 256).ToMono();
+        var other = Patch().Render(0.5, Rate, blockSize).ToMono();
+
+        for (int i = 0; i < reference.Length; i++)
+            Assert.Equal(reference[i], other[i], 5);
     }
 
     [Fact]

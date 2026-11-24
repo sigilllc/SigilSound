@@ -60,6 +60,24 @@ public static class Sounds
         Sound.FromOperator(_ => new NoiseOperator(seed), "Noise()");
 
     /// <summary>
+    /// Pink noise: equal energy in every octave, so it sounds softer and fuller than white noise. Wind, surf, rain and
+    /// natural-sounding textures start here. Independent per channel; the same <paramref name="seed"/> renders the same noise.
+    /// </summary>
+    /// <param name="seed">Starting value of the generator; change it for different noise. Defaults to 1.</param>
+    /// <example><code>PinkNoise().LowPass(Sine(0.1).Range(300, 1500)) * 0.4   // wind</code></example>
+    public static Sound PinkNoise(int seed = 1) =>
+        Sound.FromOperator(_ => new PinkNoiseOperator(seed), "PinkNoise()");
+
+    /// <summary>
+    /// Brown noise: energy falling steeply with frequency, mostly lows. Rumble, distant thunder, engines, and, slowed right down,
+    /// a random modulation that drifts. Independent per channel; the same <paramref name="seed"/> renders the same noise.
+    /// </summary>
+    /// <param name="seed">Starting value of the generator; change it for different noise. Defaults to 1.</param>
+    /// <example><code>BrownNoise() * 0.5   // a low rumble</code></example>
+    public static Sound BrownNoise(int seed = 1) =>
+        Sound.FromOperator(_ => new BrownNoiseOperator(seed), "BrownNoise()");
+
+    /// <summary>
     /// Plays a recorded or rendered sample, such as a drum hit or a loop. Speed sets the pitch: 2 is an octave up and 0.5 an
     /// octave down. A negative speed plays backward: a one-shot starts at its last frame and runs back to its first. Blending
     /// between frames keeps fractional speeds smooth.

@@ -185,23 +185,13 @@ internal sealed class VoicePool : IDisposable
         }
     }
 
-    // The common case, one pass over the interleaved floats. Every voice runs this for every frame, and in the browser
-    // the .NET interpreter pays for each call and struct copy, so it does plain float arithmetic with no helper calls.
+    // The common case, one pass over the interleaved floats, in vectors where the machine has them. It is one call per voice
+    // per block, so in the browser, where the .NET interpreter pays for every call, the loop inside still runs as plain floats.
     private static float MixSteady(float velocity, Span<StereoFrame> source, Span<StereoFrame> segment)
     {
         var from = System.Runtime.InteropServices.MemoryMarshal.Cast<StereoFrame, float>(source);
         var to = System.Runtime.InteropServices.MemoryMarshal.Cast<StereoFrame, float>(segment);
-        float peak = 0;
-        for (int i = 0; i < to.Length; i++)
-        {
-            float value = from[i] * velocity;
-            to[i] += value;
-            float magnitude = value < 0 ? -value : value;
-            if (magnitude > peak)
-                peak = magnitude;
-        }
-
-        return peak;
+        return Sigil.Sound.Operators.Vectors.AddScaledPeak(to, from, velocity);
     }
 
     private static float MixFading(VoiceSlot voice, Span<StereoFrame> source, Span<StereoFrame> segment)

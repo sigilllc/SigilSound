@@ -3,10 +3,14 @@ namespace Sigil.Sound.Operators;
 /// <summary>Small helpers shared by the effect operators.</summary>
 internal static class Dsp
 {
-    /// <summary>Crossfades from <paramref name="dry"/> (mix 0) to <paramref name="wet"/> (mix 1).</summary>
+    /// <summary>Crossfades from <paramref name="dry"/> (mix 0) to <paramref name="wet"/> (mix 1). A mix that is not a number is dry.</summary>
     public static StereoFrame Blend(StereoFrame dry, StereoFrame wet, float mix)
     {
-        mix = Math.Clamp(mix, 0f, 1f);
+        // The same as Math.Clamp(mix, 0, 1), except that NaN, which Clamp passes through, becomes 0.
+        if (!(mix >= 0f))
+            mix = 0f;
+        else if (mix > 1f)
+            mix = 1f;
         return dry * (1f - mix) + wet * mix;
     }
 

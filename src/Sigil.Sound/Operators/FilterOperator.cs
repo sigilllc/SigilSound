@@ -59,13 +59,15 @@ internal sealed class FilterOperator : IOperator, IResettable
     public void RenderBlock(Span<StereoFrame> block)
     {
         _input.RenderBlock(block);
+        if (block.Length == 0)
+            return;
         var cutoff = _cutoff.Next(block.Length);
         var q = _q.Next(block.Length);
 
         // The sample loop is written out in one piece, with the filter state in locals: a voice runs it for every
         // frame, and where the .NET interpreter runs (the browser) each call and ref argument is a large part of the cost.
         // A fixed cutoff and Q (the usual case) are applied once per block instead of tested for every frame.
-        bool fixedCoefficients = _cutoff.IsConstant && _q.IsConstant;
+        bool fixedCoefficients = _cutoff.IsFlat && _q.IsFlat;
         if (fixedCoefficients)
             UpdateCoefficients(Dsp.Finite(cutoff[0], 1000f), Dsp.Finite(q[0], 0.7071f));
 

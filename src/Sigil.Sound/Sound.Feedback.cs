@@ -40,10 +40,13 @@ public sealed partial class Sound
 
         return new(ctx =>
         {
-            int chunk = Math.Clamp((int)Math.Round(ctx.SampleRate * latencySeconds), 1, ctx.BlockSize);
+            // The chunk is set by the latency alone, never by the host's block, so the loop is equally late in every host. The input
+            // and the loop render a whole chunk at once, so they are compiled for blocks at least that long.
+            int chunk = Math.Max(1, (int)Math.Round(ctx.SampleRate * latencySeconds));
+            var inner = chunk > ctx.BlockSize ? ctx with { BlockSize = chunk } : ctx;
             var tap = new FeedbackTap(chunk);
             var returned = loop(FromOperator(_ => tap, "Feedback")) ?? throw new InvalidOperationException("The feedback loop returned null.");
-            return new FeedbackOperator(Compile(ctx), returned.Compile(ctx), tap);
+            return new FeedbackOperator(Compile(inner), returned.Compile(inner), tap);
         }, $"{this}.Feedback(...)");
     }
 }

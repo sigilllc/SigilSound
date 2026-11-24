@@ -5,11 +5,13 @@ namespace Sigil.Sound;
 /// <summary>
 /// A hot-swappable place in a chain. <see cref="Sound"/> can go anywhere a sound goes;
 /// <see cref="Swap"/> replaces what plays there in every running render, with a short
-/// equal-power crossfade so the change doesn't click.
+/// crossfade so the change doesn't click.
 /// </summary>
 /// <remarks>
 /// <see cref="Swap"/> compiles the new sound on the calling thread, never on the audio thread,
 /// and hands it over with an atomic exchange that the audio thread picks up on its next block.
+/// A swap made while an earlier one is still fading starts a new fade from where the sounds have got to,
+/// so swaps can follow each other as fast as you like without a click.
 /// Replaced operators that implement <see cref="IDisposable"/> are disposed on a later
 /// <see cref="Swap"/> call, once the audio thread has let go of them.
 /// </remarks>
@@ -32,6 +34,9 @@ public sealed class Slot
     private readonly object _swapGate = new();
     private readonly List<WeakReference<SlotOperator>> _instances = [];
     private Sound _current;
+
+    // Counts the swaps, so a running render that hears about two of them out of order plays the later one.
+    private long _version;
 
     // One timer per slot, re-armed by each swap, instead of a task and closure per swap per running render.
     private Timer? _cleanup;
@@ -62,6 +67,19 @@ public sealed class Slot
     public double FadeSeconds { get; }
 
     /// <summary>
+    /// The shape of the crossfade the next swaps make: <see cref="FadeCurve.EqualPower"/> (the default) for audio,
+    /// <see cref="FadeCurve.Linear"/> for a slot that carries a control signal, so its level does not swell during a swap.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// // A slot that holds a modulation signal: a linear fade keeps its level steady while it is swapped.
+    /// var sweep = new Slot(Sine(0.5).Range(400, 2000)) { FadeCurve = FadeCurve.Linear };
+    /// Saw(110).LowPass(sweep.Sound) * 0.4
+    /// </code>
+    /// </example>
+    public FadeCurve FadeCurve { get; set; }
+
+    /// <summary>
     /// Replaces the slot's sound in every running render, crossfading over <paramref name="fadeSeconds"/>
     /// (default <see cref="FadeSeconds"/>; zero swaps on the next block without a fade).
     /// Compiles on the calling thread; safe to call while another thread renders.
@@ -74,13 +92,16 @@ public sealed class Slot
 
         // One swap at a time, so two swaps from two threads land in the order they took their turn. This lock is held while
         // compiling; the gate below never is, so asking the slot what it plays does not wait for a long compile.
+        var curve = FadeCurve;
         lock (_swapGate)
         {
             List<SlotOperator> running = [];
+            long version;
             lock (_gate)
             {
                 // A sound attached from here on compiles the new sound itself, and one attached before is in the list.
                 _current = next;
+                version = ++_version;
                 for (int i = _instances.Count - 1; i >= 0; i--)
                 {
                     if (_instances[i].TryGetTarget(out var instance))
@@ -94,7 +115,7 @@ public sealed class Slot
             {
                 instance.DisposeRetired();
                 var op = next.Compile(instance.Context);
-                instance.Post(op, (int)Math.Round(fade * instance.Context.SampleRate));
+                instance.Post(op, (int)Math.Round(fade * instance.Context.SampleRate), curve, version);
             }
 
             lock (_gate)
@@ -113,14 +134,34 @@ public sealed class Slot
 
     private SlotOperator Attach(RenderContext context)
     {
+        // Each slot instance is its own compile root, so retiring it disposes exactly what it built.
+        var own = context with { Scope = null };
+
+        // Compile outside the gate, so asking the slot what it plays never waits for this compile.
+        Sound sound;
+        long version;
         lock (_gate)
         {
-            // Each slot instance is its own compile root, so retiring it disposes exactly what it built.
-            var own = context with { Scope = null };
-            var instance = new SlotOperator(_current.Compile(own), own);
-            _instances.Add(new WeakReference<SlotOperator>(instance));
-            return instance;
+            sound = _current;
+            version = _version;
         }
+
+        var instance = new SlotOperator(sound.Compile(own), version, own);
+
+        // A swap made during the compile did not know about this instance, so catch up with it here. A swap after this point
+        // finds the instance in the list, and the versions keep the later sound if the two arrive out of order.
+        Sound latest;
+        long latestVersion;
+        lock (_gate)
+        {
+            _instances.Add(new WeakReference<SlotOperator>(instance));
+            latest = _current;
+            latestVersion = _version;
+        }
+
+        if (latestVersion != version)
+            instance.Post(latest.Compile(own), (int)Math.Round(FadeSeconds * own.SampleRate), FadeCurve, latestVersion);
+        return instance;
     }
 
     // Once the crossfade is over the audio thread has retired the old sound; dispose it then, rather than

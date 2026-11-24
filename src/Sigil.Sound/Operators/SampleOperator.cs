@@ -54,6 +54,8 @@ internal sealed class SampleOperator : IOperator, IResettable
 
     public void RenderBlock(Span<StereoFrame> block)
     {
+        if (block.Length == 0)
+            return;
         var speed = _speed.Next(block.Length);
 
         // A one-shot played backward starts at its last frame and runs toward its first. A loop or ping-pong needs no

@@ -70,7 +70,7 @@ internal sealed class EqualizerOperator : IOperator, IResettable
 
         // Fixed settings need their coefficients worked out once per block. A modulated setting is followed frame by
         // frame, so a sweep of the band is heard as a sweep rather than as steps one block long.
-        bool fixedCoefficients = _frequency.IsConstant && _q.IsConstant && _gainDb.IsConstant;
+        bool fixedCoefficients = _frequency.IsFlat && _q.IsFlat && _gainDb.IsFlat;
         if (fixedCoefficients)
             UpdateCoefficients(Dsp.Finite(frequency[0], 1000f), Dsp.Finite(q[0], 0.7071f), Dsp.Finite(gainDb[0], 0f));
 

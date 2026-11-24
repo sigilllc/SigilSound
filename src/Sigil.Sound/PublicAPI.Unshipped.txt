@@ -1,1 +1,20 @@
 #nullable enable
+Sigil.Sound.FadeCurve
+Sigil.Sound.FadeCurve.EqualPower = 0 -> Sigil.Sound.FadeCurve
+Sigil.Sound.FadeCurve.Linear = 1 -> Sigil.Sound.FadeCurve
+Sigil.Sound.Slot.FadeCurve.get -> Sigil.Sound.FadeCurve
+Sigil.Sound.Slot.FadeCurve.set -> void
+Sigil.Sound.SoundContext.FadeCurve.get -> Sigil.Sound.FadeCurve
+Sigil.Sound.SoundContext.FadeCurve.set -> void
+Sigil.Sound.Sound.DcBlock(Sigil.Sound.Param? cutoff = null) -> Sigil.Sound.Sound!
+Sigil.Sound.Sound.Gate(Sigil.Sound.Param? thresholdDb = null, Sigil.Sound.Param? attack = null, Sigil.Sound.Param? release = null, Sigil.Sound.Sound? sidechain = null) -> Sigil.Sound.Sound!
+Sigil.Sound.Sound.Hold(Sigil.Sound.Param? rate = null) -> Sigil.Sound.Sound!
+Sigil.Sound.Sound.Mix(Sigil.Sound.Sound! other, Sigil.Sound.Param? amount = null) -> Sigil.Sound.Sound!
+Sigil.Sound.Sound.Range(Sigil.Sound.Param min, Sigil.Sound.Param max) -> Sigil.Sound.Sound!
+Sigil.Sound.Sound.Slew(Sigil.Sound.Param? rise = null, Sigil.Sound.Param? fall = null) -> Sigil.Sound.Sound!
+static Sigil.Sound.Sound.operator -(Sigil.Sound.Param offset, Sigil.Sound.Sound! a) -> Sigil.Sound.Sound!
+static Sigil.Sound.Sound.operator -(Sigil.Sound.Sound! a) -> Sigil.Sound.Sound!
+static Sigil.Sound.Sound.operator -(Sigil.Sound.Sound! a, Sigil.Sound.Param offset) -> Sigil.Sound.Sound!
+static Sigil.Sound.Sound.operator -(Sigil.Sound.Sound! a, Sigil.Sound.Sound! b) -> Sigil.Sound.Sound!
+static Sigil.Sound.Sounds.BrownNoise(int seed = 1) -> Sigil.Sound.Sound!
+static Sigil.Sound.Sounds.PinkNoise(int seed = 1) -> Sigil.Sound.Sound!

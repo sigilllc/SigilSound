@@ -361,6 +361,7 @@ internal sealed class ControlParamSource : ParamSource
         {
             _current = target;
             values.Fill(_map is { } m ? m.Apply(target) : target);
+            Flat = true;
             return;
         }
 

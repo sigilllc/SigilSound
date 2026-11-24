@@ -55,6 +55,16 @@ public sealed class SoundContext : IDisposable
     /// <summary>Seconds rendered since this output was created.</summary>
     public double Time => (double)FramesRendered / RenderContext.SampleRate;
 
+    /// <summary>
+    /// The shape of the crossfade <see cref="Play"/> and <see cref="Stop"/> make: <see cref="FadeCurve.EqualPower"/> (the default)
+    /// for audio, <see cref="FadeCurve.Linear"/> for an output that carries a control signal.
+    /// </summary>
+    public FadeCurve FadeCurve
+    {
+        get => _slot.FadeCurve;
+        set => _slot.FadeCurve = value;
+    }
+
     /// <summary>Crossfades from whatever is playing to <paramref name="sound"/>.</summary>
     public void Play(Sound sound, double? fadeSeconds = null) => _slot.Swap(sound, fadeSeconds);
 

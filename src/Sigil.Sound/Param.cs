@@ -84,9 +84,19 @@ public abstract class ParamSource
         if ((uint)count > (uint)_buffer.Length)
             throw new ArgumentOutOfRangeException(nameof(count), count, "Count exceeds the render context block size.");
         var span = _buffer.AsSpan(0, count);
+        Flat = false;
         Fill(span);
         return span;
     }
+
+    /// <summary>
+    /// True when every value of the last <see cref="Next"/> was the same: always for a constant, and for a control at rest. An
+    /// operator can then work out what depends on the value once for the block instead of once per frame.
+    /// </summary>
+    internal bool IsFlat => IsConstant || Flat;
+
+    /// <summary>Set by <see cref="Fill"/> when it wrote one value to the whole block.</summary>
+    private protected bool Flat { get; set; }
 
     /// <summary>Returns to the state just after compiling, so a time function starts again at zero.</summary>
     internal virtual void Reset()

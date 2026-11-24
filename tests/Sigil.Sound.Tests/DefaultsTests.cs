@@ -125,6 +125,9 @@ public class DefaultsTests
         "Sound.Gain(gain)",                              // 1 does nothing and any other level is a guess
         "Sound.Pan(position)",                           // centre does nothing and any side is a guess
         "Sound.Balance(position)",                       // the same
+        "Sound.Range(min)",                              // the overload whose ends move; Range() with no arguments picks the one that takes numbers
+        "Sound.Range(max)",                              // the same
+        "Sound.Mix(other)",                              // the sound to fade to is the effect
         "Sound.Feedback(loop)",                          // the loop is the effect
         "Sound.Convolve(impulse)",                       // there is no default impulse response
         "Sound.Adsr(attack)",                            // the overload that takes sounds; Adsr() with no arguments picks the all-default one that takes numbers

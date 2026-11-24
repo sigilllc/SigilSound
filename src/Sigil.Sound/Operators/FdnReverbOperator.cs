@@ -100,6 +100,9 @@ internal sealed class FdnReverbOperator : IOperator, IResettable
         var mix = _mix.Next(block.Length);
         float damping = _damping;
 
+        // No sheen, and none to come (the default): the octave shifter would only be multiplied by zero, so it is not run.
+        bool noSheen = _sheen.IsConstant && !(Math.Clamp(Dsp.Finite(sheen[0], 0f), 0f, MaxSheen) > 0f);
+
         for (int i = 0; i < block.Length; i++)
         {
             var dry = block[i];
@@ -137,6 +140,12 @@ internal sealed class FdnReverbOperator : IOperator, IResettable
 
             // Sheen mixes in an octave-up copy of the tail. It is taken from the output, not from inside the loop: a shifter
             // with gain near one inside a loop of gain near one grows without bound, so a feed-forward layer is the stable choice.
+            if (noSheen)
+            {
+                block[i] = Dsp.Blend(dry, new StereoFrame(left + 0f, right + 0f), mix[i]);
+                continue;
+            }
+
             float share = Math.Clamp(Dsp.Finite(sheen[i], 0f), 0f, MaxSheen);
             _tail[0] = left;
             _tail[1] = right;

@@ -117,8 +117,12 @@ public sealed partial class Sound
     /// <param name="min">The value the signal's -1 maps to. Defaults to 0.</param>
     /// <param name="max">The value the signal's +1 maps to. Defaults to 1, so with no arguments an LFO becomes a 0 to 1 control.</param>
     /// <example><code>Sine(0.25).Range(200, 2000)   // sweeps between 200 and 2000, four seconds per cycle</code></example>
+    // RS0027 asks that the overload with optional parameters have the most parameters. Range(Param, Param) has as many, and this one
+    // keeps its defaults so that Range() still makes a 0 to 1 control. Part of the overload review before 1.0, with the RS0026 groups.
+#pragma warning disable RS0027
     public Sound Range(double min = 0, double max = 1) =>
         new(ctx => new RangeOperator(Compile(ctx), (float)min, (float)max), $"{this}.Range({min}, {max})");
+#pragma warning restore RS0027
 
     /// <summary>
     /// Shapes the amplitude with an attack-decay-sustain-release envelope. Times are in seconds.

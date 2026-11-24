@@ -27,6 +27,8 @@ internal sealed class SineOperator : IOperator, IResettable
 
     public void RenderBlock(Span<StereoFrame> block)
     {
+        if (block.Length == 0)
+            return;
         var frequency = _frequency.Next(block.Length);
         if (!_synced)
         {
@@ -74,6 +76,8 @@ internal sealed class SawOperator : IOperator, IResettable
 
     public void RenderBlock(Span<StereoFrame> block)
     {
+        if (block.Length == 0)
+            return;
         var frequency = _frequency.Next(block.Length);
         if (!_synced)
         {
@@ -158,6 +162,8 @@ internal sealed class SquareOperator : IOperator, IResettable
 
     public void RenderBlock(Span<StereoFrame> block)
     {
+        if (block.Length == 0)
+            return;
         var frequency = _frequency.Next(block.Length);
         var width = _width.Next(block.Length);
         if (!_synced)

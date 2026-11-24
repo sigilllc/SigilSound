@@ -88,7 +88,7 @@ internal sealed class VowelFilterOperator : IOperator, IResettable
         var resonance = _resonance.Next(block.Length);
 
         // A fixed vowel is set up once per block. A moving one is followed frame by frame, so a morph sounds continuous.
-        bool fixedCoefficients = _vowel.IsConstant && _resonance.IsConstant;
+        bool fixedCoefficients = _vowel.IsFlat && _resonance.IsFlat;
         if (fixedCoefficients)
             UpdateCoefficients(Dsp.Finite(vowel[0], 0f), Dsp.Finite(resonance[0], 0.5f));
 

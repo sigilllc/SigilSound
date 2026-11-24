@@ -22,6 +22,12 @@ internal sealed class GainOperator : IOperator, IResettable
     {
         _input.RenderBlock(block);
         var gain = _gain.Next(block.Length);
+        if (_gain.IsFlat && block.Length > 0)
+        {
+            Vectors.Scale(block, gain[0]);
+            return;
+        }
+
         for (int i = 0; i < block.Length; i++)
             block[i] *= gain[i];
     }
@@ -52,8 +58,7 @@ internal sealed class MixOperator : IOperator, IResettable
         _a.RenderBlock(block);
         var other = _scratch.AsSpan(0, block.Length);
         _b.RenderBlock(other);
-        for (int i = 0; i < block.Length; i++)
-            block[i] += other[i];
+        Vectors.Add(block, other);
     }
 }
 
@@ -82,8 +87,7 @@ internal sealed class MultiplyOperator : IOperator, IResettable
         _a.RenderBlock(block);
         var other = _scratch.AsSpan(0, block.Length);
         _b.RenderBlock(other);
-        for (int i = 0; i < block.Length; i++)
-            block[i] = new StereoFrame(block[i].Left * other[i].Left, block[i].Right * other[i].Right);
+        Vectors.Multiply(block, other);
     }
 }
 
@@ -95,12 +99,7 @@ internal sealed class RangeOperator(IOperator input, float min, float max) : IOp
     public void RenderBlock(Span<StereoFrame> block)
     {
         input.RenderBlock(block);
-        float half = 0.5f * (max - min);
-        for (int i = 0; i < block.Length; i++)
-        {
-            var f = block[i];
-            block[i] = new StereoFrame(min + (f.Left + 1.0f) * half, min + (f.Right + 1.0f) * half);
-        }
+        Vectors.Range(block, min, 0.5f * (max - min));
     }
 }
 
