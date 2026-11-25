@@ -1,6 +1,6 @@
 # A whole piece: Night drive
 
-The other guides show one idea at a time. This one builds a short groove from start to finish, a part at a time, so you can hear how the pieces fit: drums, a bass, a pad and a lead on four chords (A minor, G, F, E minor) at 96 beats a minute. It is also the example the REPL opens with.
+The other guides show one idea at a time. This one builds a short groove from start to finish, a part at a time, so you can hear how the pieces fit: drums, a bass, a pad and a lead on four chords (A minor, G, F, E minor) at 96 beats a minute. It is also one of the REPL's examples: pick Night drive in the menu.
 
 Every part below plays on its own. Open it in the REPL, change it, and press Ctrl+Enter to hear the change.
 
@@ -78,11 +78,9 @@ lead.Mix(lead.Delay(60.0 / 96 * 0.75, feedback: 0.35, mix: 1), Sine(0.1).Range(0
 
 The punch comes from one more step: the kick drives a compressor on the pad and the bass (a sidechain), so they dip on every hit and swell back in between. There is no reverb on the whole mix, which keeps the drums dry and close, and a `Limit` at the end keeps the sum under full scale.
 
-This is the whole piece, as it opens in the REPL:
+This is the whole piece, as it is in the REPL:
 
 ```csharp
-// Press Ctrl+Enter to play. Edit anything and press it again: the new sound fades in while the old one plays.
-//
 // A sparse groove on four chords (A minor, G, F, E minor), built with the newer tools: subtraction, Mix, Slew,
 // Hold, Gate, DcBlock, and pink and brown noise. Each part says which one it uses.
 var bpm = 96;
