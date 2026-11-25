@@ -1,5 +1,7 @@
 - name: Getting started
   href: getting-started.md
+- name: A whole piece
+  href: night-drive.md
 - name: Defaults
   href: defaults.md
 - name: Sources
