@@ -36,7 +36,7 @@ The output is unchanged to the bit: every example in the API docs, the guides an
 ### Documentation and examples
 
 - Guides for every new member, and a new **Integrations** page: the Sound Script device in Sigilgraph Audio Workbench, the REPL and its Sigilgraph mode, a small live host, and offline rendering.
-- REPL: **Night drive**, a sparse groove that uses all of the new members; **Edit me while it plays** and **Edit me: the beat keeps its place**, written to be changed while they play; and two Sigilgraph examples, **Random steps with glide** and **Noise gate**.
+- REPL: **Night drive**, a sparse groove that uses all of the new members, is now the example the REPL opens with, and the new guide **A whole piece** builds it a part at a time; **Edit me while it plays** and **Edit me: the beat keeps its place**, written to be changed while they play; and two Sigilgraph examples, **Random steps with glide** and **Noise gate**.
 - `samples/LiveScript`: a Windows console app (NAudio) that plays a script file and swaps it in on every save, with the computer keyboard as a `NoteInput`.
 - A feature request form, a pull request checklist and `CODEOWNERS`.
 
