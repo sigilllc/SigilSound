@@ -2,9 +2,9 @@
 
 All notable changes to the Sigil.Sound packages. The format follows [Keep a Changelog](https://keepachangelog.com/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0 a minor version may change the public API; [Versioning](docs/articles/versioning.md) says what each number promises.
 
-## Unreleased
+## 0.2.0
 
-Planned as 0.2.0: safe to edit while it plays. Hot swaps that follow each other no longer click, five fixes, twelve new members for signal arithmetic and modulation, and faster rendering that leaves every sample as it was. Nothing is removed or renamed, and a 0.1.x script compiles and sounds the same unless it ran into one of the fixes below.
+A minor release about being safe to edit while it plays. Hot swaps that follow each other no longer click, six fixes, twelve new members for signal arithmetic and modulation, and faster rendering that leaves every sample as it was. Nothing is removed or renamed, and a 0.1.x script compiles and sounds the same unless it ran into one of the fixes below.
 
 ### Added
 
@@ -25,6 +25,7 @@ Planned as 0.2.0: safe to edit while it plays. Hot swaps that follow each other 
 - **`Slot` compiled under its lock when a render first attached to it**, so `Slot.Current` and a swap waited for the whole compile. A swap made during that compile is no longer lost.
 - **A `mix` that was not a number reached the output** in `Delay`, `TapeDelay`, `Reverb`, `FdnReverb`, `Phaser` and `Fold`. It now plays dry.
 - **An empty block threw** `IndexOutOfRangeException` in the filters, `Sample`, and `Sine`, `Saw` and `Square` under a host clock.
+- **REPL: an edit made while the music played restarted every pattern from the first beat.** The page wound its clock back to zero on each run, so patterns that follow the clock, which are meant to keep the beat when edited, started over. Run from silence and picking an example still start at the first beat; an edit while playing now carries on, and the clock is wound back only by the queued audio that the edit throws away.
 
 ### Performance
 
