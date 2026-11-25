@@ -303,9 +303,9 @@ public static class Examples
             """),
         new("Edit me: the beat keeps its place",
             """
-            // A pattern without its own tempo follows the page's clock, so editing it keeps it on the beat:
-            // change the notes, the filter or the drums and press Ctrl+Enter, and the new version carries on
-            // from the same step instead of starting again.
+            // A pattern without its own tempo follows the page's clock, so an edit made while it plays keeps it on the beat:
+            // change the notes, the filter or the drums (with Refresh on change it updates when you stop typing, or press
+            // Ctrl+Enter) and the new version carries on from the same step. Stop, then Run, starts it from the top.
             //
             // Try: "c3 eb3 g3 bb3" to "c3 f3 ab3 c4", or LowPass(1800) to LowPass(900).
             var line = Mini.Notes("c3 eb3 g3 bb3 g3 eb3")

@@ -200,13 +200,16 @@
             return Math.max(0, audio.written - audio.read);
         },
 
-        // Discards queued audio beyond `seconds`, so a new sound is heard almost at once.
+        // Discards queued audio beyond `seconds`, so a new sound is heard almost at once. Returns how many frames were thrown away,
+        // so the engine can wind its clock back by as much and a pattern carries on from what was actually heard.
         flush(seconds) {
-            if (!audio.node) return;
+            if (!audio.node) return 0;
             const keep = Math.round(seconds * audio.context.sampleRate);
             audio.node.port.postMessage({ flush: keep });
+            const before = audio.written;
             audio.written = Math.min(audio.written, audio.read + keep);
             noteStrip.cut(audio.written);   // notes in the audio that was thrown away never happen
+            return before - audio.written;
         },
 
         push(bytes) {

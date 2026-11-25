@@ -19,7 +19,7 @@ The device's own guide lives with the Workbench. A script written there also run
 
 ## The browser REPL
 
-The [REPL](https://sound.sigilaud.io/repl/) compiles C# snippets in the browser and plays them through Web Audio. Every example on this site has an **Open in REPL** link. Press Ctrl+Enter to run what you typed; the new sound crossfades in over the old one, so you can edit while it plays.
+The [REPL](https://sound.sigilaud.io/repl/) compiles C# snippets in the browser and plays them through Web Audio. Every example on this site has an **Open in REPL** link. Press Ctrl+Enter to run what you typed; the new sound crossfades in over the old one, so you can edit while it plays. A pattern without its own tempo follows the page's clock, so an edit made while it plays carries on from the same beat; Stop, then Run, starts from the top.
 
 Its **Sigilgraph** mode adds a simulation of the Sound Script device's API (`Knob`, `Slider`, `In`, `Out`, `Poly`), so a device script can be tried, and shared, without the app.
 

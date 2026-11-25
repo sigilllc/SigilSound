@@ -210,6 +210,9 @@
     private bool _ready;
     private bool _playing;
     private bool _refreshOnChange = true;
+
+    // Set when an example is picked, so the edit that loads it starts the new music from its first beat.
+    private bool _restartNext;
     private bool _showDisclaimer;
     private bool _disclaimerDismissed;
     private bool _usesKeys;
@@ -293,7 +296,8 @@
         await Engine.StartAsync(_engineRef!);
         var code = await JS.InvokeAsync<string>("sigilRepl.getCode");
         UpdatePanels(code);
-        await PlayAsync(code);
+        // From silence the music starts at its first beat; while it plays, Run swaps in the edit and keeps the beat.
+        await PlayAsync(code, restart: !_playing);
     }
 
     private bool _startingFromKey;
@@ -328,7 +332,10 @@
             return [];
         if (_refreshOnChange && _playing)
         {
-            await PlayAsync(code);
+            // An edit keeps the beat; a newly picked example starts from its first beat.
+            bool restart = _restartNext;
+            _restartNext = false;
+            await PlayAsync(code, restart);
             return _diagnostics;
         }
 
@@ -415,8 +422,9 @@
         return sample.Seconds > 0 ? $"{sample.Seconds:0.##} s, {size}" : size;
     }
 
-    private async Task PlayAsync(string code)
+    private async Task PlayAsync(string code, bool restart)
     {
+        _restartNext = false;
         SetStatus("Compiling", "dim");
         await Task.Delay(1);
 
@@ -438,7 +446,7 @@
             if (_sigilgraph)
                 _build++;
             _sendsNotes = _sigilgraph && SigilgraphSession.Instance.SendsNotes;
-            Engine.Play(sound);
+            Engine.Play(sound, restart);
             _playing = true;
             SetStatus($"Playing (compiled in {compileMs} ms)", "ok");
         }
@@ -468,9 +476,13 @@
             await SetSigilgraphAsync(true);
         UpdatePanels(example.Code);
         // Refresh on change picks the new code up; without it, a playing sound switches right away.
+        _restartNext = true;
         await JS.InvokeVoidAsync("sigilRepl.setCode", example.Code);
         if (_playing && !_refreshOnChange)
-            await PlayAsync(example.Code);
+        {
+            _restartNext = false;
+            await PlayAsync(example.Code, restart: true);
+        }
     }
 
     private async Task ShareAsync()

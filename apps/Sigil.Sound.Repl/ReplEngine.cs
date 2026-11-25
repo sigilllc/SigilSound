@@ -62,18 +62,38 @@ public sealed class ReplEngine(IJSRuntime js)
             _output = new SoundContext(sampleRate, fadeSeconds: 0.03, clock: _noteClock);
     }
 
-    public void Play(Sound sound)
+    /// <summary>
+    /// Plays <paramref name="sound"/>, crossfading from what is playing. With <paramref name="restart"/> a pattern that follows the
+    /// clock starts from its first note (pressing Run from silence, or picking another example); without it the clock carries on, so
+    /// an edit made while the music plays keeps the beat where it was.
+    /// </summary>
+    public void Play(Sound sound, bool restart)
     {
         Current = sound;
         if (_output is null)
             return;
 
         // Audio rendered ahead belongs to the old sound; drop most of it so the change is heard now.
-        Js.InvokeVoid("sigilRepl.audio.flush", AudibleLeadSeconds);
+        int dropped = Js.Invoke<int>("sigilRepl.audio.flush", AudibleLeadSeconds);
 
-        // A pattern that follows the clock starts from its first note when you press Run, as it did before the sounds had a clock.
-        _noteClock?.Seek(0, 0);
+        if (_noteClock is { } clock)
+        {
+            if (restart)
+                clock.Seek(0, 0);
+            else
+                Rewind(clock, dropped);
+        }
         _output.Play(sound);
+    }
+
+    // The clock ran ahead with the audio that was just thrown away; wind it back so the new sound continues from what was heard.
+    private static void Rewind(HostClock clock, int frames)
+    {
+        if (frames <= 0)
+            return;
+        long position = Math.Max(0, clock.SamplePosition - frames);
+        double beats = clock.Running ? Math.Max(0, clock.Beats - frames / (double)clock.SampleRate * clock.Bpm / 60.0) : clock.Beats;
+        clock.Seek(position, beats);
     }
 
     public void Stop()
