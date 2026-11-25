@@ -2,8 +2,6 @@
 
 A fluent API for sound synthesis in your .NET app. Build an instrument or an effect in a few lines, then record it to a file or play it live.
 
-> **Status: 0.1.0, the first public release.** The public API is tracked and every example is tested, but it may still change before 1.0; see the [changelog](CHANGELOG.md). Licensed under the [MIT License](LICENSE).
-
 ## Quick Start
 
 ```csharp
