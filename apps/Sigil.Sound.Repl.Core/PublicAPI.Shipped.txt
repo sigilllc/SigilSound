@@ -24,6 +24,13 @@ Sigil.Sound.Repl.CompletionItem.ReplaceBefore.init -> void
 Sigil.Sound.Repl.CompletionItem.SortText.get -> string!
 Sigil.Sound.Repl.CompletionItem.SortText.init -> void
 Sigil.Sound.Repl.EditorServices
+Sigil.Sound.Repl.EmitResult
+Sigil.Sound.Repl.EmitResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>!
+Sigil.Sound.Repl.EmitResult.Diagnostics.init -> void
+Sigil.Sound.Repl.EmitResult.EmitResult(byte[]? Image, System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>! Diagnostics) -> void
+Sigil.Sound.Repl.EmitResult.Image.get -> byte[]?
+Sigil.Sound.Repl.EmitResult.Image.init -> void
+Sigil.Sound.Repl.EmitResult.Success.get -> bool
 Sigil.Sound.Repl.Examples
 Sigil.Sound.Repl.Examples.Example
 Sigil.Sound.Repl.Examples.Example.Code.get -> string!
@@ -111,5 +118,7 @@ static Sigil.Sound.Repl.ExecutionGuard.ExitCall() -> void
 static Sigil.Sound.Repl.ExecutionGuard.Reset(int frames = 0) -> void
 static Sigil.Sound.Repl.SnippetCompiler.Check(string! code, Sigil.Sound.Repl.SnippetProfile? profile = null) -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>!
 static Sigil.Sound.Repl.SnippetCompiler.Compile(string! code, Sigil.Sound.Repl.SnippetProfile? profile = null) -> Sigil.Sound.Repl.CompileResult!
+static Sigil.Sound.Repl.SnippetCompiler.Emit(string! code, Sigil.Sound.Repl.SnippetProfile? profile = null) -> Sigil.Sound.Repl.EmitResult!
+static Sigil.Sound.Repl.SnippetCompiler.Load(byte[]! image, System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>? diagnostics = null) -> Sigil.Sound.Repl.CompileResult!
 static Sigil.Sound.Repl.SnippetCompiler.Warm() -> void
 static Sigil.Sound.Repl.SnippetProfile.Default.get -> Sigil.Sound.Repl.SnippetProfile!

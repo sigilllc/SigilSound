@@ -2,7 +2,9 @@
 
 All notable changes to the Sigil.Sound packages. The format follows [Keep a Changelog](https://keepachangelog.com/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0 a minor version may change the public API; [Versioning](docs/articles/versioning.md) says what each number promises.
 
-## Unreleased
+## 0.2.1
+
+A patch release for hosts that compile scripts in one place and run them in another. It adds two members to `Sigil.Sound.Repl.Core` and changes nothing else; no sound changes.
 
 ### Added
 

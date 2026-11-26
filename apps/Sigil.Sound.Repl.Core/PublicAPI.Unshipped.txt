@@ -1,10 +1,1 @@
 #nullable enable
-Sigil.Sound.Repl.EmitResult
-Sigil.Sound.Repl.EmitResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>!
-Sigil.Sound.Repl.EmitResult.Diagnostics.init -> void
-Sigil.Sound.Repl.EmitResult.EmitResult(byte[]? Image, System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>! Diagnostics) -> void
-Sigil.Sound.Repl.EmitResult.Image.get -> byte[]?
-Sigil.Sound.Repl.EmitResult.Image.init -> void
-Sigil.Sound.Repl.EmitResult.Success.get -> bool
-static Sigil.Sound.Repl.SnippetCompiler.Emit(string! code, Sigil.Sound.Repl.SnippetProfile? profile = null) -> Sigil.Sound.Repl.EmitResult!
-static Sigil.Sound.Repl.SnippetCompiler.Load(byte[]! image, System.Collections.Generic.IReadOnlyList<Sigil.Sound.Repl.SnippetDiagnostic!>? diagnostics = null) -> Sigil.Sound.Repl.CompileResult!
