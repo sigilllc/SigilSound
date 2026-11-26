@@ -2,6 +2,12 @@
 
 All notable changes to the Sigil.Sound packages. The format follows [Keep a Changelog](https://keepachangelog.com/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0 a minor version may change the public API; [Versioning](docs/articles/versioning.md) says what each number promises.
 
+## Unreleased
+
+### Added
+
+- **REPL core: compile in one place, run in another.** `SnippetCompiler.Emit(code, profile)` runs everything `Compile` does up to the emit (the profile's checks, the loop and recursion guards) and returns an `EmitResult` with the assembly image and the diagnostics, without loading it. `SnippetCompiler.Load(image, diagnostics)` loads such an image as a `CompileResult`, in a collectible context like `Compile`'s. A host can keep Roslyn in one runtime (a browser Web Worker, a build step) and run the snippet in another that cannot run the compiler. `Load` checks nothing: load only images your own `Emit` produced. `Compile` is now `Emit` followed by `Load` and behaves as before.
+
 ## 0.2.0
 
 A minor release about being safe to edit while it plays. Hot swaps that follow each other no longer click, six fixes, twelve new members for signal arithmetic and modulation, and faster rendering that leaves every sample as it was. Nothing is removed or renamed, and a 0.1.x script compiles and sounds the same unless it ran into one of the fixes below.
